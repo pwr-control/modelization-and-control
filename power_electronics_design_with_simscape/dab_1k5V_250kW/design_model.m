@@ -9,20 +9,20 @@ opts.FreqUnits = 'Hz';
 %% pwm
 fPWM_INV = 35e3; % PWM frequency 
 tPWM_INV = 1/fPWM_INV;
-fPWM_ZVS = fPWM_INV; % PWM frequency 
-tPWM_ZVS = 1/fPWM_ZVS;
+fPWM_DAB = fPWM_INV; % PWM frequency 
+tPWM_DAB = 1/fPWM_DAB;
 fclock=25e6;
-half_phase_pulses = fclock/fPWM_ZVS/2;
+half_phase_pulses = fclock/fPWM_DAB/2;
 
 %% sampling time
 s=tf('s');
 ts_inv = tPWM_INV; % Sampling time of the control 
 z_inv=tf('z',ts_inv);
-ts_zvs = tPWM_ZVS*2; % Sampling time of the control 
-z_zvs=tf('z',ts_zvs);
+ts_dab = tPWM_DAB*2; % Sampling time of the control 
+z_dab=tf('z',ts_dab);
 % dead_time = 3e-6;
 dead_time = 0;
-m_dead_time = dead_time/tPWM_ZVS;
+m_dead_time = dead_time/tPWM_DAB;
 
 ts_afe = ts_inv;
 
@@ -54,7 +54,7 @@ t_misura=simlength/5;
 Nc = ceil(t_misura/tc);
 Ns_inv = ceil(t_misura/ts_inv);
 Ns_afe = ceil(t_misura/ts_afe);
-Ns_zvs = ceil(t_misura/ts_zvs);
+Ns_dab = ceil(t_misura/ts_dab);
 
 %% HF trafo
 pn_trafo = 8e3;
@@ -91,18 +91,18 @@ CFu_dc = 2500e-6;
 RCFu_dc = 12e3;
 RCFu_dc_internal = 1e-3;
 
-% LC interno ZVS
+% LC interno DAB
 m = 7;
 Cs1 = 250e-6;
 Ls1 = 1.5e-6;
 Cs2 = Cs1/m^2;
 Ls2 = Ls1*m^2;
 
-p_tranf = v1_trafo^2/(2*pi*fPWM_ZVS*Ls1)*pi/4
+p_tranf = v1_trafo^2/(2*pi*fPWM_DAB*Ls1)*pi/4
 RLs = 0.5e-3;
-req = 1/(2*pi*fPWM_ZVS*Cs1) + 2*pi*fPWM_ZVS*Ls1;
+req = 1/(2*pi*fPWM_DAB*Cs1) + 2*pi*fPWM_DAB*Ls1;
 fres= 1/2/pi/sqrt(Cs1*Ls1)
-fsr = fPWM_ZVS/fres
+fsr = fPWM_DAB/fres
 
 
 
@@ -147,11 +147,11 @@ kw = K(2);
 kalman_theta = kg;
 kalman_omega = kw;
 
-%% control zvs
-kp_i_zvs = 2;
-ki_i_zvs = 18;
-kp_v_zvs = 8;
-ki_v_zvs = 45;
+%% control dab
+kp_i_dab = 2;
+ki_i_dab = 18;
+kp_v_dab = 8;
+ki_v_dab = 45;
 
 Vout_dc_ref = Vout_dc_nom;
 
@@ -210,9 +210,6 @@ Qkalman = [q1kalman 0; 0 q2kalman];
 gate_nominal_voltage = 15;
 Vdon_diode = 0.35;
 Rdon_diode = 3e-3;
-
-% open_system('batt_zvs_inv_single_phase_hb');
-
 
 %%
 phase_shift_mod11 = 0;
