@@ -43,7 +43,7 @@ component im_uvw_2
 
         omega_m_out = { 0, 'rad/s' };       % rotor_speed(electrical):right
         theta_m_out = { 0, 'rad' };         % rotor_phase(electrical):right
-        tau_m_out = { 0, 'N*m' };           % Electromagnetic torque:right
+        tau_m_out = { 0, 'N*m' };           % electromagnetic torque:right
     end
 
     parameters
@@ -63,7 +63,7 @@ component im_uvw_2
     end
 
     variables
-        omega_m = { 0, 'rad/s' };               % Rotor pulsation (electrical)
+        omega_m = { 0, 'rad/s' };               % rotor speed (electrical)
         isu = { 0, 'A' };                       % isu
         isv = { 0, 'A' };                       % isv
         isw = { 0, 'A' };                       % isw
@@ -87,18 +87,18 @@ component im_uvw_2
         psi_r_q = { 0, 'V*s' };                 % psi_r_q
         psi_s_d = { 0, 'V*s' };                 % psi_s_d
         psi_s_q = { 0, 'V*s' };                 % psi_s_q
-        tau_m = { 0, 'N*m' };                   % Torque electromagnetic
-        tau_l = { 0, 'N*m' };                   % Torque load
-        theta_m = { 0, 'rad' };                 % Rotor phase (electrical)
-        theta_slip = { 0, 'rad' };              % Slip phase (electrical)
-        theta_s = { 0, 'rad' };                 % Stator phase (electrical)
-        omega_slip = { 0, 'rad/s' };            % Slip pulsation (electrical)
-        omega_s = { 0, 'rad/s' };               % Stator pulsation (electrical)
+        tau_m = { 0, 'N*m' };                   % torque electromagnetic
+        tau_l = { 0, 'N*m' };                   % torque load
+        theta_m = { 0, 'rad' };                 % rotor phase (electrical)
+        theta_slip = { 0, 'rad' };              % slip phase (electrical)
+        theta_s = { 0, 'rad' };                 % stator phase (electrical)
+        omega_slip = { 0, 'rad/s' };            % slip pulsation (electrical)
+        omega_s = { 0, 'rad/s' };               % stator pulsation (electrical)
     end
 
     variables(Access = private)
-        omega_i_slip = { 0, 'rad/s' };          % Integral term slip pulsation (electrical)
-        omega_i_s = { 0, 'rad/s' };             % Integral term stator pulsation (electrical)
+        omega_i_slip = { 0, 'rad/s' };          % integral term slip pulsation (electrical)
+        omega_i_s = { 0, 'rad/s' };             % integral term stator pulsation (electrical)
         psi_s_alpha = { 0, 'V*s' };             % psi_s_alpha
         psi_s_beta = { 0, 'V*s' };              % psi_s_beta
         psi_r_alpha = { 0, 'V*s' };             % psi_r_alpha
