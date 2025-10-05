@@ -92,6 +92,9 @@ while (((Tn > Tnom*(1+toll)) || (Tn < Tnom*(1-toll))) && (Rr < Rr_max))
     Rr = Rr+deltaRr;
 end
 
+omega_nom = wnom;
+omega_m_nom = wnom/cp;
+torque_nom = Tn;
 
 Motor_name = string({'SICME SN315X4 440kW'});
 comment1 = string({'Values with label "bez" mean always peak'});
