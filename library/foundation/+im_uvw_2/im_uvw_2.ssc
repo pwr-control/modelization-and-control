@@ -62,6 +62,8 @@ component im_uvw_2
 
         omega_m_out = { 0, 'rad/s' };       % rotor_speed(electrical):right
         theta_m_out = { 0, 'rad' };         % rotor_phase(electrical):right
+        theta_s_out = { 0, 'rad' };         % stator_phase(electrical):right
+        theta_slip_out = { 0, 'rad' };      % slip_phase(electrical):right
         tau_m_out = { 0, 'N*m' };           % electromagnetic torque:right
     end
 
@@ -124,7 +126,7 @@ component im_uvw_2
     end
 
     variables(Access = private)
-        omega_i_slip = { 0, 'rad/s' };          % integral term slip pulsation (electrical)
+        % omega_i_slip = { 0, 'rad/s' };          % integral term slip pulsation (electrical)
         omega_i_s = { 0, 'rad/s' };             % integral term stator pulsation (electrical)
         psi_s_alpha = { 0, 'V*s' };             % psi_s_alpha
         psi_s_beta = { 0, 'V*s' };              % psi_s_beta
@@ -182,12 +184,15 @@ component im_uvw_2
             Jm * omega_m.der == pp*(tau_m + tau_l) - bm*omega_m;
             theta_m.der == omega_m; 
             
-            theta_slip.der == omega_slip;
-            omega_slip == -psi_r_q*kp + omega_i_slip;
-            omega_i_slip.der == -psi_r_q*ki;
+            % PLL on flux stator
             theta_s.der == omega_s;
-            omega_s == -psi_s_q*kp + omega_i_s;
-            omega_i_s.der == -psi_s_q*ki;
+            omega_s == -psi_r_y*kp + omega_i_s;
+            omega_i_s.der == -psi_r_y*ki;
+
+            theta_slip.der == omega_slip;
+            omega_slip == omega_s - omega_m;
+            
+
 
             % rotor uvw quantities rotates at slip
             psi_r_d == 2/3*(psi_r_u - 1/2*psi_r_v - 1/2*psi_r_w);
@@ -220,11 +225,11 @@ component im_uvw_2
             isd == is_alpha*cos(theta_m) + is_beta*sin(theta_m);
             isq == -is_alpha*sin(theta_m) + is_beta*cos(theta_m);
 
-            isx == is_beta*cos(theta_s) + is_alpha*sin(theta_s);
-            isy == -is_beta*sin(theta_s) + is_alpha*cos(theta_s);
+            isx == is_alpha*cos(theta_s) + is_beta*sin(theta_s);
+            isy == -is_alpha*sin(theta_s) + is_beta*cos(theta_s);
          
-            irx == irq*cos(theta_slip) + ird*sin(theta_slip);
-            iry == -irq*sin(theta_slip) + ird*cos(theta_slip);
+            irx == ird*cos(theta_slip) + irq*sin(theta_slip);
+            iry == -ird*sin(theta_slip) + irq*cos(theta_slip);
 
             isu_out == isu;
             isv_out == isv;
@@ -276,6 +281,8 @@ component im_uvw_2
 
             omega_m_out == omega_m;
             theta_m_out == mod(theta_m + 3*pi, 2*pi) - pi;
+            theta_s_out == mod(theta_s + 3*pi, 2*pi) - pi;
+            theta_slip_out == mod(theta_slip + 3*pi, 2*pi) - pi;
             tau_m_out == tau_m;
            
         end
