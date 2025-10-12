@@ -2,13 +2,14 @@ component pmsm_spatial_harmonics_uvw
 % pmsm spatial harmonics uvw
 
     nodes
-        uu_p = foundation.electrical.electrical;            % _uu+_:left
-        uu_n = foundation.electrical.electrical;            % _uu-_:left
-        uv_p = foundation.electrical.electrical;            % _uv+_:left
-        uv_n = foundation.electrical.electrical;            % _uv-_:left
-        uw_p = foundation.electrical.electrical;            % _uw+_:left
-        uw_n = foundation.electrical.electrical;            % _uw-_:left
-        S = foundation.mechanical.rotational.rotational;    % _S_:right
+        uu_p = foundation.electrical.electrical;            % uu+:left
+        uv_p = foundation.electrical.electrical;            % uv+:left
+        uw_p = foundation.electrical.electrical;            % uw+:left
+        
+        uu_n = foundation.electrical.electrical;            % uu-:left
+        uv_n = foundation.electrical.electrical;            % uv-:left
+        uw_n = foundation.electrical.electrical;            % uw-:left
+        S = foundation.mechanical.rotational.rotational;    % S:right
     end
     inputs
         psi_m = { 0.03, 'V*s' }; % _psi_m_:left

@@ -2,37 +2,48 @@ component pmsm_uvw_with_harmonics
 % pmsm uvw with harmonics components
 
     nodes
-        uu_p = foundation.electrical.electrical;            % _uu+_:left
-        uu_n = foundation.electrical.electrical;            % _uu-_:left
-        uv_p = foundation.electrical.electrical;            % _uv+_:left
-        uv_n = foundation.electrical.electrical;            % _uv-_:left
-        uw_p = foundation.electrical.electrical;            % _uw+_:left
-        uw_n = foundation.electrical.electrical;            % _uw-_:left
-        S = foundation.mechanical.rotational.rotational;    % _S_:right
+        uu_p = foundation.electrical.electrical;            % uu+:left
+        uv_p = foundation.electrical.electrical;            % uv+:left
+        uw_p = foundation.electrical.electrical;            % uw+:left
+        
+        uu_n = foundation.electrical.electrical;            % uu-:left
+        uv_n = foundation.electrical.electrical;            % uv-:left
+        uw_n = foundation.electrical.electrical;            % uw-:left
+        S = foundation.mechanical.rotational.rotational;    % S:right
     end
     inputs
         psi_m = { 0.03, 'V*s' }; % _psi_m_:left
     end
     outputs
-        id_out = { 0, 'A' };                    % _id_:right
-        iq_out = { 0, 'A' };                    % _iq_:right
-        ud_out = { 0, 'V' };                    % _ud_:right
-        uq_out = { 0, 'V' };                    % _uq_:right
-        ed_out = { 0, 'V' };                    % _ed_:right
-        eq_out = { 0, 'V' };                    % _eq_:right
-        iu_out = { 0, 'A' };                    % _iu_:right
-        iv_out = { 0, 'A' };                    % _iv_:right
-        iw_out = { 0, 'A' };                    % _iw_:right
-        psi_r_d_out = { 0, 'V*s' };               % _psi_r_d_:right
-        psi_r_q_out = { 0, 'V*s' };               % _psi_r_q:right
-        psi_r_alpha_out = { 0, 'V*s' };           % _psi_r_alpha_:right
-        psi_r_beta_out = { 0, 'V*s' };            % _psi_r_beta:right
-        tau_out = { 0, 'N*m' };                 % _torque_:right
-        omega_out = { 0, 'rad/s' };             % _omega_elec_:right
-        omega_m_out = { 0, 'rpm' };             % _omega_m_:right
-        theta_out = { 0, 'rad' };               % _theta_elec_:right
-        pin_out = { 0, 'kW' };                  % _pin_:right
-        pout_out = { 0, 'kW' };                  % _pout_:right
+        id_out = { 0, 'A' };                    % id:right
+        iq_out = { 0, 'A' };                    % iq:right
+        
+        ud_out = { 0, 'V' };                    % ud:right
+        uq_out = { 0, 'V' };                    % uq:right
+        
+        ed_out = { 0, 'V' };                    % ed(back emf):right
+        eq_out = { 0, 'V' };                    % eq(back emf):right
+        
+        iu_out = { 0, 'A' };                    % iu:right
+        iv_out = { 0, 'A' };                    % iv:right
+        iw_out = { 0, 'A' };                    % iw:right
+        
+        psi_r_u_out = { 0, 'V*s' };             % psi_r_u:right
+        psi_r_v_out = { 0, 'V*s' };             % psi_r_v:right
+        psi_r_w_out = { 0, 'V*s' };             % psi_r_w:right
+
+        psi_r_d_out = { 0, 'V*s' };             % psi_r_d:right
+        psi_r_q_out = { 0, 'V*s' };             % psi_r_q:right
+        
+        psi_r_alpha_out = { 0, 'V*s' };         % psi_r_alpha:right
+        psi_r_beta_out = { 0, 'V*s' };          % psi_r_beta:right
+        
+        tau_out = { 0, 'N*m' };                 % torque:right
+        omega_out = { 0, 'rad/s' };             % omega(elec):right
+        omega_m_out = { 0, 'rpm' };             % omega(mech):right
+        theta_out = { 0, 'rad' };               % phase(elec):right
+        pin_out = { 0, 'kW' };                  % pwr_in(elec):right
+        pout_out = { 0, 'kW' };                 % pwr_out(shaft):right
     end
 
     parameters
@@ -163,23 +174,36 @@ component pmsm_uvw_with_harmonics
     
             id_out == id;
             iq_out == iq;
+            
             ud_out == ud;
             uq_out == uq;
+            
             ed_out == -psi_r_q*omega;
             eq_out == psi_r_d*omega;
+            
             iu_out == iu;
             iv_out == iv;
             iw_out == iw;
+            
             psi_r_d_out == psi_r_d;
             psi_r_q_out == psi_r_q;
+            
             psi_r_alpha_out == psi_r_alpha;
             psi_r_beta_out == psi_r_beta;
+
+            psi_r_u_out == psi_r_u;
+            psi_r_v_out == psi_r_v;
+            psi_r_w_out == psi_r_w;
+            
             tau_out == tau_m;
             theta_out == mod(theta+angle_error+3*pi, 2*pi) - pi;
+            
             omega_out == omega;
             omega_m_out == omega/pp;
+            
             pin_out == uv*iv + uw*iw + uu*iu;
             pout_out == (tau_m )*S.w;
+
         end
     end
 end
