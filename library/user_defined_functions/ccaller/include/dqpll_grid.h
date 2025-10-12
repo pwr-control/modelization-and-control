@@ -14,13 +14,13 @@
 #define CABCD_STATE_DISCONNECTING		        7 /* a fronte di un allarme cerco di spegnere prima l'INVERTER e poi lo ZVS*/
 
 #define DQPLL_GRID_DESAT		0.001f
-#define DQPLL_GRID_LIM_OK		0.1f
+#define DQPLL_GRID_LIM_OK		0.2f
 #define KP_DQPLL_GRID			1.0f
 #define KI1_DQPLL_GRID			80.0f
 #define OMEGA_GRID_NOM			314.159f
 #define OMEGA_GRID_NORM_NOM		1.0f
 #define KI2_DQPLL_GRID			314.159f
-#define OMEGA_HAT_WINDOW1		0.95f
+#define OMEGA_HAT_WINDOW1		0.85f
 #define OMEGA_HAT_WINDOW2		0.85f
 
 #define DQPLL_GRID_STATE_STOP			0
@@ -32,7 +32,7 @@
 #define FAULT_DQPLL_GRID_SYNC			0x0040 // Fault Value : 64
 
 #define AGGANCIO_PLL_CONTAFAULT_WINDOW1		2000
-#define AGGANCIO_PLL_CONTAFAULT_WINDOW2		500
+#define AGGANCIO_PLL_CONTAFAULT_WINDOW2		5000
 
 typedef struct param_s
 {

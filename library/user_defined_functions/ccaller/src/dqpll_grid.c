@@ -61,8 +61,8 @@ float dqpll_grid_process(volatile DQPLL_GRID *dqpll_ctrl, volatile float u_phase
 	dqpll_ctrl->u_xi = u_grid_xi_n;
 	dqpll_ctrl->u_eta = u_grid_eta_n;
 
-	dqpll_ctrl->omega_i_hat = u_grid_eta_n * ki1_dqpll_grid * ts + omega_i_hat;
-	dqpll_ctrl->omega_hat = u_grid_eta_n * kp_dqpll_grid + dqpll_ctrl->omega_i_hat;
+	dqpll_ctrl->omega_i_hat = -u_grid_eta_n * ki1_dqpll_grid * ts + omega_i_hat;
+	dqpll_ctrl->omega_hat = -u_grid_eta_n * kp_dqpll_grid + dqpll_ctrl->omega_i_hat;
 	dqpll_ctrl->gamma_hat = dqpll_ctrl->omega_hat * ki2_dqpll_grid * ts + gamma_hat;
 	
 	// keep estimated phase between PI and -PI
