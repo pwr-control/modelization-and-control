@@ -1,0 +1,25 @@
+SICME SN315X4 440kW 
+Values with label "bez" mean always peak 
+Ubez means voltage peak phase 
+ 
+Inom =  793.00000000 A 
+Vnom =  440.00000000 V 
+Ibez =  1121.47135496 A 
+Ubez =  359.25849561 V 
+rpm =  1020.00000000 rpm 
+freq_nom =  34.00000000 Hz 
+rpm_load =  1008.00000000 rpm 
+polepairs =  2.00000000  
+Rs =  0.00300000 Ohm 
+Ls =  0.00386085 H 
+Rr =  0.00420000 Ohm 
+Lr =  0.00386085 H 
+Lm =  0.00374767 H 
+Im =  308.00000000 A 
+Im_bez =  435.57777721 A 
+Torque =  4659.23359357 kNm 
+cosphi =  0.84000000  
+eff =  0.94400000  
+ucc =  440.00000000 V 
+icc =  3568.50000000 A 
+fcc =  50.00000000 Hz 

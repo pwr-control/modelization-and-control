@@ -3,6 +3,10 @@
 This subfolder contains a collection of models and control applications concerning power electronics. Most of the projects use the library which must added to the path of matlab to be able to use these models.
 Each folder contains a power electronics project, in the following a description of each project. 
 
+
+**n-time_domains**:
+- this folder contains the most advanced concept in modelization of the whole repo. n-time domains are implemented, each time domain generates a trigger (TRGO) for sampling, control and pwm generation. In this modelization, effects of sliding pwm as well as clocks deviation can be fully analyzed. The model contains up to three systems in parallel, where each system is composed by a three phase active rectifier, an inverter and a permanent magnet synchronous generator. All physical blocks are developed with open source custom simscape code.
+
 **ac-ac-buck-converter**:
 - tipical application with two antiseries igbts used to create a bidirectional switch. The modulation strategy use overlapping deadtime, a detailed explanation can be found into the subfolders of the project.
 

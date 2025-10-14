@@ -34,39 +34,44 @@ void dqpll_grid_reset(volatile DQPLL_GRID *dqpll_ctrl) {
 }
 
 float dqpll_grid_process(volatile DQPLL_GRID *dqpll_ctrl, volatile float u_phase_r, volatile float u_phase_s, volatile float u_phase_t) {
-		
+	float u_vector_length_inverter = 0;
 	float omega_i_hat_tilde = 0;
-	const float ts = dqpll_ctrl->ts;
-	const float kp_dqpll_grid = dqpll_ctrl->kp_dqpll_grid;
-	const float ki1_dqpll_grid = dqpll_ctrl->ki1_dqpll_grid;
-	const float ki2_dqpll_grid = dqpll_ctrl->ki2_dqpll_grid;
+	float ts = dqpll_ctrl->ts;
+	float kp_dqpll_grid = dqpll_ctrl->kp_dqpll_grid;
+	float ki1_dqpll_grid = dqpll_ctrl->ki1_dqpll_grid;
+	float ki2_dqpll_grid = dqpll_ctrl->ki2_dqpll_grid;
 
-	const float omega_i_hat = dqpll_ctrl->omega_i_hat;
-	const float gamma_hat = dqpll_ctrl->gamma_hat;
+	float omega_i_hat = dqpll_ctrl->omega_i_hat;
+	float gamma_hat = dqpll_ctrl->gamma_hat;
 	
-	const float th_sin = sinf(gamma_hat);
-	const float th_cos = cosf(gamma_hat);
+	float th_sin = sinf(gamma_hat);
+	float th_cos = cosf(gamma_hat);
 
-	const float u_grid_alpha = MATH_2_3 * (u_phase_r - MATH_HALF *  u_phase_s - MATH_HALF *  u_phase_t);
-	const float u_grid_beta = MATH_1_SQRT3 * (u_phase_s - u_phase_t);
+	float u_grid_alpha = MATH_2_3 * (u_phase_r - MATH_HALF *  u_phase_s - MATH_HALF *  u_phase_t);
+	float u_grid_beta = MATH_1_SQRT3 * (u_phase_s - u_phase_t);
+	float len = sqrtf(u_grid_alpha * u_grid_alpha + u_grid_beta * u_grid_beta);
+	if (len > 0.0f)
+		u_vector_length_inverter = 1.0f / len;
+	else
+		u_vector_length_inverter = 1.0f;
 
-	const float u_vector_length_inverter = 1.0f / sqrtf(u_grid_alpha * u_grid_alpha + u_grid_beta * u_grid_beta);
+	float u_grid_xi = u_grid_alpha * th_cos + u_grid_beta * th_sin;
+	float u_grid_eta = u_grid_beta * th_cos - u_grid_alpha * th_sin;
 
-	const float u_grid_xi = u_grid_alpha * th_cos + u_grid_beta * th_sin;
-	const float u_grid_eta = u_grid_beta * th_cos - u_grid_alpha * th_sin;
-
-	const float u_grid_xi_n = u_grid_xi * u_vector_length_inverter;
-	const float u_grid_eta_n = u_grid_eta * u_vector_length_inverter;
+	float u_grid_xi_n = u_grid_xi * u_vector_length_inverter;
+	float u_grid_eta_n = u_grid_eta * u_vector_length_inverter;
 
 	dqpll_ctrl->u_xi = u_grid_xi_n;
 	dqpll_ctrl->u_eta = u_grid_eta_n;
+	
+	float ueta_tilde = u_grid_eta_n;
 
-	dqpll_ctrl->omega_i_hat = u_grid_eta_n * ki1_dqpll_grid * ts + omega_i_hat;
-	dqpll_ctrl->omega_hat = u_grid_eta_n * kp_dqpll_grid + dqpll_ctrl->omega_i_hat;
+	dqpll_ctrl->omega_i_hat = ueta_tilde * ki1_dqpll_grid * ts + omega_i_hat;
+	dqpll_ctrl->omega_hat = ueta_tilde * kp_dqpll_grid + dqpll_ctrl->omega_i_hat;
 	dqpll_ctrl->gamma_hat = dqpll_ctrl->omega_hat * ki2_dqpll_grid * ts + gamma_hat;
 	
 	// keep estimated phase between PI and -PI
-	dqpll_ctrl->gamma_hat = - MATH_PI + fmodf(dqpll_ctrl->gamma_hat + MATH_3PI, MATH_2PI);
+	dqpll_ctrl->gamma_hat = fmodf(dqpll_ctrl->gamma_hat + MATH_3PI, MATH_2PI) - MATH_PI;
 
 	switch (dqpll_ctrl->dqpll_state) {
 		case DQPLL_GRID_STATE_STOP:
@@ -82,8 +87,7 @@ float dqpll_grid_process(volatile DQPLL_GRID *dqpll_ctrl, volatile float u_phase
 		break;
 
 		case DQPLL_GRID_STATE_START:
-			omega_i_hat_tilde = 0;
-			/* omega_i_hat_tilde = dqpll_ctrl->omega_i_hat - omega_i_hat; */
+			 omega_i_hat_tilde = dqpll_ctrl->omega_i_hat - omega_i_hat;
 		    if ((dqpll_ctrl->omega_hat > OMEGA_HAT_WINDOW1) || (dqpll_ctrl->omega_hat < -OMEGA_HAT_WINDOW1)) {
 				if ((omega_i_hat_tilde < param.pll_lim_ok) && (omega_i_hat_tilde > -param.pll_lim_ok)) {
 							param.pll_state = DQPLL_GRID_STATE_CONNECTING; 
@@ -108,8 +112,8 @@ float dqpll_grid_process(volatile DQPLL_GRID *dqpll_ctrl, volatile float u_phase
 		break;
 
 		case DQPLL_GRID_STATE_CONNECTING:
-			omega_i_hat_tilde = 0;
-		/*	omega_i_hat_tilde = dqpll_ctrl->omega_i_hat - omega_i_hat;	*/
+
+			omega_i_hat_tilde = dqpll_ctrl->omega_i_hat - omega_i_hat;	
 			if ((dqpll_ctrl->omega_hat > OMEGA_HAT_WINDOW2) || (dqpll_ctrl->omega_hat < -OMEGA_HAT_WINDOW2)) {
 				if ((omega_i_hat_tilde < param.pll_lim_ok) && (omega_i_hat_tilde > -param.pll_lim_ok)) { 
 						param.pll_state = DQPLL_GRID_STATE_CONNECTING; 
@@ -141,8 +145,8 @@ float dqpll_grid_process(volatile DQPLL_GRID *dqpll_ctrl, volatile float u_phase
 
 
 		case DQPLL_GRID_STATE_RUN:
-			omega_i_hat_tilde = 0;
-		/*	omega_i_hat_tilde = dqpll_ctrl->omega_i_hat - omega_i_hat; */
+
+			omega_i_hat_tilde = dqpll_ctrl->omega_i_hat - omega_i_hat;
 			if ((dqpll_ctrl->omega_hat > OMEGA_HAT_WINDOW2) || (dqpll_ctrl->omega_hat < -OMEGA_HAT_WINDOW2)) {
 				if ((omega_i_hat_tilde < param.pll_lim_ok) && (omega_i_hat_tilde > -param.pll_lim_ok)){  
 						param.pll_state = DQPLL_GRID_STATE_RUN;
