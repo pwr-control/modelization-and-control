@@ -1,7 +1,7 @@
 #ifndef _MAVGFLT_SIMULINK_
 #define _MAVGFLT_SIMULINK_
 
-#define NMAVGFLT_INSTANCES				255
+#define NMAVGFLT_INSTANCES				31
 
 typedef struct mavgflt_output_s {
 	float								ts;		        // sampling time
