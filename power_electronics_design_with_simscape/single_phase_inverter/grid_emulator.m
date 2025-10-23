@@ -9,7 +9,7 @@ vn_xi_pu = 0;
 vn_eta_pu = 0;
 
 %% grid emulator output transformer
-Ptrafo = 1600e3;
+Ptrafo = 250e3;
 I0 = 5; % no load current
 Vcc_perc = 6.6; %cc voltage percente
 
