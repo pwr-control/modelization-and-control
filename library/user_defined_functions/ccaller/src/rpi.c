@@ -1,3 +1,11 @@
+
+/*
+ * rpi.c
+ *
+ *  Created on: Feb 20, 2024
+ *
+ */	
+
 #include <rpi.h>
 
 void rpi_init(volatile RPI *rpi_ctrl, volatile float ts, volatile float kp_rpi, volatile float ki_rpi, 
@@ -43,9 +51,6 @@ float rpi_process(volatile RPI *rpi_ctrl, volatile float i_ref,
 	const float x1_z = rpi_ctrl->x1;
 	const float x2_z = rpi_ctrl->x2;
 
-
-
-	
 	if (rpi_ctrl->y_out > rpi_ctrl->u_out_lim) {
 		rpi_ctrl->clip_active = 1;
 	}
@@ -58,14 +63,14 @@ float rpi_process(volatile RPI *rpi_ctrl, volatile float i_ref,
 
 	if (!rpi_ctrl->clip_active) {
 		rpi_ctrl->x1 = a11*x1_z + a12*x2_z;
-		rpi_ctrl->x2 = i_tilde * rpi_ctrl->ki_rpi * rpi_ctrl->ts + a21*x1_z + a22*x2_z;
+		rpi_ctrl->x2 = i_tilde * ki_rpi * rpi_ctrl->ts + a21*x1_z + a22*x2_z;
 	}
 	else {
 		rpi_ctrl->x1 = x1_z;
 		rpi_ctrl->x2 = x2_z;
 	}
 
-	rpi_ctrl->y_out = x2_z;
+	rpi_ctrl->y_out = x2_z + u_p_out;
 
 	const float u_out = rpi_ctrl->y_out;
 
