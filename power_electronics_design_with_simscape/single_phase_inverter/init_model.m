@@ -302,12 +302,12 @@ rKalman = 1;
 Zmodel = (0:1e-3:1);
 ocv_model = E_1*exp(-Zmodel*alpha) + E0 + E1*Zmodel + E2*Zmodel.^2 +...
     E3*Zmodel.^3 + Elog*log(1-Zmodel+ts_inv);
-figure; 
-plot(Zmodel,ocv_model,'LineWidth',2);
-xlabel('state of charge [p.u.]');
-ylabel('open circuit voltage [V]');
-title('open circuit voltage(state of charge)');
-grid on
+figure;  %[output:0336b779]
+plot(Zmodel,ocv_model,'LineWidth',2); %[output:0336b779]
+xlabel('state of charge [p.u.]'); %[output:0336b779]
+ylabel('open circuit voltage [V]'); %[output:0336b779]
+title('open circuit voltage(state of charge)'); %[output:0336b779]
+grid on %[output:0336b779]
 
 %[text] ## IGBT and snubber data
 %[text] ### HeatSink
@@ -357,15 +357,17 @@ Rsnubber = 1/(Csnubber*fPWM_INV)/5 %[output:73b64db6]
 %[text] ## C-Caller Settings
 model = 'single_phase_inverter';
 open_system(model);
-% Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
-% Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_output_t'});
-% Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_load_est_output_t'});
-% Simulink.importExternalCTypes(model,'Names',{'dqvector_pi_output_t'});
-% Simulink.importExternalCTypes(model,'Names',{'sv_pwm_output_t'});
-% Simulink.importExternalCTypes(model,'Names',{'global_state_machine_output_t'});
-% Simulink.importExternalCTypes(model,'Names',{'first_harmonic_tracker_output_t'});
-% Simulink.importExternalCTypes(model,'Names',{'dqpll_thyr_output_t'});
-% Simulink.importExternalCTypes(model,'Names',{'dqpll_grid_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_load_est_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'dqvector_pi_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'sv_pwm_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'global_state_machine_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'first_harmonic_tracker_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'dqpll_thyr_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'dqpll_grid_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
+
 %[text] ## Remove Scopes Opening Automatically
 % open_scopes = find_system(model, 'BlockType', 'Scope');
 % for i = 1:length(open_scopes)
@@ -382,10 +384,10 @@ open_system(model);
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":43.2}
+%   data: {"layout":"onright","rightPanelPercent":19}
 %---
 %[output:7a651282]
-%   data: {"dataType":"textualVariable","outputData":{"name":"V2rms_load_trafo","value":"   6.600000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"V2rms_load_trafo","value":"     6.600000000000000e+00"}}
 %---
 %[output:4b19a8b8]
 %   data: {"dataType":"textualVariable","outputData":{"name":"I2rms_load_trafo","value":"       30000"}}
@@ -397,10 +399,10 @@ open_system(model);
 %   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"     8.485281374238571e+02"}}
 %---
 %[output:723f6bfb]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"5","name":"Ares_nom","rows":2,"type":"double","value":[["0","0.000010000000000"],["-2.526618726678876","-0.000251327412287"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ares_nom","rows":2,"type":"double","value":[["0","1.000000000000000e+00"],["-2.526618726678876e+05","-2.513274122871834e+01"]]}}
 %---
 %[output:5e6b0628]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Aresd_nom","rows":2,"type":"double","value":[["1.000000000000000","0.000050000000000"],["-12.633093633394379","0.998743362938564"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Aresd_nom","rows":2,"type":"double","value":[["1.000000000000000e+00","5.000000000000000e-05"],["-1.263309363339438e+01","9.987433629385640e-01"]]}}
 %---
 %[output:8a55130b]
 %   data: {"dataType":"textualVariable","outputData":{"name":"a11d","value":"     1"}}
@@ -409,37 +411,40 @@ open_system(model);
 %   data: {"dataType":"textualVariable","outputData":{"name":"a12d","value":"     5.000000000000000e-05"}}
 %---
 %[output:4bafd65e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":" -12.633093633394379"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":"    -1.263309363339438e+01"}}
 %---
 %[output:07ba8e5f]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.998743362938564"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"     9.987433629385640e-01"}}
 %---
 %[output:33a36eb7]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.076483869223994"],["18.982392004991411"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["7.648386922399372e-02"],["1.898239200499141e+01"]]}}
 %---
 %[output:847036c0]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Afht","rows":2,"type":"double","value":[["0","1.000000000000000e+00"],["-9.869604401089359e+04","-1.570796326794897e+01"]]}}
 %---
 %[output:27dad7f7]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Lfht","rows":2,"type":"double","value":[["1.555088363526948e+03"],["2.716608611399846e+05"]]}}
 %---
 %[output:6211d779]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000050000000000"],["-4.934802200544680","0.999214601836603"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000e+00","5.000000000000000e-05"],["-4.934802200544680e+00","9.992146018366026e-01"]]}}
 %---
 %[output:1d06662e]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.077754418176347"],["13.583043056999228"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["7.775441817634739e-02"],["1.358304305699923e+01"]]}}
 %---
 %[output:0b114241]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.018721899663332"],["0.977712707506129"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["1.872189966333203e-02"],["9.777127075061287e-01"]]}}
+%---
+%[output:0336b779]
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAANoAAACDCAYAAADrnAXkAAAAAXNSR0IArs4c6QAAAwRJREFUeF7t01EJACAQBUHtX\/YaKNjB\/RoDeDC83TNzlkeAwFeBLbSvvj4n8ASEZggEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAgGhBchOEBCaDRAIBIQWIDtBQGg2QCAQEFqA7AQBodkAgUBAaAGyEwSEZgMEAoELHYjzgOPuiWcAAAAASUVORK5CYII=","height":105,"width":175}}
 %---
 %[output:68368d88]
 %   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"   440"}}
 %---
 %[output:693c913f]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.030000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"     3.000000000000000e-02"}}
 %---
 %[output:5da90709]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_JH","value":"   0.075000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_JH","value":"     7.500000000000001e-02"}}
 %---
 %[output:3ed5876a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Csnubber","value":"     6.215564738292011e-09"}}
