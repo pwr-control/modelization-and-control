@@ -4,6 +4,12 @@ This subfolder contains a collection of models and control applications concerni
 Each folder contains a power electronics project, in the following a description of each project. 
 
 
+** dab theory design **:
+- two batteries connected among them by a DAB. This model is intended for deep DAB analysis in term of modulation strategies and efficiency analysis. The model contains a detailed Mosfet model.
+
+** single phase inverter **:
+- single phase inverter application with resonant pi, and system identification.
+
 **n-time_domains**:
 - this folder contains the most advanced concept in modelization of the whole repo. n-time domains are implemented, each time domain generates a trigger (TRGO) for sampling, control and pwm generation. In this modelization, effects of sliding pwm as well as clocks deviation can be fully analyzed. The model contains up to three systems in parallel, where each system is composed by a three phase active rectifier, an inverter and a permanent magnet synchronous generator. All physical blocks are developed with open source custom simscape code.
 
