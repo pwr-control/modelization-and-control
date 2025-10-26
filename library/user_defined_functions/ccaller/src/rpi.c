@@ -7,6 +7,7 @@
  */	
 
 #include <rpi.h>
+#define UDC_MIN 0.25f
 
 void rpi_init(volatile RPI *rpi_ctrl, volatile float ts, volatile float kp_rpi, volatile float ki_rpi, 
 		volatile float omega, volatile float delta, volatile float u_out_lim)
@@ -70,7 +71,8 @@ float rpi_process(volatile RPI *rpi_ctrl, volatile float i_ref,
 		rpi_ctrl->x2 = x2_z;
 	}
 
-	rpi_ctrl->y_out = x2_z + u_p_out;
+	const float udc = u_dc > UDC_MIN ? u_dc : UDC_MIN;  // avoid division by zero
+	rpi_ctrl->y_out = (x2_z + u_p_out)/udc;
 
 	const float u_out = rpi_ctrl->y_out;
 
