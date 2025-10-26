@@ -11,7 +11,7 @@ simlength = 1;
 transmission_delay = 125e-6*2;
 s=tf('s');
 
-rpi_enable = 1; % use RPI otherwise DQ PI
+rpi_enable = 0; % use RPI otherwise DQ PI
 
 %[text] ### Voltage application
 application400 = 1;
@@ -121,35 +121,14 @@ kp_inv = 1;
 ki_inv = 45;
 %[text] #### Phase shift filter for Q component derivation at 50Hz and 80Hz
 freq = 80;
-temp = 2*pi*freq*ts_inv;
-% a_phshift = (sin(temp) - cos(temp)) / (sin(temp) + cos(temp))
-a_phshift = -0.951005;
+omega_set = 2*pi*freq;
 
-% flt_dq = 2/(s/(2*pi*50)+1)^2;
-% flt_dq_d = c2d(flt_dq,ts_inv);
-% figure; bode(flt_dq_d, options); grid on
-% [num50, den50]=tfdata(flt_dq_d,'v')
-% 
-% flt_dq_80Hz = 2/(s/(2*pi*80)+1)^2;
-% flt_dq_80Hz_d = c2d(flt_dq_80Hz,ts_inv);
-% figure; bode(flt_dq_80Hz_d, options); grid on
-% [num80, den80]=tfdata(flt_dq_80Hz_d,'v')
-
-% flt_dq = (s/(2*pi*50)-1)/(s/(2*pi*50)+1);
-% flt_dq_d = c2d(flt_dq,ts_inv);
-% figure; bode(flt_dq_d, options); grid on
-% [num50, den50]=tfdata(flt_dq_d,'v')
-% 
-% flt_dq_80Hz = (s/(2*pi*80)-1)/(s/(2*pi*80)+1);
-% flt_dq_80Hz_d = c2d(flt_dq_80Hz,ts_inv);
-% figure; bode(flt_dq_80Hz_d, options); grid on
-% [num80, den80]=tfdata(flt_dq_80Hz_d,'v')
-% 
-% flt_dq_d = (a_phshift + z_inv^-1)/(1 + a_phshift*z_inv^-1);
-% figure; bode(flt_dq_d, options); grid on
+flt_dq = 2/(s/omega_set+1)^2;
+flt_dq_d = c2d(flt_dq,ts_inv);
+figure; bode(flt_dq_d, options); grid on
+[num, den]=tfdata(flt_dq_d,'v')
 
 %[text] #### Resonant PI
-omega_set = 2*pi*freq;
 kp_rpi = 2;
 ki_rpi = 45;
 delta = 0.025;
