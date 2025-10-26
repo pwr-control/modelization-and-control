@@ -1,35 +1,34 @@
 
+/*
+ * rpi_simulink.c
+ *
+ *  Created on: Feb 20, 2024
+ *
+ */
 
 #include <rpi.h>
 #include <rpi_simulink.h>
 
 unsigned int rpi_ctrl_initialized = 0;
-RPI rpi_ctrl = {0.0};
+RPI rpi_ctrl;
 
 // ------------------------------------------------------------------------------
-RPI_OUTPUT dqvector_pi_process_simulink(unsigned char reset, const float i_ref, const float i, 
-		const float u_dc, const float ts, const float u_lim)
-{
+rpi_output_t rpi_process_simulink(unsigned char reset, const float i_ref, const float i, 
+		const float u_dc, const float ts, const float kp_rpi, const float ki_rpi, 
+		const float omega, const float delta, const float u_lim) {
 
 	if (rpi_ctrl_initialized == 0) {
-	    rpi_init(&rpi_ctrl, kp_rpi, ki_rpi, omega, delta, u_lim);
+	    rpi_init(&rpi_ctrl, ts, kp_rpi, ki_rpi, omega, delta, u_lim);
 		rpi_ctrl_initialized = 1;
 	}
 
-	rpi_ts(&dqpi_ctrl, ts);
-
 	if (reset) {
-		rpi_reset(&dqpi_ctrl);
+		rpi_reset(&rpi_ctrl);
 	}
-	
-	rpi_output_t rpi_state_out = rpi_process(&rpi_ctrl, i_ref, i, u_dc);
 
-	const RPI_OUTPUT rpi_out = {
-		.x1 = rpi_state_out.x1,
-		.x2 = rpi_state_out.x2,
-		.u_out = rpi_state_out.u_out
-	};
+	rpi_output_t rpi_output;
+	rpi_output.u_out = rpi_process(&rpi_ctrl, i_ref, i, u_dc);
 	
-	return rpi_out;
+	return rpi_output;
 }
 

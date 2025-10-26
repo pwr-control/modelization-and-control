@@ -32,6 +32,7 @@ extern void rpi_ts(volatile RPI *rpi_ctrl, volatile float ts);
 
 extern void rpi_reset(volatile RPI *rpi_ctrl);
 
-extern rpi_output_t rpi_process(volatile RPI *rpi_ctrl, volatile float i_ref, volatile float i, volatile float u_dc);
+extern float rpi_process(volatile RPI *rpi_ctrl, volatile float i_ref, volatile float i, 
+	volatile float u_dc);
 
 #endif
