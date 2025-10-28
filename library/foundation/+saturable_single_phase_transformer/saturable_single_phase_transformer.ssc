@@ -1,5 +1,5 @@
-component single_phase_transformer
-% single phase transformer
+component saturable_single_phase_transformer
+% saturable single phase transformer
 
     nodes
         u1_p = foundation.electrical.electrical; % u1(+):left
@@ -9,23 +9,22 @@ component single_phase_transformer
     end
     
     outputs
-%         Bc = { 0, 'Wb/m^2' }; % _Bc_:right
-%         i1_out = { 0, 'A' }; % _i1_:right
-%         i2_out = { 0, 'A' }; % _i2_:right
-%         u1_out = { 0, 'V' }; % _u1_:right
-%         u2_out = { 0, 'V' }; % _u2_:right
-%         phi_out = { 0, 'V*s' }; % _phi_:right
+        Bc = { 0, 'Wb/m^2' }; % Bc:right
+        phi_out = { 0, 'V*s' }; % phi:right
     end
 
     parameters
-        Lm = {1.8e-3, 'H'};                  % Lm1
+        Lm = {1.8e-3, 'H'};                  % Lm1 (H)
         n1 = {16, '1'};                      % n1
         n2 = {1, '1'};                       % n2
-        Rd1 = {2e-3, 'Ohm'};                 % Rd1
-        Rd2 = {7.81e-06, 'Ohm'};             % Rd2
-        Ld1 = {6e-6, 'H'};                   % Ld1
-        Ld2 = {2.34e-08, 'H'};               % Ld2
-        Rfe = {4e3, 'Ohm'};                  % Rfe1
+        Rd1 = {2e-3, 'Ohm'};                 % Rd1 (Ohm)
+        Rd2 = {7.81e-06, 'Ohm'};             % Rd2 (Ohm)
+        Ld1 = {6e-6, 'H'};                   % Ld1 (H)
+        Ld2 = {2.34e-08, 'H'};               % Ld2 (H)
+        Rfe = {4e3, 'Ohm'};                  % Rfe1 (Ohm)
+        length_m = {0.1, 'm'};               % length_m (m)
+        mu0 = {1.256637e-6, 'H/m'};          % mu_0 (H/m)
+        mur = {1, '1'};                      % mu_r
     end
 
     variables
@@ -55,11 +54,8 @@ component single_phase_transformer
             u2 - Rd2 * i2 - Ld2 * i2.der - n2 * phi.der == 0;
             ife == (u1 - Rd1 * i1 - Ld1 * i1.der) / Rfe;
 
-%             i1_out == i1;
-%             i2_out == i2;        
-%             u1_out == u1;
-%             phi_out == phi;
-%             Bc == (n1 * (i1-ife) + n2 * i2) / lm * (mu0 * mur);
+            phi_out == phi;
+            Bc == (mu0 * mur) * (n1*(i1-ife) + n2*i2) / length_m;
         end
     end
 end
