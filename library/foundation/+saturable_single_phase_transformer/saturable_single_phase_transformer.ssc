@@ -9,8 +9,13 @@ component saturable_single_phase_transformer
     end
     
     outputs
-        Bc = { 0, 'Wb/m^2' }; % Bc:right
-        phi_out = { 0, 'V*s' }; % phi:right
+        Bc = { 0, 'Wb/m^2' };                       % Bc:right
+        phi_out = { 0, 'V*s' };                     % phi:right
+        i1_out = { 0, 'A' };                        % i1_out:right
+        i2_out = { 0, 'A' };                        % i2_out:right
+        im_out = { 0, 'A' };                        % im_out:right
+        u1_out = { 0, 'V' };                        % u1_out:right
+        u2_out = { 0, 'V' };                        % u2_out:right
     end
 
     parameters
@@ -56,6 +61,11 @@ component saturable_single_phase_transformer
 
             phi_out == phi;
             Bc == (mu0 * mur) * (n1*(i1-ife) + n2*i2) / length_m;
+            i1_out == i1;
+            i2_out == i2;
+            im_out == i1_out + n2/n1*i2_out;
+            u1_out == u1;
+            u2_out == u2;
         end
     end
 end
