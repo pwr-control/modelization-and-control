@@ -45,18 +45,13 @@ component single_phase_transformer
 
     equations
         let
-            Reluctance = (n1/n2)^2/Lm;
+            Reluctance = (n1)^2/Lm;
         in
             u1 == u1_p.v - u1_n.v;
             u2 == u2_p.v - u2_n.v;
 
-            % Reluctance * phi == (-n1 * (i1-ife) + n2 * i2);
-            % u1 - Rd1 * i1 - Ld1 * i1.der + n1 * phi.der == 0;
-            % u2 - Rd2 * i2 - Ld2 * i2.der - n2 * phi.der == 0;
-            % ife == (u1 - Rd1 * i1 - Ld1 * i1.der) / Rfe;
-
-            Reluctance * phi == (-n1 * (i1-ife) + n2 * i2);
-            u1 - Rd1 * i1 - Ld1 * i1.der + n1 * phi.der == 0;
+            Reluctance * phi == (n1 * (i1-ife) + n2 * i2);
+            u1 - Rd1 * i1 - Ld1 * i1.der - n1 * phi.der == 0;
             u2 - Rd2 * i2 - Ld2 * i2.der - n2 * phi.der == 0;
             ife == (u1 - Rd1 * i1 - Ld1 * i1.der) / Rfe;
 
