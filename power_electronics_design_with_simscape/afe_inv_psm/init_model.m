@@ -118,7 +118,7 @@ time_phase_fault = 1e3;
 start_load = 0.25;
 
 %[text] #### FRT gain factor for grid support
-settle_time = 0.15;
+settle_time = 0.175;
 k_frt_ref = 2;
 %[text] #### Reactive current limits for grid support
 
