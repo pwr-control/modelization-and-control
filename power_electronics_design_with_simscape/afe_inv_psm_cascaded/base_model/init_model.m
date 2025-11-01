@@ -9,7 +9,7 @@ options.FreqUnits = 'Hz';
 % simlength = 3.75;
 simlength = 2;
 transmission_delay = 125e-6*2;
-model = 'afe_abc_inv_psm';
+model = 'afe_abc_inv_psm_n';
 load_step_time = 1.25;
 %[text] #### local time allignment to master time
 kp_align = 0.6;
@@ -433,7 +433,7 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %%
 %[text] ## C-Caller Settings
 open_system(model);
-Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'mavgflts_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_load_est_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dqvector_pi_output_t'});

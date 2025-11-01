@@ -492,7 +492,7 @@ Csnubber = Irr^2*Lstray_module/Vdc_nom^2 %[output:00223aa5]
 Rsnubber = 1/(Csnubber*fPWM_INV)/5 %[output:57c59169]
 %[text] ## C-Caller Settings
 open_system(model);
-Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'mavgflts_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_load_est_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dqvector_pi_output_t'});
