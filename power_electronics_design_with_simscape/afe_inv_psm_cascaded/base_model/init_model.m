@@ -433,7 +433,7 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %%
 %[text] ## C-Caller Settings
 open_system(model);
-Simulink.importExternalCTypes(model,'Names',{'mavgflts_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'dsmavgflt_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_load_est_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dqvector_pi_output_t'});
