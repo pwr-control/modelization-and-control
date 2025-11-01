@@ -12,24 +12,14 @@ vn_eta_pu = 0;
 Ptrafo = 1600e3;
 I0 = 5; % no load current
 Vcc_perc = 6.6; %cc voltage percente
-
-if (application690 == 1)
-    Vline1 = 690; % primary voltage
-    Vline2 = 690; % secondary voltage
-    f_grid = 50;
-elseif (application480 == 1)
-    Vline1 = 480; % primary voltage
-    Vline2 = 480; % secondary voltage
-    f_grid = 60;
-else
-    Vline1 = 400; % primary voltage
-    Vline2 = 400; % secondary voltage
-    f_grid = 50;
-end
-
+Vline1 = 690; % primary voltage
+Vline2 = 690; % secondary voltage
 Vphase1 = Vline1/sqrt(3);
 Vphase2 = Vline2/sqrt(3);
-
+% f_grid = 47.5;
+% f_grid = 48.2;
+f_grid = 50;
+% f_grid = 51.5;
 w_grid = f_grid*2*pi;
 omega_grid_emulator_nom = w_grid;
 omega_grid_nom = w_grid;
@@ -42,31 +32,20 @@ Rm2_trafo = Vphase2^2/(Piron/3);
 psi_trafo = Lmu2_trafo*I0*sqrt(2);
 
 %% grid emulator others data
+Vdc_bez = 1070; % DClink voltage reference
 kp_vgrid = 10;
 ki_vgrid = 45;
 k_ff = 1;
 
 %% voltage reference grid emulator
-if (application690 == 1)
-    Igrid_phase_normalization_factor = 270*sqrt(2);
-elseif (application480 == 1)
-    Igrid_phase_normalization_factor = 360*sqrt(2);
-else
-    Igrid_phase_normalization_factor = 360*sqrt(2);
-end
+Igrid_phase_normalization_factor = 270*sqrt(2);
 Vgrid_phase_normalization_factor = Vphase2*sqrt(2);
 I_phase_normalization_factor = Igrid_phase_normalization_factor; % misura della corrente 
 V_phase_normalization_factor = Vgrid_phase_normalization_factor; % misura della tensione dopo il trafo
 ugrid_factor = 1;
 
-if (application690 == 1)
-    Vemu_ref = 690/sqrt(3); % tensione di fase rms di riferimento in uscita al trafo
-    Vemu_ref_norm = Vemu_ref * sqrt(2) / V_phase_normalization_factor;
-elseif (application480 == 1)
-    Vemu_ref = 480/sqrt(3); % tensione di fase rms di riferimento in uscita al trafo
-    Vemu_ref_norm = Vemu_ref * sqrt(2) / V_phase_normalization_factor;
-else
-    Vemu_ref = 400/sqrt(3); % tensione di fase rms di riferimento in uscita al trafo
-    Vemu_ref_norm = Vemu_ref * sqrt(2) / V_phase_normalization_factor;
-end
+Vemu_ref = 400; % tensione di fase rms di riferimento in uscita al trafo
+Vemu_ref_norm = Vemu_ref * sqrt(2) / V_phase_normalization_factor;
+
+
 
