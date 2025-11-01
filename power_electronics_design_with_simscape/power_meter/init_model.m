@@ -9,7 +9,7 @@ options.FreqUnits = 'Hz';
 % simlength = 3.75;
 simlength = 0.25;
 transmission_delay = 125e-6*2;
-model = 'afe_abc_inv_psm';
+model = 'iec_power_meter';
 load_step_time = 1.25;
 %[text] ## Grid Emulator Settings
 grid_emulator;
@@ -68,6 +68,9 @@ rms_perios = 1;
 n1 = rms_perios/f_grid/ts_afe;
 rms_perios = 10;
 n10 = rms_perios/f_grid/ts_afe;
+%[text] ## C-Caller Settings
+open_system(model);
+Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
 %%
 %[text] ### 
 

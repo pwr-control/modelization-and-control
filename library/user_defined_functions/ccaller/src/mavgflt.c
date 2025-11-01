@@ -1,23 +1,12 @@
 #include <mavgflt.h>
 
-void mavgflt_init(volatile MAVGFLT *f)
-{
-	f->ts = 0.0;
-	mavgflt_reset(f);
-}
-
-void mavgflt_ts(volatile MAVGFLT *f, volatile float ts)
-{
-	f->ts = ts;
-}
-
-void mavgflt_reset(volatile MAVGFLT *f)
+void mavgflt_init(volatile MAVGFLT *f, volatile float ts)
 {
 	int i;
+	f->ts = ts;
 
 	f->pinput = 0.0;
-	f->sshort = 0.0;
-	f->slong = 0.0;
+	f->sum_value = 0.0;
 	f->cbpointer = 0;
 	f->cbsample = 0;
 	for (i = 0; i < MAVGFLT_SIZE_MAX; i++) {
@@ -25,6 +14,8 @@ void mavgflt_reset(volatile MAVGFLT *f)
 	}
 }
 
+// ------------------------------------------------------------------------------
+// Get buffer pointer	
 static unsigned int get_buffer_pointer(const unsigned int cbpointer, const unsigned int cnperiod)
 {
 	if (cnperiod <= cbpointer) {
@@ -46,18 +37,15 @@ float mavgflt_process(volatile MAVGFLT *f, float input, const float period)
 {
 	if (period > 0.0) {
 		
-		float samples_requested_f = period / f->ts;
+		unsigned int samples_requested = floor(period / f->ts);
 		
-		if (samples_requested_f > MAVGFLT_SIZE_MAX - 1)
-		    samples_requested_f = MAVGFLT_SIZE_MAX - 1;
+		if (samples_requested > MAVGFLT_SIZE_MAX - 1)
+		    samples_requested = MAVGFLT_SIZE_MAX - 1;
 		
-		const unsigned int cnbuffer = samples_requested_f + 1;
+		const unsigned int cnbuffer = samples_requested + 1;
 		
-		const float sampling_fraction = samples_requested_f + 1 - cnbuffer;
-
 		if (cnbuffer > f->cbsample) {
-			f->sshort += f->pinput;
-			f->slong += input;
+			f->sum_value += f->pinput;
 			f->cbsample++;
 		}
 		else if (cnbuffer < f->cbsample) {
@@ -65,16 +53,14 @@ float mavgflt_process(volatile MAVGFLT *f, float input, const float period)
 			const float two_oldest_samples = get_buffer_value((MAVGFLT*) f, f->cbsample)
 												+ get_buffer_value((MAVGFLT*) f, decremented_cbsample);
 
-			f->sshort += f->pinput - two_oldest_samples;
-			f->slong += input - two_oldest_samples;
+			f->sum_value += f->pinput - two_oldest_samples;
 					
 			f->cbsample = decremented_cbsample;
 		}
 		else {
 			const float oldest_period_sample = get_buffer_value((MAVGFLT*) f, f->cbsample);
 			
-			f->sshort += f->pinput - oldest_period_sample;
-			f->slong += input - oldest_period_sample;
+			f->sum_value += f->pinput - oldest_period_sample;
 		}
 		
 		f->buffer[f->cbpointer] = input;
@@ -87,11 +73,9 @@ float mavgflt_process(volatile MAVGFLT *f, float input, const float period)
 			f->cbpointer = 0;
 		}
 
-		const float cbsample_short = f->cbsample - 1;
-		const float filter_output_short = cbsample_short ? f->sshort / cbsample_short : 0.0;
-		const float filter_output_long = f->slong / f->cbsample;
+		const float filter_output = f->sum_value / f->cbsample;
 		
-		return filter_output_short * (1 - sampling_fraction) + filter_output_long * sampling_fraction;
+		return filter_output;
 	}
 	else {
 		return 0.0;
