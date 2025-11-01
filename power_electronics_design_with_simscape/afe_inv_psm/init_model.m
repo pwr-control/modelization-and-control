@@ -10,6 +10,7 @@ options.FreqUnits = 'Hz';
 simlength = 2;
 transmission_delay = 125e-6*2;
 model = 'afe_abc_inv_psm';
+use_thermal_model = 1;
 load_step_time = 1.25;
 %[text] #### local time allignment to master time
 kp_align = 0.6;
@@ -515,11 +516,24 @@ end
 % close(hscope);
 % set(0,'ShowHiddenHandles',shh);
 
+%[text] ## Enable/Disable Subsystems
+
+if use_thermal_model
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'off');
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
+else
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'off');
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
+end
 
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":41.3}
+%   data: {"layout":"onright","rightPanelPercent":26.9}
 %---
 %[output:261bf7e5]
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
