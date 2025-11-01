@@ -10,7 +10,7 @@ options.FreqUnits = 'Hz';
 simlength = 2;
 transmission_delay = 125e-6*2;
 model = 'afe_abc_inv_psm';
-use_thermal_model = 1;
+use_thermal_model = 0;
 load_step_time = 1.25;
 %[text] #### local time allignment to master time
 kp_align = 0.6;
