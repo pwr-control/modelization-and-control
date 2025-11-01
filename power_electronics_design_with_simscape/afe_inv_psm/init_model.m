@@ -436,7 +436,7 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 Vf_diode_rectifier = 0.7;
 Rdon_diode_rectifier = 1.85e-3;
 %[text] ### HeatSink
-weigth = 0.150; % kg
+weigth = 0.150/10; % kg - when /10 thermal inertia is not accounted 
 cp_al = 880; % specific heat_capacity J/K/kg - alluminium
 heat_capacity = cp_al*weigth % J/K %[output:66181e92]
 thermal_conducibility_al = 204; % W/(m K) - alluminium
@@ -579,7 +579,7 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
 %---
 %[output:66181e92]
-%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"   132"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
 %---
 %[output:0b1b4a88]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
