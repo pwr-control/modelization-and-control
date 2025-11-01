@@ -29,7 +29,7 @@ use_load_estimator = 0; %
 use_estimator_from_mb = 0; %mb model based
 use_motor_speed_control_mode = 0; 
 use_advanced_pll = 0; % advanced pll should compensate second harmonic
-use_dq_pll_ccaller_mod1 = 1; % only module 1
+use_dq_pll_ccaller_mod1 = 0; % only module 1
 use_dq_pll_ccaller_mod2 = 0; % only module 1
 %[text] ### Settings for CCcaller versus Simulink
 use_observer_from_simulink_module_1 = 0;
@@ -42,7 +42,7 @@ use_current_controller_from_ccaller_module_1 = 1;
 use_current_controller_from_simulink_module_2 = 1;
 use_current_controller_from_ccaller_module_2 = 0;
 
-use_moving_average_from_ccaller_mod1 = 1;
+use_moving_average_from_ccaller_mod1 = 0;
 use_moving_average_from_ccaller_mod2 = 0;
 mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
 %%
