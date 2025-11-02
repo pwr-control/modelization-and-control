@@ -10,7 +10,7 @@ options.FreqUnits = 'Hz';
 simlength = 2;
 transmission_delay = 125e-6*2;
 model = 'afe_abc_inv_psm';
-use_thermal_model = 0;
+use_thermal_model = 1;
 load_step_time = 1.25;
 %[text] #### local time allignment to master time
 kp_align = 0.6;
@@ -42,10 +42,10 @@ use_current_controller_from_ccaller_module_1 = 1;
 use_current_controller_from_simulink_module_2 = 1;
 use_current_controller_from_ccaller_module_2 = 0;
 
-use_moving_average_from_ccaller_mod1 = 0;
+use_moving_average_from_ccaller_mod1 = 1;
 use_moving_average_from_ccaller_mod2 = 0;
 mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
-start_delay_mavg_filter = 0.125;
+dmavg_filter_enable_time = 0.025;
 %%
 %[text] ## Grid Emulator Settings
 grid_emulator;
