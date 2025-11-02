@@ -42,7 +42,7 @@ MAVGFLTS_OUTPUT mavgflts_process_simulink(const float input, const float period,
 			.pinput = filter_instance->pinput,
 			.cbpointer = filter_instance->cbpointer,
 			.cbsample = filter_instance->cbsample,
-			.mavg_output = output_value
+			.mavgs_output = output_value
 		};
 		return filter_output;
 	}

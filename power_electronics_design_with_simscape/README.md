@@ -16,7 +16,7 @@ Each folder contains a power electronics project, in the following a description
 ** single phase inverter **:
 - single phase inverter application with resonant pi, and system identification.
 
-** n-time_domains **:
+** afe-inv-psm-cascade **:
 - this folder contains the most advanced concept in modelization of the whole repo. n-time domains are implemented, each time domain generates a trigger (TRGO) for sampling, control and pwm generation. In this modelization, effects of sliding pwm as well as clocks deviation can be fully analyzed. The model contains up to three systems in parallel, where each system is composed by a three phase active rectifier, an inverter and a permanent magnet synchronous generator. All physical blocks are developed with open source custom simscape code.
 
 ** ac-ac-buck-converter **:
@@ -80,3 +80,6 @@ In particular:
 ** zvs-inv-single-phase-inverter **:
 - zero voltage switching based on full-bridge LLC (switching frequenzy 5 times higher than resonant tank);
 - single phase inverter with control algoritms.
+
+** power_meter **:
+- in this folder an implementation of the power measure according to VDE/IEC is analyzed.

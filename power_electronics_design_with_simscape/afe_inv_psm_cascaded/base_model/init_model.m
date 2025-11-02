@@ -44,6 +44,7 @@ use_current_controller_from_ccaller_module_2 = 0;
 use_moving_average_from_ccaller_mod1 = 1;
 use_moving_average_from_ccaller_mod2 = 0;
 mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
+dmavg_filter_enable_time = 0.025;
 %%
 %[text] ## Grid Emulator Settings
 grid_emulator;
@@ -433,6 +434,8 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %%
 %[text] ## C-Caller Settings
 open_system(model);
+Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'dsmavgflt_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'mavgflts_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_load_est_output_t'});
@@ -463,40 +466,40 @@ end
 %   data: {"layout":"onright","rightPanelPercent":41.3}
 %---
 %[output:65aea0a9]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"     5.000000000000000e-01"}}
 %---
 %[output:0853a9fc]
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
 %---
 %[output:9fc20da5]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"     5.000000000000000e-01"}}
 %---
 %[output:54bcb499]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"     4.478239263389039e+01"}}
 %---
 %[output:2d7b31d9]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.183872841045359"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"     1.838728410453592e-01"}}
 %---
 %[output:9546200a]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.183872841045359"],["44.782392633890389"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["1.838728410453592e-01"],["4.478239263389039e+01"]]}}
 %---
 %[output:83b297af]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Afht","rows":2,"type":"double","value":[["0","1.000000000000000e+00"],["-9.869604401089359e+04","-1.570796326794897e+01"]]}}
 %---
 %[output:8fe1a3ae]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Lfht","rows":2,"type":"double","value":[["1.555088363526948e+03"],["2.716608611399846e+05"]]}}
 %---
 %[output:6ebfb55e]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000e+00","1.250000000000000e-04"],["-1.233700550136170e+01","9.980365045915064e-01"]]}}
 %---
 %[output:36166f87]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.194386045440868"],["33.957607642498068"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["1.943860454408685e-01"],["3.395760764249807e+01"]]}}
 %---
 %[output:3a686f16]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Csnubber","value":"     4.913092846536815e-08"}}
 %---
 %[output:152b21ae]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"  50.884444444444455"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"     5.088444444444445e+01"}}
 %---
 %[output:683290bb]
 %   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
@@ -505,13 +508,13 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
 %---
 %[output:79e2ff1c]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.036997274900261"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"     3.699727490026117e-02"}}
 %---
 %[output:487a1b6b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   1.533540968663871"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"     1.533540968663871e+00"}}
 %---
 %[output:95c36cd7]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.414020903616658"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"     4.140209036166578e-01"}}
 %---
 %[output:849978af]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     2.438383113714302e+02"}}

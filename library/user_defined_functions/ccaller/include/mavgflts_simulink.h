@@ -9,7 +9,7 @@ typedef struct mavgflts_output_s {
 	float				pinput;         // previous input
 	unsigned int		cbpointer;      // current buffer pointer
 	unsigned int		cbsample;      	// current buffer sample
-	float 				mavg_output;    // moving average filter output
+	float 				mavgs_output;    // moving average filter output
 } mavgflts_output_t;
 
 #define MAVGFLTS_OUTPUT mavgflts_output_t

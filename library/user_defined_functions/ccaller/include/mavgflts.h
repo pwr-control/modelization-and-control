@@ -1,10 +1,7 @@
 #ifndef _MAVGFLTS_
 #define _MAVGFLTS_
 
-
-#define MAVGFLTS_SIZE		1520
-#define MAVGFLTS_SIZE_MIN	780
-#define MAVGFLTS_SIZE_MAX	4200
+#define MAVGFLTS_SIZE_MAX	1600
 
 typedef struct mavgflts_s {
 	float					ts;						    /* time base */
