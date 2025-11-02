@@ -70,8 +70,6 @@ rms_perios = 10;
 n10 = rms_perios/f_grid/ts_afe;
 %[text] ## C-Caller Settings
 open_system(model);
-Simulink.importExternalCTypes(model,'Names',{'dsmavgflt_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'mavgflts_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
 %%
 %[text] ### 
