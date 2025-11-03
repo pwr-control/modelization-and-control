@@ -434,64 +434,23 @@ omega_flt_g1 = 1 - omega_flt_g0;
 motorc_m_scale = 2/3*Vdc_bez/ubez;
 %%
 %[text] ## IGBT, MOSFET, DIODE and snubber data
-%[text] ### Diode rectifier
+%[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
+%[text] #### Diode rectifier
 Vf_diode_rectifier = 0.7;
 Rdon_diode_rectifier = 1.85e-3;
-%[text] ### HeatSink\_1
-weigth = 0.150/10; % kg - when /10 thermal inertia is not accounted 
-cp_al = 880; % specific heat_capacity J/K/kg - alluminium
-heat_capacity = cp_al*weigth % J/K %[output:66181e92]
-thermal_conducibility_al = 204; % W/(m K) - alluminium
-Rth_switch_HA = 10/8000*6 % K/W %[output:0b1b4a88]
-Rth_mosfet_HA = Rth_switch_HA %[output:4faacf15]
-Tambient = 40;
-DThs_init = 0;
-%[text] ### SKM1700MB20R4S2I4
-% Rds_on = 1.04e-3; % Rds [Ohm]
-% Vdon_diode = 4; % V
-% Vgamma = 4; % V
-% Rdon_diode = 1.85e-3; % V
-% Eon = 77e-3; % J @ Tj = 125°C
-% Eoff = 108e-3; % J @ Tj = 125°C
-% Eerr = 9.7e-3; % J @ Tj = 125°C
-% Voff_sw_losses = 1300; % V
-% Ion_sw_losses = 1000; % A
-% 
-% JunctionTermalMass = 2; % J/K
-% Rtim = 0.01;
-% Rth_mosfet_JC = 19/1000; % K/W
-% Rth_mosfet_CH = 6/1000; % K/W
-% Rth_mosfet_JH = Rtim + Rth_mosfet_JC + Rth_mosfet_CH % K/W
-% Lstray_module = 12e-9;
-% 
-% Irr = 475;
-% Csnubber = Irr^2*Lstray_module/Vdc_nom^2
-% Rsnubber = 1/(Csnubber*fPWM_INV)/5
-%[text] ### FF650R17IE4
-Vth = 5.5; % [V]
-Rce_on = 0.15e-3; % Rce_on [Ohm]
-Vce_sat = 2.35; % Vce_sat [V]
-Vdon_diode = 2; % [V]
-Rdon_diode = 0.15e-3; % [Ohm]
-Eon = 300e-3; % J @ Tj = 125°C
-Eoff = 205e-3; % J @ Tj = 125°C
-Erec = 135e-3; % J @ Tj = 125°C
-Voff_sw_losses = 900; % V
-Ion_sw_losses = 650; % A
+%[text] #### HeatSink
+heatsink_liquid_2kW; %[output:00223aa5] %[output:57c59169] %[output:52d62a1b]
+%[text] #### SKM1700MB20R4S2I4
+% danfoss_SKM1700MB20R4S2I4;
+infineon_FF1200R17IP5
+% infineon_FF650R17IE4;
+% infineon_FF900R12IE4;
 
-JunctionTermalMass = 2; % J/K
-Rtim = 0.01;
-Rth_switch_JC = 36/1000; % K/W
-Rth_switch_CH = 14/1000; % K/W
-Rth_switch_JH = Rtim + Rth_switch_JC + Rth_switch_CH % K/W %[output:7d9035c7]
-Rth_diode_JC = 72/1000; % K/W
-Rth_diode_CH = 27/1000; % K/W
-Rth_diode_JH = Rtim + Rth_diode_JC + Rth_diode_CH % K/W %[output:315715cc]
-Lstray_module = 18e-9;
+% Csnubber = Irr^2*Lstray_module/Vdab2_dc_nom^2
+% Rsnubber = 1/(Csnubber*fPWM_DAB)/5
 
-Irr = 475;
-Csnubber = Irr^2*Lstray_module/Vdc_nom^2 %[output:00223aa5]
-Rsnubber = 1/(Csnubber*fPWM_INV)/5 %[output:57c59169]
+Csnubber = Irr^2*Lstray_module/Vdc_nom^2 %[output:83bcd2ea]
+Rsnubber = 1/(Csnubber*fPWM_INV)/5 %[output:8ca617da]
 %[text] ## C-Caller Settings
 open_system(model);
 Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
@@ -539,40 +498,40 @@ end
 %   data: {"layout":"onright","rightPanelPercent":26.9}
 %---
 %[output:261bf7e5]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"     5.000000000000000e-01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
 %---
 %[output:5b778b38]
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
 %---
 %[output:01a56420]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"     5.000000000000000e-01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
 %---
 %[output:60dddf1e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"     4.478239263389039e+01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
 %---
 %[output:58103d1f]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"     1.838728410453592e-01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.183872841045359"}}
 %---
 %[output:1d032500]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["1.838728410453592e-01"],["4.478239263389039e+01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.183872841045359"],["44.782392633890389"]]}}
 %---
 %[output:0e3a00ad]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Afht","rows":2,"type":"double","value":[["0","1.000000000000000e+00"],["-9.869604401089359e+04","-1.570796326794897e+01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
 %[output:9856533a]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Lfht","rows":2,"type":"double","value":[["1.555088363526948e+03"],["2.716608611399846e+05"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
 %[output:1336d85b]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000e+00","1.250000000000000e-04"],["-1.233700550136170e+01","9.980365045915064e-01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
 %---
 %[output:359194e8]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["1.943860454408685e-01"],["3.395760764249807e+01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.194386045440868"],["33.957607642498068"]]}}
 %---
 %[output:0b9de73f]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Csnubber","value":"     4.913092846536815e-08"}}
 %---
 %[output:41abf538]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"     5.088444444444445e+01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"  50.884444444444455"}}
 %---
 %[output:254cc10e]
 %   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
@@ -581,13 +540,13 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
 %---
 %[output:7fd34f5b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"     3.699727490026117e-02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.036997274900261"}}
 %---
 %[output:4ac622d1]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"     1.533540968663871e+00"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   1.533540968663871"}}
 %---
 %[output:559ef329]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"     4.140209036166578e-01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.414020903616658"}}
 %---
 %[output:06167321]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     2.438383113714302e+02"}}
@@ -595,24 +554,18 @@ end
 %[output:8998cf78]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
 %---
-%[output:66181e92]
-%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"     1.320000000000000e+01"}}
-%---
-%[output:0b1b4a88]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"     7.500000000000000e-03"}}
-%---
-%[output:4faacf15]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"     7.500000000000000e-03"}}
-%---
-%[output:7d9035c7]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_JH","value":"     6.000000000000000e-02"}}
-%---
-%[output:315715cc]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_diode_JH","value":"     1.090000000000000e-01"}}
-%---
 %[output:00223aa5]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Csnubber","value":"     3.547253035199581e-09"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
 %---
 %[output:57c59169]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"     1.409541397353032e+04"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
+%---
+%[output:52d62a1b]
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
+%---
+%[output:83bcd2ea]
+%   data: {"dataType":"textualVariable","outputData":{"name":"Csnubber","value":"     1.902349550179055e-08"}}
+%---
+%[output:8ca617da]
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"     2.628328741965106e+03"}}
 %---
