@@ -437,7 +437,7 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %[text] ### Diode rectifier
 Vf_diode_rectifier = 0.7;
 Rdon_diode_rectifier = 1.85e-3;
-%[text] ### HeatSink
+%[text] ### HeatSink\_1
 weigth = 0.150/10; % kg - when /10 thermal inertia is not accounted 
 cp_al = 880; % specific heat_capacity J/K/kg - alluminium
 heat_capacity = cp_al*weigth % J/K %[output:66181e92]
