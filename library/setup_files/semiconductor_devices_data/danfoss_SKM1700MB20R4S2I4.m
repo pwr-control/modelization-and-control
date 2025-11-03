@@ -1,5 +1,5 @@
 
-%% SKM1700MB20R4S2I4 
+%% SKM1700MB20R4S2I4 (MOSFET)
 Vth = 5.5;                                              % [V]
 Rds_on = 1.04e-3;                                       % [Ohm]
 Vdon_diode = 4;                                         % [V]
