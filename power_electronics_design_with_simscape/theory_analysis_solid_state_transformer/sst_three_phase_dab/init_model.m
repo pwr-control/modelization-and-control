@@ -367,13 +367,54 @@ title('open circuit voltage(state of charge)'); %[output:9482b399]
 grid on %[output:9482b399]
 
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
-%[text] #### HeatSink
+%[text] #### HeatSink settings
 heatsink_liquid_2kW; %[output:3c0bacdf] %[output:5cff4622] %[output:87721deb]
-%[text] #### SKM1700MB20R4S2I4
-% danfoss_SKM1700MB20R4S2I4;
-infineon_FF1000UXTR23T2M1;
-% Csnubber = Irr^2*Lstray_module/Vdab2_dc_nom^2
-% Rsnubber = 1/(Csnubber*fPWM_DAB)/5
+%[text] #### DEVICES settings
+danfoss_SKM1700MB20R4S2I4;
+
+dab.Vth = Vth;                                  % [V]
+dab.Rds_on = Rds_on;                            % [Ohm]
+dab.Vdon_diode = Vdon_diode;                    % [V]
+dab.Vgamma = Vgamma;                            % [V]
+dab.Rdon_diode = Rdon_diode;                    % [Ohm]
+dab.Eon = Eon;                                  % [J] @ Tj = 125°C
+dab.Eoff = Eoff;                                % [J] @ Tj = 125°C
+dab.Eerr = Eerr;                                % [J] @ Tj = 125°C
+dab.Voff_sw_losses = Voff_sw_losses;            % [V]
+dab.Ion_sw_losses = Ion_sw_losses;              % [A]
+dab.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+dab.Rtim = Rtim;                                % [K/W]
+dab.Rth_mosfet_JC = Rth_mosfet_JC;              % [K/W]
+dab.Rth_mosfet_CH = Rth_mosfet_CH;              % [K/W]
+dab.Rth_mosfet_JH = Rth_mosfet_JH;              % [K/W]
+dab.Lstray_module = Lstray_module;              % [H]
+dab.Irr = Irr;                                  % [A]
+dab.Csnubber = Csnubber;                        % [F]
+dab.Rsnubber = Rsnubber;                        % [Ohm]
+dab.Csnubber = Irr^2*Lstray_module/Vdab2_dc_nom^2 %[output:607bd0d3]
+dab.Rsnubber = 1/(Csnubber*fPWM_DAB)/5 %[output:9a2cb80e]
+
+% infineon_FF1000UXTR23T2M1;
+inv.Vth = Vth;                                  % [V]
+inv.Rds_on = Rds_on;                            % [Ohm]
+inv.Vdon_diode = Vdon_diode;                    % [V]
+inv.Vgamma = Vgamma;                            % [V]
+inv.Rdon_diode = Rdon_diode;                    % [Ohm]
+inv.Eon = Eon;                                  % [J] @ Tj = 125°C
+inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
+inv.Eerr = Eerr;                                % [J] @ Tj = 125°C
+inv.Voff_sw_losses = Voff_sw_losses;            % [V]
+inv.Ion_sw_losses = Ion_sw_losses;              % [A]
+inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+inv.Rtim = Rtim;                                % [K/W]
+inv.Rth_mosfet_JC = Rth_mosfet_JC;              % [K/W]
+inv.Rth_mosfet_CH = Rth_mosfet_CH;              % [K/W]
+inv.Rth_mosfet_JH = Rth_mosfet_JH;              % [K/W]
+inv.Lstray_module = Lstray_module;              % [H]
+inv.Irr = Irr;                                  % [A]
+inv.Csnubber = Csnubber;                        % [F]
+inv.Rsnubber = Rsnubber;                        % [Ohm]
+
 %[text] ## C-Caller Settings
 open_system(model);
 Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
@@ -452,4 +493,10 @@ end
 %---
 %[output:87721deb]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
+%---
+%[output:607bd0d3]
+%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"dab","value":"                   Vth: 5.500000000000000\n                Rds_on: 0.001040000000000\n            Vdon_diode: 4\n                Vgamma: 4\n            Rdon_diode: 0.001850000000000\n                   Eon: 0.077000000000000\n                  Eoff: 0.108000000000000\n                  Eerr: 0.009700000000000\n        Voff_sw_losses: 1300\n         Ion_sw_losses: 1000\n    JunctionTermalMass: 2\n                  Rtim: 0.010000000000000\n         Rth_mosfet_JC: 0.019000000000000\n         Rth_mosfet_CH: 0.006000000000000\n         Rth_mosfet_JH: 0.035000000000000\n         Lstray_module: 1.200000000000000e-08\n                   Irr: 475\n              Csnubber: 1.203333333333333e-09\n              Rsnubber: 2200"}}
+%---
+%[output:9a2cb80e]
+%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"dab","value":"                   Vth: 5.500000000000000\n                Rds_on: 0.001040000000000\n            Vdon_diode: 4\n                Vgamma: 4\n            Rdon_diode: 0.001850000000000\n                   Eon: 0.077000000000000\n                  Eoff: 0.108000000000000\n                  Eerr: 0.009700000000000\n        Voff_sw_losses: 1300\n         Ion_sw_losses: 1000\n    JunctionTermalMass: 2\n                  Rtim: 0.010000000000000\n         Rth_mosfet_JC: 0.019000000000000\n         Rth_mosfet_CH: 0.006000000000000\n         Rth_mosfet_JH: 0.035000000000000\n         Lstray_module: 1.200000000000000e-08\n                   Irr: 475\n              Csnubber: 1.203333333333333e-09\n              Rsnubber: 6.944444444444443e+05"}}
 %---
