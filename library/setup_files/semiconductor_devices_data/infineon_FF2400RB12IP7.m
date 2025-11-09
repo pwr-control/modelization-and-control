@@ -1,5 +1,5 @@
 
-%% FF2400RB12IP7 (IGBT)
+%% FF2400RB12IP7 (IGBT - 3-Level)
 Vth = 5.5;                                              % [V]
 Rce_on = 0.15e-3;                                       % [Ohm]
 Vce_sat = 1.37;                                         % [V]
