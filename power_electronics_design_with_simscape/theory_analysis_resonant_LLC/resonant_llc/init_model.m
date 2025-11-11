@@ -474,10 +474,10 @@ Simulink.importExternalCTypes(model,'Names',{'dqpll_grid_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 
 %[text] ## Remove Scopes Opening Automatically
-% open_scopes = find_system(model, 'BlockType', 'Scope');
-% for i = 1:length(open_scopes)
-%     set_param(open_scopes{i}, 'Open', 'off');
-% end
+open_scopes = find_system(model, 'BlockType', 'Scope');
+for i = 1:length(open_scopes)
+    set_param(open_scopes{i}, 'Open', 'off');
+end
 
 % shh = get(0,'ShowHiddenHandles');
 % set(0,'ShowHiddenHandles','On');
