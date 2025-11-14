@@ -8,7 +8,7 @@ colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 time_offset = 0.0;
-t1c = time_tc_sim(end) - Nc*tc/2000 - time_offset;
+t1c = time_tc_sim(end) - Nc*tc/4000 - time_offset;
 t2c = time_tc_sim(end) - time_offset;
 t1s = time_ts_dab_sim(end) - Ns_dab*ts_dab/2;
 t2s = time_ts_dab_sim(end);
@@ -16,9 +16,9 @@ t3s = time_ts_dab_sim(end) - Ns_dab*ts_dab/10;
 t4s = time_ts_dab_sim(end);
 t5s = time_ts_dab_sim(end) - Ns_dab*ts_dab/20;
 t6s = time_ts_dab_sim(end);
-t3c = time_tc_sim(end) - Nc*tc/1000 - time_offset;
+t3c = time_tc_sim(end) - Nc*tc/2000 - time_offset;
 t4c = time_tc_sim(end) - time_offset;
-t5c = time_tc_sim(end) - Nc*tc/2000 - time_offset;
+t5c = time_tc_sim(end) - Nc*tc/4000 - time_offset;
 t6c = time_tc_sim(end) - time_offset;
 fontsize_plotting = 14;
 
@@ -49,13 +49,13 @@ yyaxis left;
 plot(time_tc_sim,dab_current_input_modA_sim,'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-set(gca,'ylim',[-400 0]);
+set(gca,'ylim',[-300 -200]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
 plot(time_tc_sim,dab_voltage_input_modA_sim,'-','LineWidth',tratto2,'Color',colore2);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[1200 1400]);
+set(gca,'ylim',[1290 1340]);
 hold off
 title('DAB input current and voltage','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$i_{1}^{dc}$','$u_{1}^{dc}$','Location','northwestoutside',...
@@ -125,13 +125,13 @@ yyaxis left;
 plot(time_tc_sim,current_battery_sim,'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-set(gca,'ylim',[-800 -200]);
+set(gca,'ylim',[-600 -400]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
 plot(time_tc_sim,voltage_battery_sim,'-','LineWidth',tratto2,'Color',colore2);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[1300 1360]);
+set(gca,'ylim',[1310 1320]);
 hold off
 title('DC grid (battery) current and voltage','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$i_{g}^{dc}$','$u_{g}^{dc}$','Location','northwestoutside',...
@@ -273,7 +273,7 @@ figure(7);
 subplot 211
 plot(time_tc_sim,inverter_1_dab_devices_data_modA_sim(:,1),'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$p/W$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[185 200]);
+set(gca,'ylim',[970 1000]);
 set(gca,'xlim',[t1s t2s]);
 title('DAB primary side: Q1 power loss','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$p_{Q_1}$','Location','northwestoutside',...
@@ -296,7 +296,7 @@ ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
 legend('$u_{Q_1}$','$i_{Q_1}$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 title('DAB primary side: Q1 voltage and current','Interpreter','latex','FontSize',fontsize_plotting);
-set(gca,'ylim',[-1000 200]);
+set(gca,'ylim',[-450 300]);
 grid on
 h=gcf;
 set(h,'PaperOrientation','landscape');
@@ -310,7 +310,7 @@ figure(8);
 subplot 211
 plot(time_tc_sim,inverter_1_dab_devices_data_modA_sim(:,6),'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$p/W$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[185 200]);
+set(gca,'ylim',[900 950]);
 set(gca,'xlim',[t1s t2s]);
 title('DAB primary side: Q2 power loss','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$p_{Q_2}$','Location','northwestoutside',...
@@ -333,7 +333,7 @@ ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
 legend('$u_{Q_2}$','$i_{Q_2}$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 title('DAB primary side: Q2 voltage and current','Interpreter','latex','FontSize',fontsize_plotting);
-set(gca,'ylim',[-1000 200]);
+set(gca,'ylim',[-450 300]);
 grid on
 h=gcf;
 set(h,'PaperOrientation','landscape');
@@ -346,7 +346,7 @@ figure(9);
 subplot 211
 plot(time_tc_sim,inverter_2_dab_devices_data_modA_sim(:,1),'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$p/W$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[325 335]);
+set(gca,'ylim',[2100 2200]);
 set(gca,'xlim',[t1s t2s]);
 title('DAB secondary side: Q1 power loss','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$p_{Q_1}$','Location','northwestoutside',...
@@ -367,7 +367,7 @@ ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
 plot(time_tc_sim,inverter_2_dab_devices_data_modA_sim(:,3),'-','LineWidth',tratto1,'Color',colore2);
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[-200 1000]);
+set(gca,'ylim',[-300 450]);
 grid on
 legend('$u_{Q_1}$','$i_{Q_1}$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
@@ -386,7 +386,7 @@ figure(10);
 subplot 211
 plot(time_tc_sim,inverter_2_dab_devices_data_modA_sim(:,6),'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$p/W$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[320 330]);
+set(gca,'ylim',[2050 2200]);
 set(gca,'xlim',[t1s t2s]);
 title('DAB secondary side: Q2 power loss','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$p_{Q_2}$','Location','northwestoutside',...
@@ -406,7 +406,7 @@ ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
 plot(time_tc_sim,inverter_2_dab_devices_data_modA_sim(:,8),'-','LineWidth',tratto1,'Color',colore2);
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[-200 1000]);
+set(gca,'ylim',[-300 450]);
 grid on
 legend('$u_{Q_2}$','$i_{Q_2}$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);

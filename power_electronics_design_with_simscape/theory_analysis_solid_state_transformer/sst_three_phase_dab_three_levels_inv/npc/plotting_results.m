@@ -49,13 +49,13 @@ yyaxis left;
 plot(time_tc_sim,dab_current_input_modA_sim,'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-set(gca,'ylim',[-350 0]);
+set(gca,'ylim',[-325 -200]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
 plot(time_tc_sim,dab_voltage_input_modA_sim,'-','LineWidth',tratto2,'Color',colore2);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[1200 1400]);
+set(gca,'ylim',[1275 1375]);
 hold off
 title('DAB input current and voltage','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$i_{1}^{dc}$','$u_{1}^{dc}$','Location','northwestoutside',...
@@ -70,7 +70,7 @@ set(h,'PaperPosition', [0 0 1 1]);
 print('dab_ui_output_input','-depsc');
 movefile('dab_ui_output_input.eps', 'figures');
 
-figure;
+figure(2);
 subplot 211
 colororder({'k','k'})
 yyaxis left;
