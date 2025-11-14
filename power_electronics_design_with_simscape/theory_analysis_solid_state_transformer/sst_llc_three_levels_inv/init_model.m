@@ -19,7 +19,7 @@ application400 = 0;
 application690 = 1;
 application480 = 0;
 
-n_modules = 1;
+n_modules = 2;
 %[text] ## Settings and initialization
 fPWM = 5e3;
 fPWM_AFE = fPWM; % PWM frequency 
