@@ -158,8 +158,8 @@ ki_v_dab = 45;
 %%
 %[text] ### AFE current control parameters
 %[text] #### Resonant PI
-Vac_FS = V_phase_normalization_factor %[output:23e72b9a]
-Iac_FS = I_phase_normalization_factor %[output:2e20a02c]
+Vac_FS = V_phase_normalization_factor %[output:2e20a02c]
+Iac_FS = I_phase_normalization_factor %[output:833b5921]
 
 kp_rpi = 0.25;
 ki_rpi = 18;
@@ -357,12 +357,12 @@ rKalman = 1;
 Zmodel = (0:1e-3:1);
 ocv_model = E_1*exp(-Zmodel*alpha) + E0 + E1*Zmodel + E2*Zmodel.^2 +...
     E3*Zmodel.^3 + Elog*log(1-Zmodel+ts_inv);
-figure;  %[output:9482b399]
-plot(Zmodel,ocv_model,'LineWidth',2); %[output:9482b399]
-xlabel('state of charge [p.u.]'); %[output:9482b399]
-ylabel('open circuit voltage [V]'); %[output:9482b399]
-title('open circuit voltage(state of charge)'); %[output:9482b399]
-grid on %[output:9482b399]
+figure; 
+plot(Zmodel,ocv_model,'LineWidth',2);
+xlabel('state of charge [p.u.]');
+ylabel('open circuit voltage [V]');
+title('open circuit voltage(state of charge)');
+grid on
 
 %[text] ### IGBT and snubber data
 %[text] #### HeatSink
@@ -426,9 +426,9 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 
 %[text] ## Remove Scopes Opening Automatically
 open_scopes = find_system(model, 'BlockType', 'Scope');
-for i = 1:length(open_scopes)
+for i = 1:length(open_scopes) %[output:group:91443054] %[output:75361540] %[output:3f627570] %[output:3c58c647]
     set_param(open_scopes{i}, 'Open', 'off');
-end
+end %[output:group:91443054]
 
 % shh = get(0,'ShowHiddenHandles');
 % set(0,'ShowHiddenHandles','On');
@@ -454,10 +454,10 @@ end
 %[output:538b2e49]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Cs","value":"     1.783252832105145e-04"}}
 %---
-%[output:23e72b9a]
+%[output:2e20a02c]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Vac_FS","value":"     5.633826408401311e+02"}}
 %---
-%[output:2e20a02c]
+%[output:833b5921]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"     3.818376618407357e+02"}}
 %---
 %[output:0cc65d7c]
@@ -478,9 +478,6 @@ end
 %[output:38b72f5b]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.073386376052051"],["3.802432508328568"]]}}
 %---
-%[output:9482b399]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAARcAAACoCAYAAADKOKrAAAAAAXNSR0IArs4c6QAAH9JJREFUeF7tXX+QV9V1P6Y0goo\/QGjEZbNol0jSkYhNpBumYBjETAdM6XT4YRoGKDJG3CRC+bFikU5B2Ej+QGxCLWFIp+wiKTOC0xk0jBAUbQwIyUQRfwFZgUbAn4hNjXTOC+fL2ft99737vvfd9+7dPW8mE\/nuvfed+7nnfN455\/664OzZs2dBHkFAEBAEckbgAiGXnBGV5gQBQSBCQMhFFEEQEAScICDkUgOszz33HEyZMgU2bNgAw4cPr6EFfRW17TNnzsCqVatg5syZ0KdPn1zehW0uWLAgamv58uXQq1cvwPcePnwYJk6cmMs7dI1s3LgRdu\/eXXlv0stWr14NY8eOhcbGxlSZspRNbexcAcJp69atMGDAAFi3bp2RLHH4mr4zz3KnTp2CGTNmwPz583PXUxM5hVxMUCqxzIoVKyLDX7t2rTNy6ejogGnTpsHdd9\/tlFxI2SdNmpT6HiShhx56yMigs5TNMpSvvPJKhMu4ceMiAzV9fCEXlBf15+jRo0Zkbto\/03LekgsNLAKDD3kJNHDvvfde9PvOnTurvir09ce\/Dx06tGKY9Pt9990X\/YZtP\/DAA1pF18nAvQtsH70Akgfr4Beurq4u+h2\/evjMmjUrUlBqkwxZ9VT4v9GTWLhwYVRf\/XLGKbBKRGkYYrvz5s2D2bNnw\/79+zvJiQareze+Z82aNZFMo0aNgh07dlRIgH\/tsUGOr0oCRDb0birLx4\/GfvDgwdFXWJUzrix6k1x+JAfy0FTD0Mmg\/h7XhtpXGuM4HeV6SEaPGOp0FNvCv1ObSZirsnKP2qWXnUYyXpKLaoBcKclo9+zZEyl03759I6Wrr6+PFIh\/hcePH9\/J\/UfFxHCGD5jOK1C\/stxwDx48WAmLiFxIHnLh+ReD3ouDjvJyLyGJXNBIkjwXxKW9vT0iSnwQB6wTR2JxGGIdFTMMixD\/ZcuWwcqVKyvtEr7UFyQCwpf3XYcT9YV\/RXnZJ598spOnohIRlm1oaIg+BEQcZERqWY4pkRLhwg2Cxpj+po5FmueiG2NVJ\/Cd6pi3tbV1wp68I5KBdBTr0m9xmJM90Fhu2bKlE45ZvMU0ssj6dy\/JRfeFQyVobm6uyhfw8nv37q1SUjJAIgX6Qia50zigc+fOjXXL4zwXGlzMXyQNaBbPJY1cqK0HH3wwGneeB8qCoS4sivv6Y\/4HvTHKP\/D3ENGTsXIcVKJHnOhrrH7VsS9xY6P7QscREf9o6EKDuPwWz0URLnFhUdIYk+dy5MiRWOInI6X+c882ztPAcjrMVeLiOoHjoBJoVoKwKe8luahfaw5QGrls3rw5cif5QyHFyZMnEw2Q10kjHjJk+kpxclEJhLebJ7mQEmP\/6AtHuZksGKrkQgqORrV48WJYsmRJ1D56OUgu3HA5TqToFMpSv\/ErjAlp7mEiuahhGyeZOE8LDQy9lSQiVcNRksGEwNRQM4lcksZYbQf\/zb1KIm2Oi857QvnVseTYkE6rJEAfULId8jwR96IeL8kly1cXwUryXDiQ6lfBlEDUGSFTzyXOFc+TXPgXvl+\/fpWQKO7Ln0TQKrlwZUZ8+dc8i+fCsU9KcvLcBYUDcaSly1OleS46Y8rDc4kb4yRyUT+OKvHYei5qX8VzURAxybnQV4xi6iw5F12szsVQByXua4HtxHku6tcGvy4Uc48ZM6bTV4xcY5JJVa602SL+9eeJPBMMyRtRySWur5TQ5DkX6stbb71VCZPSci7k9aiklSQDD7fIOGn8KXnLZ5aKzLlQf\/gYqyGgSiBqrgkT50SqceTCcy4q5pJzqcEP40bDZ0r4V6F3796Rm6y6vGmzRSbkgiJnmS3iYRH+t24mgbwKmomhWQEdufC+xK2rUeN7vhbGBEMMdfChmS0kET6DhNijV4QPD7lczBbxGRkuO7r4+BBmON5IaOTJqGV50hfrZZktiiNo3VR02mwR6YRKLuq4IL5qwlwda5ktOmeQqJytra1VC47UwYiLg9N4yKc1BGmydsW\/Z\/Ws4rzBshZ1hToeNpijF2q6aDFvfHLNuZDhq9OyJDSGGnPmzIGWlhajlY5xnRVyyVsFsrWnfiCwdpaVymUqe7ae+lO6Vsy71ApdVBx0V5Fc4giEr5\/Iaym7PyogkggCggBHIDfPBYlj\/fr1cOedd8KiRYtiyYWvm0AhklbHyjAJAoJA2AhUyEVdoJTULTVXgm7b0qVLYerUqdEKVJPQp2yXLexhE+kFAf8R6EQuuFgKF00lhSxICmo5dVYFu522i5TiyKampk57e6655hr\/URMJBYEAEdi+fTsMGjSoMMlzC4tMkrYYFuFD+1fiZpWQXF5\/\/fXCALB5kchqg56+ruDaNXCtCouwWzbb+9UZIU4oSTtmCU5RrK6hWDa9EB2wQc8f0u7kuajGnxbauIAgJMV64403CnUzbfAWWW3Q09cNCdeibSsxLCpjdqdoAGxULiTFElltRlrIpRb0jHMucYncWl6YVkfIJQ2h2v4u5FIbbmm1QsK1aNvSkos6NV1UiFQ0AGnKk\/T3kBRLZLUZafFcakFPu86lKDJRhRZyqWUY0+sIuaRjVEuJkHAt2rYq5ILJXPxf2cvyiwagFoWiOiEplshqM9LiudSCXi6L6Gp5sa6OkEueaJ5vS8hFcC3atnJZ\/p\/nsBUNgI3sYrA26HUNbyAkHSjatoxni9yoUXWrRQNg06+QFEtktRnprkGERduWkIuFzonBWoCXUFVwdYOrkEtAe4vECNwYgeDqBlchFyEXJ5olBusEVggJVyEXIRcnVhCSEYisTlQAhFyEXJxolhisE1jFc0mANTahy3dH01UTuqMr8x6yotnVRn4xWBv0usYMTEg6ULRtVZELvyJ0woQJ0bm49957L+AF10VcUVA0ADbmEZJiiaw2I901iLBo26oiF777GW+RI3JB0jE5BtN2CIsGwEZeMVgb9LqGwYakA0XbVmxYhLe74WXi06dPh02bNkUn+s+ePbvTXcRu1AoKTzrZ9CMkxRJZbUa6axChF+SCUPJrRPHfRV0DUjQANionBmuDXtcw2JB0oGjbkhW6FvYRkmKJrBYDnVA1FFzbnj8Od6\/dBSd++LdugIhpVcjFAupQFAu7KLJaDHQXIZe72l6CU9+\/2Q0QJuSSdjma60OkinbdbJAWg7VBT8IiN+jFt7pi2yFYse2NcskFRcODuQ8dOgTz58+vSEq\/jRw5Etra2mD58uXQq1evmvHBpDE+\/B34byGXmiFNrChE2L1x9YJcdAdx0+\/Nzc2watWq1JsZk4aSksWzZs0ScnGj81WtCrm4AToUXL0gF1pEt2fPHli3bh00NjYCXdd64403wm233QaPPfZYzZ4LkRS2e\/r0aSEXNzov5CK4dkJg3e43Yc5PDpYfFqFU6lT0hg0bYPDgwUaXzCeNK4ZDGFodPny4KvSSsMidRYTyhZXksxsdGP\/wC\/D0a+\/4QS4uuoiEtXPnzshbicvrELng\/+Ol2b4\/HR0dUFdX57uYkXwiq5thCgHX0aNHwwcj5sHHV36u65ILei1r1qzpNMpq3kUSum6MQDyX7o1rn3ueigAodSoaBVCvcaVhGTp0qNUl9Xx4kzyX119\/3Y0m5NyqGGzOgJ5rTnDNF1dcQIdrXEonF0y4zpkzB1paWmDz5s1RfmT48OGAXkdDQwNMnDgxl54LueQCo3EjYrDGUGUq6DuuR059BLPbXoryLZ\/68ES5K3T5VPSTTz5ZSbrKXdHVOue7YnGJRdZMnGFc2Hdcn3ntHRj38AtRf3oe\/C84+vj3jPtmW1B7nktTUxMMGzYM5s2bB62trbB3715ob2\/PLSzSCS45F9shja\/vuxEIEeY\/7jtePgUT1uyPGq7v0xPe+9HtUGTKIXZvkeq9LFy4MBIQp6MxRHL5CLm4QVfIpXvhSlPPRCxbvnUDjPrzz5dPLm6GwaxVIRcznLKWEnLJiphZed9w\/e6ml2H9s0crwqPHgsSC\/1+0bSWeRMcvpZeci+RczMzNvpRvBpvUIx9k5UlbLuuIay+HLXfdUPmpNHJJ2w2NEuJh3bYbFtNUr2gA0uTxXbFM5ffBCERWUwTSy+kIhYdB6K3wp2jbMvZc0rubT4miAbCRWgzWBj19XcG1GpskMiFCueXzfaF1wmAtsEXblhwWZWEfYgQW4CVU7e64IpH8x8+PwbOvvROtT9E96Jl85drLYf7YQVFOJe0pjVxMwqI8V+jqgCgagLQBkbDIBqHa6nYXckES+b\/ffwLfffRlOPL2R4D\/TnqIQB69YygM7n9RZnCLti3xXDIP0fkK3cUILCCqqWpXwpUIY9erb8PG548bkQiBhmQy4torYPXk62rCUa0k5CLXueaiSGojXclgnQBUY6OI6x9ddlVUe\/WOI3Dg2OlMBEL5Evz\/W4b0hda\/0edMahSxUs0LcuHXuZJkRcwU4buKBsBmwMRgbdDT1\/URV\/RA1uzqgF91vJ+ZPLgngv897vp+MHPEH47qMMmV5IVy0baVeJ0rP9+WLkqTqWgJi\/JSdl07RZILkgYa+GP7fgs\/PXAKDp88k5hETes7kcXIxivgnjENcEHBBJIkX+nkknaG7uLFi4EvrksDO+vfiwYgq3y8fJFGYCMn1u2OsiJxnAWAn+z9H9j58qkIwqTZFxOMiTzqr+gJt990FdT98fswcODAQj0QEznjyhRtW9rrXLdu3Vp1hi6GRupp\/bV2VFevaABs5O+OBmuDl2ndJFz5jEr7L47D06+8HTVrMtti8n4kDySOxj+5CGZ85Wq45MIeicQRkg4UbVva2SL1wCi5zrVaNUNSLN9lpfBkx8G3Yd3OV+Ht3\/XIjTB4bgOJo+HKXnD3zfVwYY9PWec9fMeVa6035GLC8i7KFA2ATR9CUqwyZOWEsWnPcfjNuXUctqEJHzMepgzq1wvGDOkL11\/d25o0TPWiDFxNZVPLFW1bss6l1pHqhnkMCknqrugZ7bz9xeF3I8LIKyTRkcZ1V10M\/3BLA5z53SeFkYapWgi56JGK3Vs0Y8YMqK+vd75J0Yekk6kSxZULSbHiZOX5ixePfQCP\/+oEHDl5xglZqKEJehnjr+8PjedWmvIp2dBxtdEpl3W98Fzi1rnE3Y7oAoiiAbDpg29GcN6zuBD+ddeb8NKxD+CNE+7IQiWML1x9Cfz1F\/vDZy690MrD8A3XJB0JSdaibcs4LMI7h3Cty9q1a2Uq+py2uVQs7lUce\/d\/Yesv34Jfdryf68xInNHwHMbAPj0Bd9reMPDSStEiFn25xNXmYxK69+oFucR5LgMGDKhMTceBzG9o1K3mVduN2whZNAA2ypbVCJAwPvr4E3jixZPwxK9POCcK7ln06wUwpO4K+MvGK+DLDZdZeRY2mJnUzYqrSZuuyoQka9G2pc254GCYein8OhK8gXDBggWAB3yr15DwcnhXdKg5F\/Iqfv\/uMTh45lLYsv+3lZkQF8lNwol7Ffjbtf0uihZy9e\/96VTPIiQjEFndUGHp5GLbLfJOJk+eXHWYN15ov2zZMli5cqU2tCoaALW\/RBw\/+Nlv4NdvfuAsuanmK67tfxF8YcAl8Pdfubqy9T7PEEQM1laz4+uHhGvRtmWcczEZGgqNdGGRycK8IgFo3ngADp2w20ui8ypuqL8UvnHTVdFCrTxJwmQcQs8NhGSwIclapG2hDuZKLqTUSCK7d+9OnMqmw6lwOwG\/rsQVAGnHBKYlN6+v6w2Tv\/QZ6N2zRyVfEZJiiay10nJyvZBwdWVbOoSckIvJzBKFT2puBgHAZ\/v27dbacPS9j+H+n56APW\/qT\/gacGkPuKp3D5jxpcth4GU9AP9t+nR0dADmmEJ4RFY3oxQCrqNHj650vtRL0WrZFa3WwSlrfNRNjujR4IOJXsy\/0G2OPLmbF7vyS6F46IJ7S1ZPHpJLqBLSV0tkdUMuIeGal22ZIlnxXEzO0E06MEo3Fc0JRZ2KjtsMaQvAj587Ct959OVO\/cecx+pJQ2DEn15uiotRuZAUS2Q1GtLMhULC1da2soLTZa4WwZzK+H95odMhx9OaroZvf7U+Fy9FkqRZVav28iEZbEiylk4utatEPjVrAUAlFn6FZT5SxbcSkmKJrG40ISRca7EtG9Q6hUVLliyB5uZmmDt3Luzfv7+qXR+vFlGJRb3C0gactLohKZbImjaatf09JFxLI5faoM2\/VhYAVGKZO+az0PK1P8w2FfGEpFgiqxuNCAnXLLaVB1pOpqJtBMsCwLc3HoB\/\/+9j0eswWbvlW+cv3baRwbRuSIolspqOarZyIeGaxbayoRBfWru3yPewCL2WL\/7zs1GvMMeyb9Ff5IFHpjZCUiyRNdPQGhcOCdfSyUWHKq5dGTlyZNV+IeNRMCxoCgASCx2jiB5LGUvsQ1IskdVQATMWCwlXU9vKCIG2uHFYpFtcl5cg1I4JAAeOn4am1p9HVTbdMRRGX9cnbzGM2gtJsURWoyHNXCgkXE1sKzMACRWMycVkSX8egqUB4EM4RP0MSbFE1jy0s7qNkHBNs628EcqUc9mwYUPpYdG\/Pf0mzNt8MMIBw6G8V91mATgkxRJZs4ysedmQcC2dXMxhdVMyDYA+9zwVvbisJC7vdUiKJbK60deQcE2zrbwRig2L1E2FuD+ovb3d+GQ6GyGTAHj61XeiJf4+eC0oQ0iKJbLaaKW+bki4lk4uupPkTM5oyWP4kgCgnc4+eC1CLnmMdnwbIRlsSLKWTi61HLmQp5olAUAhUZFL\/JP6FpJiiax5aun5tkLCtXRyQdjQS3nooYcqp\/3TcQx4YlxZF9HzoxRwwVwZ61pU9QxJsURWIRcvyAWHAfMu06ZNg6NHj0ajUvZF9L6FRBIWuTFWwdUdrt6Qi7suJrccBwBf2\/Kd0Z+Ff\/yr4jYnSlhUvCaIl+UG89LJpaiVuDr44gBoe\/443NX2kjezRCS7GIEbIxBc3eBaOrlgt3AfUUNDQ9WlZm663LnVOAB8DInEfXenDUIubrAtnVySztIt47AoHhL5Mksknosb5Rdc3eJaOrm47V566yoAfOHcw5OHRHcH+fLIF9bNSAiubnAVcrnmGuB3q6zYdghWbHvDu3yLhEVuDEBwdYdraeRCiVyXZ+iqV4vEbYRUAfA13yJG4M4IxHNxg21p5OKmO51bxcV5hw4dihbi6Y5wUAHwbVUu75EYgRutEVzd4OoFuRSxcRHJpa2treo+aQ4AT+b6lm8Rz8WNAQiu7nAtnVxcb1zkoVFaWPSzV96Gr\/9gX4S2L0v+xXNxp\/wyW+QW29LJpaiNizTljSES7lmiBwHABy+iv2Pz8egSebwcfutU\/y58D+EScsJVZHVjuCHg6s1F9DgERWxcJA+mqamp02I9zq4+51vEfXdjrIKrO1xL91yoay42LvJL6dW8DvdcaCqayGX+2EEwf2yDO9RrbFkSjzUCl1JNcHWDqzfk4qJ7WaaifTt1Lg4PMQIXWiIn\/LlBFaBLk4sJaAQAXzznYzJX3HeT0aytjJB2bbil1RJyObdC1+fFczKrkabGdn8XcrHDT1dbyOUcufAbFcu4qtVkeMUITFDKXkZwzY6ZSQ0hl3Pk4vtMkYRFJupcWxkhl9pwS6vlBbng6tkpU6ZUyVrUkQs\/fmJv5QoRX2eKhFzSVLn2vwu51I5dUs3SyUW3uM1Nd6tbRQA4ufiazBVycacRQi5usPWCXJYsWQKLFy+GPn2Kv+AdAfintmegeeOBCOGyr2xNGmYxAjdGILi6wbV0csFu8d3LbrqpbxUB+LM5\/wlPv\/aOF1e2CrkUrQGyzsUV4qWTiw\/HXAq55K9e4g3kj2looXHp5OJmCMxbRQDe+fraqIJvZ+aqvRCDNR\/XLCUF1yxomZcVcmHk4vNMUWhfLTFYcyPMUjIkXL0gF74HaNy4cTBv3jxYtGgRtLS0QGNjYxbsM5et\/\/LX4IMR86J6Qi6Z4dNWCMkIRNb8xp23VDq5ELEMGDAAJkyYAOvXr4d7770XtmzZArt37646OS5vGOpG\/R18OGx61KzP09DiueQ98ufbE3Jxg23p5MIPizp58mSFXJB0ipiirhv1Tfhw2DQhl5z1Sww2Z0DPNRcSrqWTC2KGNy7iBfTTp0+HTZs2wZ133gmzZ8+OTozDk+NcPv2\/+UP4+MrPRa849f2bXb7Kuu2QFEtktR7u2AZCwtULckEU1S0ADzzwQCHXuxK51PfpGYVFPj8hKZbI6kaTQsLVG3JxMxTprYawYZF6EZJiiazpuldLiZBwFXK556lojL9x01WwauJ1tYx3YXVCUiyR1Y1ahISrF+SiHkeJw4JT0suXL4devXq5GaVzrfp+bi7vfEiKJbK6UduQcC2dXPhUNCVv6TccHtcEQ+Ti84ZFCYvcGKrg6hbX0smlqHuLdDAKubhRsJC+sCKrGx0onVxopki9ahWnpxsaGrQzRriTeuHChREqukOl1HArrhyRi+8L6LCfYgRujEBwdYNr6eSStCuauqySAt5BtGzZMli5cmV0Bgytk1FDKGx7zpw5idsIiFx8X+Mi5OLGAARXd7iWTi55dE13ybxKQnHvQnIJYY2LGEEemhLfhngubrDtEuSiC6F46ITwxS3ME3Jxo1hisIKrF+RiMxVteoqd7qxeJBffz3GRWQ03hiq4usW1dHKJm4rGLuvyKByOtKQvL6u7iB7J5dNHnoFnv3e7W6RzaL2jowPq6upyaMl9EyKrG4xDwHX06NGVztM97G7Q6NzqBWfPnj3Lf6p1KhqJZeTIkdHmRt1jchE9kovv57hQ\/4r+EtgohMhqg56+ruCqx6aKXMhL2bp1K6xbty46HAoTsdOmTYtW6cbtio6754hW9OI5MPhMnDgR1HBLl3O5aO+PIu9FHkFAEMgXgVI9F+qKSfI1325La4KAINCVEIj1XLpSB6UvgoAgUA4CQi7l4C5vFQS6PAJCLl1+iKWDgkA5CHhDLjzHs2HDhsRZpyKh4slq3Wl8vAwebE6J8CLlxHeZyEoylX0neBZ5cSZyzZo1kehl6YYJtnzrTJl6oNM7k+03eeqsF+TCtwUcPHgQ1E2TeXY4S1t8MLAe3z\/FjZTvl0KSbG9vh7Vr1xZ617aJrLzvZLBlGaupvHxRJuoJ3Ubh+lwhjpWprIgpPjijinIXcVuGqT7TjC+WL+rj5wW58IHA6eq0zY2mgNqWw68VKgwSBSrzggULYPLkyYlelcn+KVu54upnkRXLPv744\/D++++n9seFrOS1pGGLurB06VKYOnWq8\/uykvppii0nQtOV6q7wVcnxkUcegVtvvRXuv\/9+aG1tLQRPb8jl0KFDEeP74K7TwPANmPgbkktTU1PiQeVlKZWprLRIEi+6QyVLI0tXym8iL5ELhUNlhUUmshJOFN4XdaB9lvHBDx+Nu+vLDVEuIZeE0cmiVPQ1LiukM5WVVlLjsRkmnlgW5c1S1kRe+tBMmjQpInTuQeDRHkU9JrKq21l8C4sQq25LLhSfhhoWleWxcC8rLczQndVTRt7FJNQggyXvqmjjyIotD+fLkjWJcIuWyQvPJeSELg4m3zNV1NdUfY9p0pHqqYZbtNym8nLSLstzMZFV9VzKklXIJQYBilV9m8LjU5D8C0+EMmzYsGjfFd5QSY\/umE\/XBpwmK4YWvpALhZFTpkyJRIrDVt2PVqZumGDr+1R0t\/RcXBudtC8ICALFI+BFWFR8t+WNgoAg4BoBIRfXCEv7gkA3RUDIpZsOvHRbEHCNgJCLa4SlfUGgmyIg5NJNB166LQi4RkDIxTXCmvZNF9252KtEm9hw+tx0AZ3uLqoy4KNpYVdT\/tQ+HdVa5CbJMvB09U4hF1fIprRbJrmg8ezcuTP2PGSd2L6Ri+ttFmXtwC5JHZ28VsjFCaznG+WLr+hLi8dK0OKxWbNmRUauHnKOHsXgwYNhxowZsH\/\/\/sr927Q7Gw9QxyfJ8+Bt0lcY26J3677M\/Gwd2oBH5NK7d+\/onarXwOvwxW64JeHFF1+EXbt2VS7B4wsmR40aBdgmHfweJ7PqOahEh++4+OKLYfv27RFWhKk6tKoXmESYQi72hiHkYo+htgX1cB6+TUA9p4TvVuWb3vBeHPUebnwhEdLcuXNjz+eg0OfBBx+MiAA3KaLRUz3dl58bHN\/ndfLkyYiUiFjU9mhfE90VTjKq913xVaJ9+\/aNyBOvo0G5+N\/wPij+Dg5yHLnQbRXUJranXnMj5OJQ2WOaFnJxiHfSyV9JYRE3Hk4uKCoaIxlO0v4g1QD5XpekA7l0F9upe2WS5Od\/4wcoofxqPfUMFH7Aks6ziCMXIrO4d9AQC7k4VHYhl2LBxbfx5CkPQ1Qj40c5Yj0qG0cu6PrzJ+7sEHXLv8nmUN0tmPgu1aC5\/HHX\/1JoopJVEtmo19nge+OStnHk0tDQUDlnR0d8Qi7F6r94LgXirTupTPUKkjwX01P6XHguPJRK8jhUzyXJ8Gs5vS3Nc1EJTOe5JJ25IjkXe8MQcrHHUNuC+qXU5VzizjbBRpcvXw5JOReeV4nLL+Bu7aw5F25w6JFQGIbymJAL1aE8iuq5mOZc8KQ03f3kceSCv+FxpGroyAcnLg9FOKtJYyEXe8MQcrHHMLEF7urzsIhmRTB8aG5ujpKXmJTEpGtLSwts2rQJVq5cWTEW\/A9+li\/NFiUdp6ibeUmbVuYhmjpbhISHhsg9Dn7UAIYxM2fOhG3btkXkuGrVKuCeC+VEFi5cGIU8eEn66dOnY2eLdOtY4sgFzwPesWNHdPQFxyQux4PvRpyROPft2xdL4kIu9oYh5GKPobRQIwJJOZ6kJtNyLjWK06makIs9ikIu9hhKCxkQUNfz6NakpJELTouTZ4Mn26veUQaRqoqSjLJC1wZFTw7otuuC1BYEBAEfEfh\/hK0q+MuUaHQAAAAASUVORK5CYII=","height":168,"width":279}}
-%---
 %[output:619496e7]
 %   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"   440"}}
 %---
@@ -495,4 +492,13 @@ end
 %---
 %[output:71e550b8]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"     1.662049861495845e+04"}}
+%---
+%[output:75361540]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: Error resolving Custom Code."}}
+%---
+%[output:3f627570]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: C:\\Git\\GitHub\\modelization-and-control\\power_electronics_design_with_simscape\\theory_analysis_solid_state_transformer\\sst_single_phase_dab\\include specified in custom include directory paths string does not exist in any of the following search directories:\n\""}}
+%---
+%[output:3c58c647]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: C:\\Git\\GitHub\\modelization-and-control\\power_electronics_design_with_simscape\\theory_analysis_solid_state_transformer\\sst_single_phase_dab\\src specified in custom include directory paths string does not exist in any of the following search directories:\n\""}}
 %---
