@@ -3,26 +3,36 @@
 This subfolder contains a collection of models and control applications concerning power electronics. Most of the projects use the library which must added to the path of matlab to be able to use these models.
 Each folder contains a power electronics project, in the following a description of each project. 
 
-** solid state transformer **:
+**theory analysis solid state transformer**:
+investigantion on different SST architectures:
+- three phase DAB: very high efficiency on both semiconductor and magnetics, and high controllability, fundamental of the three phase at 4kHz;  
+- single phase LLC: very high efficiency on semiconductor, magnetic run at 9.6kHz;  
+- single phase DAB: high power loss on semiconductors;
+
 - model implements two dab connected in parallel at battery side (1.5kV);
 - each dab supplies a single phase inverter (400Vac);
 - single phase inverters are connected in series (800Vac per phase);
 - hw and sw implementation;
 - n-independent time domains;
 
-** dab theory design **:
+Improvements: LV DC grid at 800V, high voltage AC component at 3.3kV;
+
+**theory analysis dab**:
 - two batteries connected among them by a DAB. This model is intended for deep DAB analysis in term of modulation strategies and efficiency analysis. The model contains a detailed Mosfet model.
 
-** single phase inverter **:
+**theory analysis resonant LLC**:
+- two batteries connected among them by an LLC. This model is intended for deep resonant-LLC analysis in term of modulation strategies and efficiency analysis. The model contains a detailed Mosfet model.
+
+**single phase inverter**:
 - single phase inverter application with resonant pi, and system identification.
 
-** afe-inv-psm-cascade **:
+**afe-inv-psm-cascade**:
 - this folder contains the most advanced concept in modelization of the whole repo. n-time domains are implemented, each time domain generates a trigger (TRGO) for sampling, control and pwm generation. In this modelization, effects of sliding pwm as well as clocks deviation can be fully analyzed. The model contains up to three systems in parallel, where each system is composed by a three phase active rectifier, an inverter and a permanent magnet synchronous generator. All physical blocks are developed with open source custom simscape code.
 
-** ac-ac-buck-converter **:
+**ac-ac-buck-converter**:
 - tipical application with two antiseries igbts used to create a bidirectional switch. The modulation strategy use overlapping deadtime, a detailed explanation can be found into the subfolders of the project.
 
-** afe-inv-psm **:
+**afe-inv-psm**:
 - bidirectional electrical drive for permanent magnet synchrounous machine. The model contains a three phase AFE (active front end) a dclink braking unit, an inverter, and a permanent magnet synchronous motor;
 - model contains:
   - current vector control implemented both in simulink as well as in C code using C-caller blocks;
@@ -31,17 +41,17 @@ Each folder contains a power electronics project, in the following a description
   - sequence calculation without buffering (very efficient);
   - model can run as driver or as gerator e.g. wind turbine applications.
 
-** afe-inv-threelevel-psm **:
+**afe-inv-threelevel-psm**:
 - same functionalities of **afe-inv-psm** project but implementing three level t-type inverters (for both afe and inverter).
 
-** bat-inv-psm **:
+**bat-inv-psm**:
 - same functionalities of **afe-inv-psm** project but implementing lithium-ion battery, and a not isolated dcdc converter; no grid or afe is implemented.
 
-** dab-1k5V-250kW **:
+**dab-1k5V-250kW**:
 - single phase dual active bridge 1.5kV/1.5kV 250kW;
 - three phase (as per de doncker) dual active bridge 1.5kV/1.5kV 250kW;
 
-** dab-inv-single-phase-6kVA **:
+**dab-inv-single-phase-6kVA**:
 UPS application with battery, dab, and single phase invertert for emergy light.
 In particular:
 - lithium iojn battery with residual charge estimation model;
@@ -49,37 +59,37 @@ In particular:
 - single phase inverter with voltage and current control;
 - dq-pll;
 
-** dcdc-zcs-with-double-resonant-tank **:
+**dcdc-zcs-with-double-resonant-tank**:
 - converter based on half bridge converter and control based on variable switching frequency;
 - this architecture implements a dcdc unidirection isolated by a zero current switching;
 - the model implements also a strategy for dclink voltage ripple compensation.
 
-** distributed-ctrl **:
+**distributed-ctrl**:
 - same functionalities of **afe-inv-psm** but a distributed control is implemented, basically remote sensors with two step sampling time of delay.
 
-** flyback-250V-500W **:
+**flyback-250V-500W**:
 - study of a flyback converter using simscape and flux domain.
 
-** flying-capacitor-single-phase-inverter **:
+**flying-capacitor-single-phase-inverter**:
 - study of a flying capacitor single phase inverter from 4000Vdc to 230Vac - 500W; two orders of modelization: one fundamental and one with parassitic effects.
 
-** im-analysis-and-design **:
+**im-analysis-and-design**:
 - induction motor and indirect field oriented control (IFOC) analysis.
 
-** im-sensorless-analysis-and-design **:
+**im-sensorless-analysis-and-design**:
 - induction motor and sensorless indirect field oriented control (IFOC) analysis.
 
-** sic-inverter-for-drone **:
+**sic-inverter-for-drone**:
 - design HW/SW of an inverter for drone application (20kW).
 
-** thyristor-based-models **:
+**thyristor-based-models**:
 - twelve and six pulse rectifier;
 - bidirectional applications;
 - study and firing mechanism analysis and implemetation in C code;
 
-** zvs-inv-single-phase-inverter **:
+**zvs-inv-single-phase-inverter**:
 - zero voltage switching based on full-bridge LLC (switching frequenzy 5 times higher than resonant tank);
 - single phase inverter with control algoritms.
 
-** power_meter **:
+**power_meter**:
 - in this folder an implementation of the power measure according to VDE/IEC is analyzed.
