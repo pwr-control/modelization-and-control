@@ -1,23 +1,16 @@
 # Modelization and control
-This repo contains a collection of models and control applications developed in a multi domain physics environment based on Matlab/Simscape. The repo contains applications on: power electronics, hydrostatic systems, and control system engineering.
+This repo contains a collection of models and control applications developed in a multi domain physics environment based on Matlab/Simscape. 
+The repo contains applications on: power electronics, hydrostatic systems, and control system engineering.
 
 **How to use the repo**:
-- In matlab add to the path/with-subfolders the directory "library". This directory contains simscape (ssc) models compiled with "ssc_bultd".
+- In matlab add to the path/with-subfolders the repo "library". This repo contains all fundamentals simscape (ssc) models compiled with "ssc_bultd".
 - The folder ./library/user_defined_functions/ccaller contains a list of c-coded functions used inside the simulink models by ccallers.
 - The folder ./library/foundation contains all simscape language based model used in the simulink models.
 
-# Documentation
-Documentation is available into the folder: **repo_documentations**.
-- This folder contains the following documentations.
-  - **advanced control engineering**: collections of problems and model derivations with some pages on theory derivation;
-  - **electrification of heavy duty**: an approach to mapping an hydrostatic power train into an electrical powertrain;
-  - **litium-ion battery**: model derivation;
-  - **nonlinear observer**: apporach to hydristatic drivetrain using Khalil apporach;
-  - **pmsm motor model and control**: $\alpha-\beta$ and $dq$ derivation and representation of the three phase permanent magnet synchronous machine and model predictive control; 
-  - **induction motor model and control**: $\alpha-\beta$ and $dq$ derivation and representation of the three phase induction motor and controls; 
-  - **pem fuel cell**: model of the proton-exchange membrane fuel cell;
-  - **three phase inductors**: simscape modelization of a three phase inductance;
- 
+ # Documentation
+Documentation is available into the **library** repository.
+
+
 # Preliminary description
 **Applications**:
 - folder **power_electronics_projects_design_with_simscape** contains power electronics based projects with application on psm, im, dab, zvs, flyback, afe, inverter, hard-parallelization analysis, space-vector multilevel;
