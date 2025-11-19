@@ -10,6 +10,8 @@ options.FreqUnits = 'Hz';
 simlength = 2;
 transmission_delay = 125e-6*2;
 model = 'afe_abc_inv_psm';
+
+use_mosfet_thermal_model = 1;
 use_thermal_model = 1;
 load_step_time = 1.25;
 %[text] #### local time allignment to master time
@@ -556,17 +558,25 @@ end
 % set(0,'ShowHiddenHandles',shh);
 
 %[text] ## Enable/Disable Subsystems
-
-if use_thermal_model
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'off');
+if use_mosfet_thermal_model
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'off');
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
     set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'off');
+    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
     set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
 else
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'off');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
+    if use_thermal_model
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'off');
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
+    else
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'off');
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
+    end
 end
 
 %[appendix]{"version":"1.0"}
@@ -575,62 +585,62 @@ end
 %   data: {"layout":"onright","rightPanelPercent":26.9}
 %---
 %[output:0db165d8]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"0.5000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
 %---
 %[output:255f588d]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"0"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
 %---
 %[output:57086c1f]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"0.5000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
 %---
 %[output:08bc4522]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"44.7824"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
 %---
 %[output:858ca950]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"0.1839"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.183872841045359"}}
 %---
 %[output:72559c6d]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.1839"],["44.7824"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.183872841045359"],["44.782392633890389"]]}}
 %---
 %[output:8c11ae60]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.0001"],["-9.8696","-0.0016"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
 %[output:95cb5289]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.0156"],["2.7166"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
 %[output:42d1bda9]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.0000","0.0001"],["-12.3370","0.9980"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
 %---
 %[output:85f7f9dd]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.1944"],["33.9576"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.194386045440868"],["33.957607642498068"]]}}
 %---
 %[output:6685555d]
-%   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"1.4559e+05"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
 %---
 %[output:0345a522]
-%   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"789.7124"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
 %---
 %[output:7c2251f1]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"0.0370"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.036997274900261"}}
 %---
 %[output:76a3d4ad]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"1.5335"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   1.533540968663871"}}
 %---
 %[output:5713da6e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"0.4140"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.414020903616658"}}
 %---
 %[output:7c389dc3]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"243.8383"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     2.438383113714302e+02"}}
 %---
 %[output:8886a72c]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"-299.4503"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
 %---
 %[output:843555a4]
-%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"13.2000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
 %---
 %[output:90a5b190]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"0.0075"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
 %---
 %[output:9195034a]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"0.0075"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
 %---
