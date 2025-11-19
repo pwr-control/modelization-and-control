@@ -97,9 +97,9 @@ enable_frt_1 = 0;
 enable_frt_2 = 1-enable_frt_1;
 
 % deep data for frt type 2
-deepPOSxi = 0.5 %[output:261bf7e5]
-deepNEGxi = 0 %[output:5b778b38]
-deepNEGeta = 0.5 %[output:01a56420]
+deepPOSxi = 0.5 %[output:0db165d8]
+deepNEGxi = 0 %[output:255f588d]
+deepNEGeta = 0.5 %[output:57086c1f]
 %[text] #### 
 %[text] #### FRT, and other fault timing settings
 test_index    = 25;
@@ -139,8 +139,8 @@ omega_rso = 2*pi*50;
 p2place = [-1 -4]*omega_rso;
 p2placed = exp(p2place*ts_afe);
 Kd = (acker(Asod',Cso',p2placed))';
-l1 = Kd(2) %[output:60dddf1e]
-l2 = Kd(1) %[output:58103d1f]
+l1 = Kd(2) %[output:08bc4522]
+l2 = Kd(1) %[output:858ca950]
 
 %[text] #### Grid fault generator 
 grid_fault_generator;
@@ -219,7 +219,7 @@ polesrso = [-1 -4]*omega_rso;
 Lrso = acker(Arso',Crso',polesrso)';
 Adrso = eye(2) + Arso*ts_afe;
 polesdrso = exp(ts_afe*polesrso);
-Ldrso = acker(Adrso',Crso',polesdrso)' %[output:1d032500]
+Ldrso = acker(Adrso',Crso',polesdrso)' %[output:72559c6d]
 
 %[text] ### PLL DDSRF
 pll_i1_ddsrt = pll_i1/2;
@@ -230,100 +230,16 @@ ddsrf_fd = c2d(ddsrf_f,ts_afe);
 %%
 %[text] ### First Harmonic Tracker for Ugrid cleaning
 omega0 = 2*pi*50;
-Afht = [0 1; -omega0^2 -0.05*omega0] % impianto nel continuo %[output:0e3a00ad]
+Afht = [0 1; -omega0^2 -0.05*omega0] % impianto nel continuo %[output:8c11ae60]
 Cfht = [1 0];
 poles_fht = [-1 -4]*omega0;
-Lfht = acker(Afht',Cfht',poles_fht)' % guadagni osservatore nel continuo %[output:9856533a]
-Ad_fht = eye(2) + Afht*ts_afe % impianto nel discreto %[output:1336d85b]
+Lfht = acker(Afht',Cfht',poles_fht)' % guadagni osservatore nel continuo %[output:95cb5289]
+Ad_fht = eye(2) + Afht*ts_afe % impianto nel discreto %[output:42d1bda9]
 polesd_fht = exp(ts_afe*poles_fht);
-Ld_fht = Lfht*ts_afe % guadagni osservatore nel discreto %[output:359194e8]
-%[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
-%[text] #### HeatSink settings
-heatsink_liquid_2kW; %[output:254cc10e] %[output:773e11b7] %[output:7fd34f5b]
-%[text] #### DEVICES settings
-% infineon_FF650R17IE4D_B2;
-infineon_FF1200R17IP5;
-inv.Vth = Vth;                                  % [V]
-inv.Vce_sat = Vce_sat;                          % [V]
-inv.Rce_on = Rce_on;                            % [Ohm]
-inv.Vdon_diode = Vdon_diode;                    % [V]
-inv.Rdon_diode = Rdon_diode;                    % [Ohm]
-inv.Eon = Eon;                                  % [J] @ Tj = 125°C
-inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
-inv.Erec = Erec;                                % [J] @ Tj = 125°C
-inv.Voff_sw_losses = Voff_sw_losses;            % [V]
-inv.Ion_sw_losses = Ion_sw_losses;              % [A]
-inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-inv.Rtim = Rtim;                                % [K/W]
-inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-inv.Lstray_module = Lstray_module;              % [H]
-inv.Irr = Irr;                                  % [A]
-inv.Csnubber = Csnubber;                        % [F]
-inv.Rsnubber = Rsnubber;                        % [Ohm]
-% inv.Csnubber = (inv.Irr)^2*Lstray_module/Vdc_bez^2
-% inv.Rsnubber = 1/(inv.Csnubber*fPWM_INV)/5
-
-% infineon_FF650R17IE4;
-infineon_FF1200R17IP5;
-afe.Vth = Vth;                                  % [V]
-afe.Vce_sat = Vce_sat;                          % [V]
-afe.Rce_on = Rce_on;                            % [Ohm]
-afe.Vdon_diode = Vdon_diode;                    % [V]
-afe.Rdon_diode = Rdon_diode;                    % [Ohm]
-afe.Eon = Eon;                                  % [J] @ Tj = 125°C
-afe.Eoff = Eoff;                                % [J] @ Tj = 125°C
-afe.Erec = Erec;                                % [J] @ Tj = 125°C
-afe.Voff_sw_losses = Voff_sw_losses;            % [V]
-afe.Ion_sw_losses = Ion_sw_losses;              % [A]
-afe.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-afe.Rtim = Rtim;                                % [K/W]
-afe.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-afe.Lstray_module = Lstray_module;              % [H]
-afe.Irr = Irr;                                  % [A]
-afe.Csnubber = Csnubber;                        % [F]
-afe.Rsnubber = Rsnubber;                        % [Ohm]
-% afe.Csnubber = (afe.Irr)^2*Lstray_module/Vdc_bez^2
-% afe.Rsnubber = 1/(afe.Csnubber*fPWM_AFE)/5
-
-danfoss_SKM1700MB20R4S2I4;
-
-ideal_switch.Vth = Vth;                                  % [V]
-ideal_switch.Rds_on = Rds_on;                            % [Ohm]
-ideal_switch.Vdon_diode = Vdon_diode;                    % [V]
-ideal_switch.Vgamma = Vgamma;                            % [V]
-ideal_switch.Rdon_diode = Rdon_diode;                    % [Ohm]
-ideal_switch.Eon = Eon;                                  % [J] @ Tj = 125°C
-ideal_switch.Eoff = Eoff;                                % [J] @ Tj = 125°C
-ideal_switch.Eerr = Eerr;                                % [J] @ Tj = 125°C
-ideal_switch.Voff_sw_losses = Voff_sw_losses;            % [V]
-ideal_switch.Ion_sw_losses = Ion_sw_losses;              % [A]
-ideal_switch.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-ideal_switch.Rtim = Rtim;                                % [K/W]
-ideal_switch.Rth_mosfet_JC = Rth_mosfet_JC;              % [K/W]
-ideal_switch.Rth_mosfet_CH = Rth_mosfet_CH;              % [K/W]
-ideal_switch.Rth_mosfet_JH = Rth_mosfet_JH;              % [K/W]
-ideal_switch.Lstray_module = Lstray_module;              % [H]
-ideal_switch.Irr = Irr;                                  % [A]
-ideal_switch.Csnubber = Csnubber;                        % [F]
-ideal_switch.Rsnubber = Rsnubber;                        % [Ohm]
-% ideal_switch.Csnubber = (ideal_switch.Irr)^2*Lstray_module/Vdab2_dc_nom^2
-% ideal_switch.Rsnubber = 1/(ideal_switch.Csnubber*fPWM_DAB)/5
-
-%%
+Ld_fht = Lfht*ts_afe % guadagni osservatore nel discreto %[output:85f7f9dd]
 %[text] ### Reactive current control gains
-% kp_rc_grid = 0.1;
-% ki_rc_grid = 2;
-% 
 kp_rc_grid = 0.35;
 ki_rc_grid = 35;
-
-% kp_rc_grid = 0.15;
-% ki_rc_grid = 18;
-
 kp_rc_pos_grid = kp_rc_grid;
 ki_rc_pos_grid = ki_rc_grid;
 kp_rc_neg_grid = kp_rc_grid;
@@ -416,7 +332,7 @@ z=tf('z',ts_inv);
 
 %[text] ### MOTOR Selection from Library
 n_sys = 6;
-run('n_sys_generic_1M5W_pmsm'); %[output:2b28c01e] %[output:83231a6e]
+run('n_sys_generic_1M5W_pmsm'); %[output:6685555d] %[output:0345a522]
 run('n_sys_generic_1M5W_torque_curve');
 
 % n_sys = 1;
@@ -449,8 +365,8 @@ Cso = [1 0];
 % p2place = exp([-10 -50]*ts_inv);
 p2place = exp([-50 -250]*ts_inv);
 Kobs = (acker(Aso',Cso',p2place))';
-kg = Kobs(1) %[output:35882ab9]
-kw = Kobs(2) %[output:8e3a16af]
+kg = Kobs(1) %[output:7c2251f1]
+kw = Kobs(2) %[output:76a3d4ad]
 
 %[text] ### Rotor speed observer with load estimator
 A = [0 1 0; 0 0 -1/Jm_norm; 0 0 0];
@@ -459,9 +375,9 @@ Blo = [0; ts_inv/Jm_norm; 0];
 Clo = [1 0 0];
 p3place = exp([-1 -5 -25]*125*ts_inv);
 Klo = (acker(Alo',Clo',p3place))';
-luenberger_l1 = Klo(1) %[output:65c77b47]
-luenberger_l2 = Klo(2) %[output:1163f046]
-luenberger_l3 = Klo(3) %[output:15364f81]
+luenberger_l1 = Klo(1) %[output:5713da6e]
+luenberger_l2 = Klo(2) %[output:7c389dc3]
+luenberger_l3 = Klo(3) %[output:8886a72c]
 omega_flt_fcut = 10;
 % phase_compensation_omega = -pi/2-pi/12; % for motor mode
 phase_compensation_omega = 0; % for generator mode
@@ -498,24 +414,120 @@ omega_flt_g1 = 1 - omega_flt_g0;
 %[text] #### Motor Voltage to Udc Scaling
 motorc_m_scale = 2/3*Vdc_bez/ubez;
 %%
-%[text] ## IGBT, MOSFET, DIODE and snubber data
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
-%[text] #### Diode rectifier
-Vf_diode_rectifier = 0.7;
-Rdon_diode_rectifier = 1.85e-3;
-%[text] #### HeatSink
-heatsink_liquid_2kW; %[output:6a3c0db1] %[output:49662381] %[output:35915571]
-%[text] #### SKM1700MB20R4S2I4
-% danfoss_SKM1700MB20R4S2I4;
-infineon_FF1200R17IP5
+%[text] ### HeatSink settings
+heatsink_liquid_2kW; %[output:843555a4] %[output:90a5b190] %[output:9195034a]
+%[text] ### DEVICES settings (IGBT)
+% infineon_FF650R17IE4D_B2;
+% infineon_FF1200R17IP5;
+% danfoss_DP650B1700T104001;
+infineon_FF1200XTR17T2P5;
+
+inv.Vth = Vth;                                  % [V]
+inv.Vce_sat = Vce_sat;                          % [V]
+inv.Rce_on = Rce_on;                            % [Ohm]
+inv.Vdon_diode = Vdon_diode;                    % [V]
+inv.Rdon_diode = Rdon_diode;                    % [Ohm]
+inv.Eon = Eon;                                  % [J] @ Tj = 125°C
+inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
+inv.Erec = Erec;                                % [J] @ Tj = 125°C
+inv.Voff_sw_losses = Voff_sw_losses;            % [V]
+inv.Ion_sw_losses = Ion_sw_losses;              % [A]
+inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+inv.Rtim = Rtim;                                % [K/W]
+inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
+inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
+inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
+inv.Lstray_module = Lstray_module;              % [H]
+inv.Irr = Irr;                                  % [A]
+inv.Csnubber = Csnubber;                        % [F]
+inv.Rsnubber = Rsnubber;                        % [Ohm]
+% inv.Csnubber = (inv.Irr)^2*Lstray_module/Vdc_bez^2
+% inv.Rsnubber = 1/(inv.Csnubber*fPWM_INV)/5
+
 % infineon_FF650R17IE4;
-% infineon_FF900R12IE4;
+% infineon_FF1200R17IP5;
+% danfoss_DP650B1700T104001;
+infineon_FF1200XTR17T2P5;
 
-% Csnubber = Irr^2*Lstray_module/Vdab2_dc_nom^2
-% Rsnubber = 1/(Csnubber*fPWM_DAB)/5
+afe.Vth = Vth;                                  % [V]
+afe.Vce_sat = Vce_sat;                          % [V]
+afe.Rce_on = Rce_on;                            % [Ohm]
+afe.Vdon_diode = Vdon_diode;                    % [V]
+afe.Rdon_diode = Rdon_diode;                    % [Ohm]
+afe.Eon = Eon;                                  % [J] @ Tj = 125°C
+afe.Eoff = Eoff;                                % [J] @ Tj = 125°C
+afe.Erec = Erec;                                % [J] @ Tj = 125°C
+afe.Voff_sw_losses = Voff_sw_losses;            % [V]
+afe.Ion_sw_losses = Ion_sw_losses;              % [A]
+afe.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+afe.Rtim = Rtim;                                % [K/W]
+afe.Rth_switch_JC = Rth_switch_JC;              % [K/W]
+afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
+afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
+afe.Lstray_module = Lstray_module;              % [H]
+afe.Irr = Irr;                                  % [A]
+afe.Csnubber = Csnubber;                        % [F]
+afe.Rsnubber = Rsnubber;                        % [Ohm]
+% afe.Csnubber = (afe.Irr)^2*Lstray_module/Vdc_bez^2
+% afe.Rsnubber = 1/(afe.Csnubber*fPWM_AFE)/5
 
-Csnubber = Irr^2*Lstray_module/Vdc_nom^2 %[output:5a08d24b]
-Rsnubber = 1/(Csnubber*fPWM_INV)/5 %[output:84fc43ce]
+%[text] ### DEVICES settings (MOSFET)
+infineon_FF1000UXTR23T2M1;
+
+mosfet.inv.Vth = Vth;                                  % [V]
+mosfet.inv.Rds_on = Rds_on;                            % [V]
+mosfet.inv.Vdon_diode = Vdon_diode;                    % [V]
+mosfet.inv.Rdon_diode = Rdon_diode;                    % [Ohm]
+mosfet.inv.Eon = Eon;                                  % [J] @ Tj = 125°C
+mosfet.inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
+mosfet.inv.Erec = Erec;                                % [J] @ Tj = 125°C
+mosfet.inv.Voff_sw_losses = Voff_sw_losses;            % [V]
+mosfet.inv.Ion_sw_losses = Ion_sw_losses;              % [A]
+mosfet.inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+mosfet.inv.Rtim = Rtim;                                % [K/W]
+mosfet.inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
+mosfet.inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
+mosfet.inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
+mosfet.inv.Lstray_module = Lstray_module;              % [H]
+mosfet.inv.Irr = Irr;                                  % [A]
+mosfet.inv.Csnubber = Csnubber;                        % [F]
+mosfet.inv.Rsnubber = Rsnubber;                        % [Ohm]
+% inv.Csnubber = (mosfet.inv.Irr)^2*Lstray_module/Vdc_bez^2
+% inv.Rsnubber = 1/(mosfet.inv.Csnubber*fPWM_INV)/5
+
+mosfet.afe.Vth = Vth;                                  % [V]
+mosfet.afe.Rds_on = Rds_on;                            % [V]
+mosfet.afe.Vdon_diode = Vdon_diode;                    % [V]
+mosfet.afe.Rdon_diode = Rdon_diode;                    % [Ohm]
+mosfet.afe.Eon = Eon;                                  % [J] @ Tj = 125°C
+mosfet.afe.Eoff = Eoff;                                % [J] @ Tj = 125°C
+mosfet.afe.Erec = Erec;                                % [J] @ Tj = 125°C
+mosfet.afe.Voff_sw_losses = Voff_sw_losses;            % [V]
+mosfet.afe.Ion_sw_losses = Ion_sw_losses;              % [A]
+mosfet.afe.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+mosfet.afe.Rtim = Rtim;                                % [K/W]
+mosfet.afe.Rth_switch_JC = Rth_switch_JC;              % [K/W]
+mosfet.afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
+mosfet.afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
+mosfet.afe.Lstray_module = Lstray_module;              % [H]
+mosfet.afe.Irr = Irr;                                  % [A]
+mosfet.afe.Csnubber = Csnubber;                        % [F]
+mosfet.afe.Rsnubber = Rsnubber;                        % [Ohm]
+% afe.Csnubber = (mosfet.afe.Irr)^2*Lstray_module/Vdc_bez^2
+% afe.Rsnubber = 1/(mosfet.afe.Csnubber*fPWM_AFE)/5
+%[text] ### DEVICES settings (Ideal switch)
+silicon_high_power_ideal_switch;
+ideal_switch.Vth = Vth;                                  % [V]
+ideal_switch.Rds_on = Rds_on;                            % [Ohm]
+ideal_switch.Vdon_diode = Vdon_diode;                    % [V]
+ideal_switch.Vgamma = Vgamma;                            % [V]
+ideal_switch.Rdon_diode = Rdon_diode;                    % [Ohm]
+ideal_switch.Csnubber = Csnubber;                        % [F]
+ideal_switch.Rsnubber = Rsnubber;                        % [Ohm]
+ideal_switch.Irr = Irr;                                  % [A]
+% ideal_switch.Csnubber = (ideal_switch.Irr)^2*Lstray_module/Vdab2_dc_nom^2
+% ideal_switch.Rsnubber = 1/(ideal_switch.Csnubber*fPWM_DAB)/5
 %[text] ## C-Caller Settings
 open_system(model);
 Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
@@ -562,78 +574,63 @@ end
 %[metadata:view]
 %   data: {"layout":"onright","rightPanelPercent":26.9}
 %---
-%[output:261bf7e5]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
+%[output:0db165d8]
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"0.5000"}}
 %---
-%[output:5b778b38]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
+%[output:255f588d]
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"0"}}
 %---
-%[output:01a56420]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
+%[output:57086c1f]
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"0.5000"}}
 %---
-%[output:60dddf1e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
+%[output:08bc4522]
+%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"44.7824"}}
 %---
-%[output:58103d1f]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.183872841045359"}}
+%[output:858ca950]
+%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"0.1839"}}
 %---
-%[output:1d032500]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.183872841045359"],["44.782392633890389"]]}}
+%[output:72559c6d]
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.1839"],["44.7824"]]}}
 %---
-%[output:0e3a00ad]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
+%[output:8c11ae60]
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.0001"],["-9.8696","-0.0016"]]}}
 %---
-%[output:9856533a]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
+%[output:95cb5289]
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.0156"],["2.7166"]]}}
 %---
-%[output:1336d85b]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
+%[output:42d1bda9]
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.0000","0.0001"],["-12.3370","0.9980"]]}}
 %---
-%[output:359194e8]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.194386045440868"],["33.957607642498068"]]}}
+%[output:85f7f9dd]
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.1944"],["33.9576"]]}}
 %---
-%[output:254cc10e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
+%[output:6685555d]
+%   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"1.4559e+05"}}
 %---
-%[output:773e11b7]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
+%[output:0345a522]
+%   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"789.7124"}}
 %---
-%[output:7fd34f5b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
+%[output:7c2251f1]
+%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"0.0370"}}
 %---
-%[output:2b28c01e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
+%[output:76a3d4ad]
+%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"1.5335"}}
 %---
-%[output:83231a6e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
+%[output:5713da6e]
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"0.4140"}}
 %---
-%[output:35882ab9]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.036997274900261"}}
+%[output:7c389dc3]
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"243.8383"}}
 %---
-%[output:8e3a16af]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   1.533540968663871"}}
+%[output:8886a72c]
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"-299.4503"}}
 %---
-%[output:65c77b47]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.414020903616658"}}
+%[output:843555a4]
+%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"13.2000"}}
 %---
-%[output:1163f046]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     2.438383113714302e+02"}}
+%[output:90a5b190]
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"0.0075"}}
 %---
-%[output:15364f81]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
-%---
-%[output:6a3c0db1]
-%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
-%---
-%[output:49662381]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
-%---
-%[output:35915571]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
-%---
-%[output:5a08d24b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Csnubber","value":"     1.902349550179055e-08"}}
-%---
-%[output:84fc43ce]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"     2.628328741965106e+03"}}
+%[output:9195034a]
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"0.0075"}}
 %---
