@@ -9,7 +9,7 @@ options.FreqUnits = 'Hz';
 % simlength = 3.75;
 simlength = 2;
 transmission_delay = 125e-6*2;
-model = 'afe_abc_inv_psm';
+model = 'inv_psm';
 
 use_mosfet_thermal_model = 1;
 use_thermal_model = 1;
@@ -560,23 +560,16 @@ end
 
 %[text] ## Enable/Disable Subsystems
 if use_mosfet_thermal_model
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'off');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'off');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
+    set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'off');
+    set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
+    set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
 else
     if use_thermal_model
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'off');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
+        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
+        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
     else
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'off');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
+        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
+        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
     end
 end
 
