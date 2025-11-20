@@ -11,7 +11,7 @@ simlength = 2;
 transmission_delay = 125e-6*2;
 model = 'afe_abc_inv_psm';
 
-use_mosfet_thermal_model = 1;
+use_mosfet_thermal_model = 0;
 use_thermal_model = 1;
 load_step_time = 1.25;
 %[text] #### local time allignment to master time
@@ -421,10 +421,10 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %[text] ### HeatSink settings
 heatsink_liquid_2kW; %[output:843555a4] %[output:90a5b190] %[output:9195034a]
 %[text] ### DEVICES settings (IGBT)
-% infineon_FF650R17IE4D_B2;
+infineon_FF650R17IE4D_B2;
 % infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
-infineon_FF1200XTR17T2P5;
+% infineon_FF1200XTR17T2P5;
 
 inv.Vth = Vth;                                  % [V]
 inv.Vce_sat = Vce_sat;                          % [V]
@@ -448,10 +448,10 @@ inv.Rsnubber = Rsnubber;                        % [Ohm]
 % inv.Csnubber = (inv.Irr)^2*Lstray_module/Vdc_bez^2
 % inv.Rsnubber = 1/(inv.Csnubber*fPWM_INV)/5
 
-% infineon_FF650R17IE4;
+infineon_FF650R17IE4;
 % infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
-infineon_FF1200XTR17T2P5;
+% infineon_FF1200XTR17T2P5;
 
 afe.Vth = Vth;                                  % [V]
 afe.Vce_sat = Vce_sat;                          % [V]
@@ -568,11 +568,15 @@ if use_mosfet_thermal_model
     set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
 else
     if use_thermal_model
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'on');
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
         set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'off');
         set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
         set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
         set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
     else
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'on');
+        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
         set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
         set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'off');
         set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');

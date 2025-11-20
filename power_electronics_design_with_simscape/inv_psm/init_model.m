@@ -11,7 +11,7 @@ simlength = 2;
 transmission_delay = 125e-6*2;
 model = 'inv_psm';
 
-use_mosfet_thermal_model = 1;
+use_mosfet_thermal_model = 0;
 use_thermal_model = 1;
 load_step_time = 1.25;
 %[text] #### local time allignment to master time
@@ -64,7 +64,7 @@ delayAFE_modA=0;
 delayAFE_modC=0;
 
 ts_afe = 1/fPWM_AFE/2; % Sampling time of the control AFE as well as INVERTER
-tc = ts_afe/400;
+tc = ts_afe/125;
 
 s=tf('s');
 z_afe=tf('z',ts_afe);
@@ -421,10 +421,10 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %[text] ### HeatSink settings
 heatsink_liquid_2kW; %[output:843555a4] %[output:90a5b190] %[output:9195034a]
 %[text] ### DEVICES settings (IGBT)
-% infineon_FF650R17IE4D_B2;
+infineon_FF650R17IE4D_B2;
 % infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
-infineon_FF1200XTR17T2P5;
+% infineon_FF1200XTR17T2P5;
 
 inv.Vth = Vth;                                  % [V]
 inv.Vce_sat = Vce_sat;                          % [V]
@@ -448,10 +448,10 @@ inv.Rsnubber = Rsnubber;                        % [Ohm]
 % inv.Csnubber = (inv.Irr)^2*Lstray_module/Vdc_bez^2
 % inv.Rsnubber = 1/(inv.Csnubber*fPWM_INV)/5
 
-% infineon_FF650R17IE4;
+infineon_FF650R17IE4;
 % infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
-infineon_FF1200XTR17T2P5;
+% infineon_FF1200XTR17T2P5;
 
 afe.Vth = Vth;                                  % [V]
 afe.Vce_sat = Vce_sat;                          % [V]
@@ -482,16 +482,16 @@ mosfet.inv.Vth = Vth;                                  % [V]
 mosfet.inv.Rds_on = Rds_on;                            % [V]
 mosfet.inv.Vdon_diode = Vdon_diode;                    % [V]
 mosfet.inv.Rdon_diode = Rdon_diode;                    % [Ohm]
-mosfet.inv.Eon = Eon;                                  % [J] @ Tj = 125°C
-mosfet.inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
-mosfet.inv.Erec = Erec;                                % [J] @ Tj = 125°C
-mosfet.inv.Voff_sw_losses = Voff_sw_losses;            % [V]
-mosfet.inv.Ion_sw_losses = Ion_sw_losses;              % [A]
+mosfet.inv.Eon = Eon/3*2/3;                                % [J] @ Tj = 125°C
+mosfet.inv.Eoff = Eoff/3*2/3;                              % [J] @ Tj = 125°C
+mosfet.inv.Erec = Eerr;                                % [J] @ Tj = 125°C
+mosfet.inv.Voff_sw_losses = Voff_sw_losses*2/3;            % [V]
+mosfet.inv.Ion_sw_losses = Ion_sw_losses/3;              % [A]
 mosfet.inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
 mosfet.inv.Rtim = Rtim;                                % [K/W]
-mosfet.inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-mosfet.inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-mosfet.inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
+mosfet.inv.Rth_switch_JC = Rth_mosfet_JC;              % [K/W]
+mosfet.inv.Rth_switch_CH = Rth_mosfet_CH;              % [K/W]
+mosfet.inv.Rth_switch_JH = Rth_mosfet_JH;              % [K/W]
 mosfet.inv.Lstray_module = Lstray_module;              % [H]
 mosfet.inv.Irr = Irr;                                  % [A]
 mosfet.inv.Csnubber = Csnubber;                        % [F]
@@ -503,16 +503,16 @@ mosfet.afe.Vth = Vth;                                  % [V]
 mosfet.afe.Rds_on = Rds_on;                            % [V]
 mosfet.afe.Vdon_diode = Vdon_diode;                    % [V]
 mosfet.afe.Rdon_diode = Rdon_diode;                    % [Ohm]
-mosfet.afe.Eon = Eon;                                  % [J] @ Tj = 125°C
-mosfet.afe.Eoff = Eoff;                                % [J] @ Tj = 125°C
-mosfet.afe.Erec = Erec;                                % [J] @ Tj = 125°C
-mosfet.afe.Voff_sw_losses = Voff_sw_losses;            % [V]
-mosfet.afe.Ion_sw_losses = Ion_sw_losses;              % [A]
+mosfet.afe.Eon = Eon/3*2/3;                                % [J] @ Tj = 125°C
+mosfet.afe.Eoff = Eoff/3*2/3;                              % [J] @ Tj = 125°C
+mosfet.afe.Erec = Eerr;                                % [J] @ Tj = 125°C
+mosfet.afe.Voff_sw_losses = Voff_sw_losses*2/3;            % [V]
+mosfet.afe.Ion_sw_losses = Ion_sw_losses/3;              % [A]
 mosfet.afe.JunctionTermalMass = JunctionTermalMass;    % [J/K]
 mosfet.afe.Rtim = Rtim;                                % [K/W]
-mosfet.afe.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-mosfet.afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-mosfet.afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
+mosfet.afe.Rth_switch_JC = Rth_mosfet_JC;              % [K/W]
+mosfet.afe.Rth_switch_CH = Rth_mosfet_CH;              % [K/W]
+mosfet.afe.Rth_switch_JH = Rth_mosfet_JH;              % [K/W]
 mosfet.afe.Lstray_module = Lstray_module;              % [H]
 mosfet.afe.Irr = Irr;                                  % [A]
 mosfet.afe.Csnubber = Csnubber;                        % [F]
@@ -565,9 +565,11 @@ if use_mosfet_thermal_model
     set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
 else
     if use_thermal_model
+        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
         set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
         set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
     else
+        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
         set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
         set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
     end
