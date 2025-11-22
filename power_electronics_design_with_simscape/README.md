@@ -3,20 +3,6 @@
 This subfolder contains a collection of models and control applications concerning power electronics. Most of the projects use the library which must added to the path of matlab to be able to use these models.
 Each folder contains a power electronics project, in the following a description of each project. 
 
-**theory analysis solid state transformer**:
-investigantion on different SST architectures:
-- three phase DAB: very high efficiency on both semiconductor and magnetics, and high controllability, fundamental of the three phase at 4kHz;  
-- single phase LLC: very high efficiency on semiconductor, magnetic run at 9.6kHz;  
-- single phase DAB: high power loss on semiconductors;
-
-- model implements two dab connected in parallel at battery side (1.5kV);
-- each dab supplies a single phase inverter (400Vac);
-- single phase inverters are connected in series (800Vac per phase);
-- hw and sw implementation;
-- n-independent time domains;
-
-Improvements: LV DC grid at 800V, high voltage AC component at 3.3kV;
-
 **theory analysis dab**:
 - two batteries connected among them by a DAB. This model is intended for deep DAB analysis in term of modulation strategies and efficiency analysis. The model contains a detailed Mosfet model.
 
