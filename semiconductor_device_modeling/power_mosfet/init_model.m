@@ -2,8 +2,8 @@ clear all
 close all
 clc
 
-tc = 1e-9;
-simlength = 0.002;
+tc = 1e-8;
+simlength = 0.2;
 
 % Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 
@@ -36,3 +36,5 @@ mosfet.inv.Csnubber = 2*Eon/Voff_sw_losses^2;          % [F]
 mosfet.inv.Rsnubber = 1;                               % [Ohm]
 % inv.Csnubber = (mosfet.inv.Irr)^2*Lstray_module/Vdc_bez^2
 % inv.Rsnubber = 1/(mosfet.inv.Csnubber*fPWM_INV)/5
+
+open_system power_mosfet_device
