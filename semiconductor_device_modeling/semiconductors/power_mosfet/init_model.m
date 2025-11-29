@@ -2,7 +2,7 @@ clear all
 close all
 clc
 
-tc = 1e-7;
+tc = 1e-8;
 simlength = 0.2;
 
 % Power semiconductors modelization, IGBT, MOSFET,  and snubber data
@@ -15,6 +15,7 @@ wolfspeed_CAB006M12GM3;
 
 mosfet.inv.Vth = Vth;                                  % [V]
 mosfet.inv.Rds_on = Rds_on;                            % [V]
+mosfet.inv.g_fs = g_fs;                                % [A/V]
 mosfet.inv.Vdon_diode = Vdon_diode;                    % [V]
 mosfet.inv.Rdon_diode = Rdon_diode;                    % [Ohm]
 mosfet.inv.Eon = Eon;                                  % [J] @ Tj = 125°C
