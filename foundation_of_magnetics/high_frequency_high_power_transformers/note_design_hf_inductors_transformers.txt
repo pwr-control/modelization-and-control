@@ -1,0 +1,54 @@
+
+
+1 - given L, Iavg, Ipk Irms, switching frequency;
+2 - select ferrite material, often according to given switching frequency and power losses;
+3 - set Bpk based on hysteresis curve;
+4 - set delta-B based on desired core losses;
+5 - assume J (1-4.5A/mm2), kf (0.3-0.7);
+6 - calculate different Ap methods and select the largest;
+7 - from Irms, and J calculate wire diameter;
+8 - calculate number of turns;
+9 - estimate gap length;
+10 - adjust gap;
+11 - calculate losses: core, wire (resistance, proximity);
+12 - iterate;
+
+
+e.g. material matching finding 100mW/cm3 at given frequency; if we need larger Aw we could work with
+much lower delta-B which permits also to increase the switching frequency.
+
+Example:
+Iavg = 45A
+L = 25uH
+delta-I = 44A
+Ipk = Iavg + 0.5*delta-I = 67A
+f = 300kHz
+Pcore = 100mW/cm3
+Core = 3C94
+Core Shape = E 
+Bpk_max = 300mWb/m2
+kf = 0.5
+J = 4.5A/mm2
+Irms = sqrt(45^2+22^2)= 50A
+Bpk = 40mT - selected value
+Ap2 = 1.9 10^5 mm^4 > Ap1 = 1.16 10^5 mm^4
+Ap of the coil former must be greater than Ap2;
+
+Skin effects 
+d = 72/sqrt(f) = 72/sqrt(3e5) = 0.13mm (litz)
+strand diameter < 0.26mm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
