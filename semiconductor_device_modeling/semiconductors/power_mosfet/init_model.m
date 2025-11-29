@@ -2,7 +2,7 @@ clear all
 close all
 clc
 
-tc = 1e-8;
+tc = 1e-7;
 simlength = 0.2;
 
 % Power semiconductors modelization, IGBT, MOSFET,  and snubber data
