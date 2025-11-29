@@ -2,13 +2,16 @@ clear all
 close all
 clc
 
+tc = 1e-9;
+simlength = 0.002;
+
 % Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 
 % HeatSink settings
 heatsink_liquid_2kW;
 
 % DEVICES settings (MOSFET)
-infineon_FF1000UXTR23T2M1;
+wolfspeed_CAB006M12GM3;
 
 mosfet.inv.Vth = Vth;                                  % [V]
 mosfet.inv.Rds_on = Rds_on;                            % [V]
@@ -26,7 +29,10 @@ mosfet.inv.Rth_switch_CH = Rth_mosfet_CH;              % [K/W]
 mosfet.inv.Rth_switch_JH = Rth_mosfet_JH;              % [K/W]
 mosfet.inv.Lstray_module = Lstray_module;              % [H]
 mosfet.inv.Irr = Irr;                                  % [A]
-mosfet.inv.Csnubber = Csnubber;                        % [F]
-mosfet.inv.Rsnubber = Rsnubber;                        % [Ohm]
+mosfet.inv.Ciss = Ciss;                                % [F]
+mosfet.inv.Coss = Coss;                                % [F]
+mosfet.inv.Crss = Crss;                                % [F]
+mosfet.inv.Csnubber = 2*Eon/Voff_sw_losses^2;          % [F]
+mosfet.inv.Rsnubber = 1;                               % [Ohm]
 % inv.Csnubber = (mosfet.inv.Irr)^2*Lstray_module/Vdc_bez^2
 % inv.Rsnubber = 1/(mosfet.inv.Csnubber*fPWM_INV)/5
