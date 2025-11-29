@@ -43,7 +43,7 @@ mosfet.inv.Rsnubber = 1;                               % [Ohm]
 % inv.Rsnubber = 1/(mosfet.inv.Csnubber*fPWM_INV)/5
 
 m = 0.5;
-freq = 20e3;
+freq = 5e3;
 L = 500e-6;
 C = 200e-6;
 
