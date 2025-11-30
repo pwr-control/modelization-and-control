@@ -11,7 +11,9 @@ simlength = 0.2;
 heatsink_liquid_2kW;
 
 % DEVICES settings (MOSFET)
-wolfspeed_CAB006M12GM3;
+% wolfspeed_CAB006M12GM3;
+% wolfspeed_CAB760M12HM3;
+infineon_FF1000UXTR23T2M1;
 
 mosfet.inv.Vth = Vth;                                  % [V]
 mosfet.inv.Rds_on = Rds_on;                            % [V]
@@ -29,6 +31,10 @@ mosfet.inv.Rth_switch_JC = Rth_mosfet_JC;              % [K/W]
 mosfet.inv.Rth_switch_CH = Rth_mosfet_CH;              % [K/W]
 mosfet.inv.Rth_switch_JH = Rth_mosfet_JH;              % [K/W]
 mosfet.inv.Lstray_module = Lstray_module;              % [H]
+mosfet.inv.Ls = Ls;                                    % [H]
+mosfet.inv.Ld = Ld;                                    % [H]
+mosfet.inv.RLs = RLs;                                  % [Ohm]
+mosfet.inv.RLd = RLd;                                  % [Ohm]
 mosfet.inv.Irr = Irr;                                  % [A]
 mosfet.inv.Ciss = Ciss;                                % [F]
 mosfet.inv.Coss = Coss;                                % [F]
@@ -43,11 +49,11 @@ mosfet.inv.Rsnubber = 1;                               % [Ohm]
 % inv.Rsnubber = 1/(mosfet.inv.Csnubber*fPWM_INV)/5
 
 m = 0.5;
-freq = 5e3;
+freq = 20e3;
 L = 500e-6;
 C = 200e-6;
 
-Rgate_turn_on = 1;
-Rgate_turn_off = 1e-3;
+Rgate_turn_on = 0.1;
+Rgate_turn_off = 1;
 
 open_system power_mosfet_device
