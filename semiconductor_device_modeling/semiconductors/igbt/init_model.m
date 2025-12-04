@@ -2,7 +2,7 @@ clear all
 close all
 clc
 
-tc = 1e-10;
+tc = 1e-6;
 simlength = 0.2;
 
 % Power semiconductors modelization, IGBT, MOSFET,  and snubber data
@@ -56,4 +56,4 @@ C = 200e-6;
 Rgate_turn_on = 0.1;
 Rgate_turn_off = 1;
 
-open_system power_mosfet_device
+open_system igbt_device_analysis.slx
