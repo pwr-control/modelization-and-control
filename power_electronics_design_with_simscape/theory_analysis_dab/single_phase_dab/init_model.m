@@ -67,7 +67,7 @@ Idab2_dc_nom = Pnom/Vdab2_dc_nom;
 Idc_FS = max(Idab1_dc_nom,Idab2_dc_nom) * margin_factor %[output:0994022b]
 Vdc_FS = max(Vdab1_dc_nom,Vdab2_dc_nom) * margin_factor %[output:60f8fa48]
 %[text] ### dead\_time and delays
-dead_time_DAB = 3e-6;
+dead_time_DAB = 400e-9;
 dead_time_AFE = 0;
 dead_time_INV = 0;
 delay_pwm = 0;
@@ -103,7 +103,6 @@ CFi_dc2 = 900e-6*5;
 RCFi_dc2_internal = 1e-3;
 %[text] #### Tank LC and HF-Transformer parameters
 % single phase DAB
-% Ls = (Vdab1_dc_nom^2/(2*pi*fPWM_DAB)/Pnom*pi/8)
 Ls = (Vdab1_dc_nom^2/(2*pi*fPWM_DAB)/Pnom*pi/8) %[output:4b1b289a]
 
 f0 = fPWM_DAB/5;
@@ -390,7 +389,6 @@ grid on %[output:6480ce36]
 heatsink_liquid_2kW; %[output:038a5c0b] %[output:7c8883f0] %[output:734836a0]
 %[text] #### SKM1700MB20R4S2I4
 danfoss_SKM1700MB20R4S2I4; % SiC-Mosfet full leg
-
 dab_mosfet.Vth = Vth;                                  % [V]
 dab_mosfet.Rds_on = Rds_on;                            % [Ohm]
 dab_mosfet.Vdon_diode = Vdon_diode;                    % [V]
@@ -411,10 +409,45 @@ dab_mosfet.Irr = Irr;                                  % [A]
 dab_mosfet.Csnubber = Csnubber;                        % [F]
 dab_mosfet.Rsnubber = Rsnubber;                        % [Ohm]
 dab_mosfet.Csnubber_zvs = 4.5e-9;                      % [F]
-dab_mosfet.Rsnubber_zvs = 10;                          % [Ohm]
+dab_mosfet.Rsnubber_zvs = 5e-3;                        % [Ohm]
 
+danfoss_SKM1700MB20R4S2I4; % SiC-Mosfet full leg
+mosfet.dab.Vth = Vth;                                  % [V]
+mosfet.dab.Rds_on = Rds_on;                            % [V]
+mosfet.dab.g_fs = g_fs;                                % [A/V]
+mosfet.dab.Vdon_diode = Vdon_diode;                    % [V]
+mosfet.dab.Rdon_diode = Rdon_diode;                    % [Ohm]
+mosfet.dab.Eon = Eon;                                  % [J] @ Tj = 125°C
+mosfet.dab.Eoff = Eoff;                                % [J] @ Tj = 125°C
+mosfet.dab.Erec = Eerr;                                % [J] @ Tj = 125°C
+mosfet.dab.Voff_sw_losses = Voff_sw_losses;            % [V]
+mosfet.dab.Ion_sw_losses = Ion_sw_losses;              % [A]
+mosfet.dab.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+mosfet.dab.Rtim = Rtim;                                % [K/W]
+mosfet.dab.Rth_switch_JC = Rth_mosfet_JC;              % [K/W]
+mosfet.dab.Rth_switch_CH = Rth_mosfet_CH;              % [K/W]
+mosfet.dab.Rth_switch_JH = Rth_mosfet_JH;              % [K/W]
+mosfet.dab.Lstray_module = Lstray_module;              % [H]
+mosfet.dab.Ls = Ls;                                    % [H]
+mosfet.dab.Ld = Ld;                                    % [H]
+mosfet.dab.RLs = RLs;                                  % [Ohm]
+mosfet.dab.RLd = RLd;                                  % [Ohm]
+mosfet.dab.Irr = Irr;                                  % [A]
+mosfet.dab.Ciss = Ciss;                                % [F]
+mosfet.dab.Coss = Coss;                                % [F]
+mosfet.dab.Crss = Crss;                                % [F]
+mosfet.dab.Cgd = Cgd;                                  % [F]
+mosfet.dab.Cgs = Cgs;                                  % [F]
+mosfet.dab.Cds = Cds;                                  % [F]
+mosfet.dab.Rgate_internal = Rgate_internal;            % [Ohm]
+mosfet.dab.Csnubber = 2*Eon/Voff_sw_losses^2;          % [F]
+mosfet.dab.Rsnubber = 1;                               % [Ohm]
 % Csnubber = Irr^2*Lstray_module/Vdab2_dc_nom^2
 % Rsnubber = 1/(Csnubber*fPWM_DAB)/5
+
+
+%[text] ## ZVS constraints 
+idab_zvs_min = 2*mosfet.dab.Coss*Vdab1_dc_nom/dead_time_DAB        % [A] %[output:97f2171d]
 %[text] ## C-Caller Settings
 open_system(model);
 % Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
@@ -457,7 +490,7 @@ end
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":50.3}
+%   data: {"layout":"onright","rightPanelPercent":46.3}
 %---
 %[output:0994022b]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Idc_FS","value":"   275"}}
@@ -521,4 +554,7 @@ end
 %---
 %[output:734836a0]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
+%---
+%[output:97f2171d]
+%   data: {"dataType":"textualVariable","outputData":{"name":"idab_zvs_min","value":"  20.500000000000000"}}
 %---
