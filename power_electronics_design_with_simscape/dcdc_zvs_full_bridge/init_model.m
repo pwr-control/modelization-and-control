@@ -385,12 +385,12 @@ rKalman = 1;
 Zmodel = (0:1e-3:1);
 ocv_model = E_1*exp(-Zmodel*alpha) + E0 + E1*Zmodel + E2*Zmodel.^2 +...
     E3*Zmodel.^3 + Elog*log(1-Zmodel+ts_inv);
-figure;  %[output:6480ce36]
-plot(Zmodel,ocv_model,'LineWidth',2); %[output:6480ce36]
-xlabel('state of charge [p.u.]'); %[output:6480ce36]
-ylabel('open circuit voltage [V]'); %[output:6480ce36]
-title('open circuit voltage(state of charge)'); %[output:6480ce36]
-grid on %[output:6480ce36]
+figure; 
+plot(Zmodel,ocv_model,'LineWidth',2);
+xlabel('state of charge [p.u.]');
+ylabel('open circuit voltage [V]');
+title('open circuit voltage(state of charge)');
+grid on
 
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] #### HeatSink
@@ -507,7 +507,7 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"Vdc_FS","value":"     9.375000000000000e+02"}}
 %---
 %[output:6c8d3181]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Cs_dab","value":"     8.405905605882840e-04"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Cs_dab","value":"     2.198810408904899e-04"}}
 %---
 %[output:1384c0dc]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Vac_FS","value":"     3.919183588453085e+02"}}
@@ -516,25 +516,25 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"     5.091168824543142e+02"}}
 %---
 %[output:345f228b]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Aresd_nom","rows":2,"type":"double","value":[["1.000000000000000","0.000200000000000"],["-28.424460675137347","0.996230088815692"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Aresd_nom","rows":2,"type":"double","value":[["1.000000000000000","0.000083333333333"],["-11.843525281307226","0.998429203673205"]]}}
 %---
 %[output:9e69d693]
 %   data: {"dataType":"textualVariable","outputData":{"name":"a11d","value":"     1"}}
 %---
 %[output:20880618]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a12d","value":"     2.000000000000000e-04"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a12d","value":"     8.333333333333333e-05"}}
 %---
 %[output:266aaba1]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":" -28.424460675137347"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":" -11.843525281307226"}}
 %---
 %[output:7a235d1a]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.996230088815692"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.998429203673205"}}
 %---
 %[output:53464e72]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.073386376052051"],["3.802432508328568"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.031062519151360"],["1.619345474049183"]]}}
 %---
 %[output:2b42b309]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.283130953403918"],["67.668222262819981"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.125263346003807"],["30.829381225835562"]]}}
 %---
 %[output:19de2814]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
@@ -543,13 +543,10 @@ end
 %   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
 %[output:85434b31]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000200000000000"],["-19.739208802178720","0.996858407346410"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000083333333333"],["-8.224670334241132","0.998691003061004"]]}}
 %---
 %[output:613a9f65]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.311017672705390"],["54.332172227996914"]]}}
-%---
-%[output:6480ce36]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAjVJREFUSEvtVi2PKkEQbCQW\/gAGTUIQBPcEEiwBRwhBgXiET4PjM5xBIQgOgsHwAy44LBYUCY4sFrmX6qQ3s\/t4u8vC3SWXGwUzPVVT3dUz69N1XSebMRgMaLfb0Ww2I03TKJ\/PU7lcpkwmY7fNcc2naZoeCAQIBNPplDekUinq9\/vk9\/t5HsSj0YhqtRrt93uOKZVKVCwWqVAomOYajQavr1YrarVaRiywF4sFxeNxul6v5INiVRUiAYYAgNgpxlooFGL1QgTwYDDImYEAwRDiSCRCzWaTWLFKJKedTCY0n89pvV7bphqnV1WD+HQ6sVpRiIzlcjn+L4fyHQ4H3Vo3nN6JOJ1O88k3mw0DYgg4iGV\/OBzmg8uaxHlWHI1GTUZTwV0p9lrjZDJpeKFSqZjUqzW2rhk1lnZSXQ3HijtVc8Hlkl4YJxaLUafT4TQD8HK5GK3mytWOTfdgwPF4NJVB9QxqjsHt9CCuq3A1g9jQ6\/VMl85TxCq4FdjpdJ6J4eLlcsk33Pl8pnq9TsPhkCSVn0asAqOm3W6XxuMx4fp1MzwrFnBJtzXVgb\/v\/\/Bf3\/4Yc08TA+l2u3GbJRIJ16\/WS4hBDuUY0v9O6fZMDHNtt1smkocCv\/GquRmeiUWlvOFf1k7\/UyWPxb1LQ93zlGIrOVJerVap3W7zkl2LvZQYamEyfJ\/Jg5LNZu\/W\/eXEcptBsV2L\/Rzib0n1t5kLdVXbSb4y77XeS2vs5saSmF\/iR7L1VOwH+FUrwd61FWEAAAAASUVORK5CYII=","height":30,"width":30}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.129590696960579"],["22.638405094998713"]]}}
 %---
 %[output:038a5c0b]
 %   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
