@@ -103,7 +103,7 @@ CFi_dc2 = 900e-6*5;
 RCFi_dc2_internal = 1e-3;
 %[text] #### Tank LC and HF-Transformer parameters
 % single phase DAB
-Ls = (Vdab1_dc_nom^2/(2*pi*fPWM_DAB)/Pnom*pi/8) %[output:4b1b289a]
+Ls = (Vdab1_dc_nom^2/fPWM_DAB/Pnom/8) %[output:4b1b289a]
 
 f0 = fPWM_DAB/5;
 Cs = 1/Ls/(2*pi*f0)^2 %[output:6c8d3181]
