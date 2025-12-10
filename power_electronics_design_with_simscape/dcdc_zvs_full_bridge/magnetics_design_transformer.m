@@ -1,10 +1,11 @@
 
 %% 1. Input Data and Design Parameters
 %--------------------------------------------------------------------------
+n12 = 0.33;          % Transformation Ratio V1/V2 (1:3)
 V1 = 682;            % Primary RMS Voltage [V]
-n12 = 0.33;          % Transformation Ratio V1/V2 (1:2)
+V2 = 1200;           % Secondary RMS Voltage [V]
 I1 = 510;            % Primary RMS Current [A]
-I2 = I1*n12;         % Primary RMS Current [A]
+I2 = 194;            % Primary RMS Current [A]
 f = 12e3;            % Operating Frequency [Hz]
 Sn = V1 * I1;        % Apparent Power [VA]
 
@@ -30,7 +31,7 @@ fprintf('Nominal Frequency: %.2f kHz\n', f/1e3);
 
 %% 2. Core Area (S_Fe) and Turns (n) Calculation
 % We constrain N1 to 5 turns to set the magnetic flux density Bmax=0.8T
-n1 = 6; 
+n1 = 3; 
 n2 = n1/n12; % N2 = N1 / ratio_V
 
 % Calculate the required core area based on Faraday's Law
@@ -41,7 +42,7 @@ A_Cu1 = I1 / J; % Copper Area Primary [mm^2]
 A_Cu2 = I2 / J; % Copper Area Secondary [mm^2]
 
 % Copper band length supposing a thikness of 0.5mm
-Lband1 = A_Cu1 / 0.5; % Copper band length [mm]
+Lband1 = A_Cu1 / 0.5 / 2; % Two in parallel copper band length [mm]
 Lband2 = A_Cu2 / 0.5; % Copper band length [mm]
 
 % Core Depth/Width using AM-NC-412 AMMET Nanocrystalline cut cores

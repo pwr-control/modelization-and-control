@@ -16,8 +16,8 @@ model = 'dcdc_zvs_full_bridge';
 use_thermal_model = 1;
 
 % simulation voltages
-number_of_cells_1_sim = floor(500/3.6) %[output:0994022b]
-number_of_cells_2_sim = floor(900/3.6) %[output:60f8fa48]
+number_of_cells_1_sim = floor(900/3.6) %[output:0994022b]
+number_of_cells_2_sim = floor(360/3.6) %[output:60f8fa48]
 %[text] ### Voltage application
 application400 = 0;
 application690 = 0;
@@ -112,7 +112,8 @@ m1 = n1;
 m2 = n2;
 m12 = m1/m2;
 
-Ls_dab = L_d_eff;
+% Ls_dab = L_d_eff;
+Ls_dab = 12e-6;
 
 f0 = fPWM_DAB/5;
 Cs_dab = 1/Ls_dab/(2*pi*f0)^2 %[output:6c8d3181]
@@ -475,10 +476,10 @@ open_system(model);
 % Simulink.importExternalCTypes(model,'Names',{'dqpll_grid_output_t'});
 %[text] ## 
 %[text] ## Remove Scopes Opening Automatically
-open_scopes = find_system(model, 'BlockType', 'Scope');
-for i = 1:length(open_scopes)
-    set_param(open_scopes{i}, 'Open', 'off');
-end
+% open_scopes = find_system(model, 'BlockType', 'Scope');
+% for i = 1:length(open_scopes)
+%     set_param(open_scopes{i}, 'Open', 'off');
+% end
 
 % shh = get(0,'ShowHiddenHandles');
 % set(0,'ShowHiddenHandles','On');
@@ -507,10 +508,10 @@ end
 %   data: {"layout":"onright","rightPanelPercent":6.2}
 %---
 %[output:0994022b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"number_of_cells_1_sim","value":"   138"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"number_of_cells_1_sim","value":"   250"}}
 %---
 %[output:60f8fa48]
-%   data: {"dataType":"textualVariable","outputData":{"name":"number_of_cells_2_sim","value":"   250"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"number_of_cells_2_sim","value":"   100"}}
 %---
 %[output:6c7481ff]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Idc_FS","value":"     4.050925925925926e+02"}}
@@ -519,10 +520,10 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"Vdc_FS","value":"     9.375000000000000e+02"}}
 %---
 %[output:6f08adf0]
-%   data: {"dataType":"text","outputData":{"text":"--- INITIAL ELECTRICAL PARAMETERS ---\nNominal Power (Sn): 347.82 kVA\nNominal Primary Voltage (Vn): 682.00 V\nNominal Primary Current (I1n): 510.00 V\nNominal Secondary Current (I2n): 168.30 V\nNominal Frequency: 12.00 kHz\n----------------------------------------------------\nCore Section Area (S_Fe): 42.6677 cm^2\nPrimary Turns (n1): 6\nSecondary Turns (n2): 1.818182e+01\nPrimary Copper Area (A_Cu1): 170.00 mm^2\nPrimary Copper Band Length: 34.00 cm\nSecondary Copper Band Length (L_b2): 11.22 cm\nCore Height (AM-NC-412 AMMET): 29.00 cm\nCore Width (AM-NC-412 AMMET): 6.00 cm\nCore Length (AM-NC-412 AMMET): 95.00 cm\nCore Dept (AM-NC-412 AMMET): 7.11 cm\nSpecific Core Loss (AM-NC-412 AMMET): 16.00 W\/kg\n----------------------------------------------------\n--- LOSS ESTIMATION ---\nCore Mass (M_Fe): 31.62 kg\nCore Loss (P_Fe): 505.87 W\nCopper Loss (P_Cu): 82.81 W\nTotal Losses per Phase (P_tot): 588.68 W\n----------------------------------------------------\nEstimated Efficiency (Eta, cos(phi)=0.95): 99.82 %\n----------------------------------------------------\n--- LEAKAGE INDUCTANCE AND REACTANCE ESTIMATION ---\nCalculated Leakage Inductance (Ld_calc): 0.000018 H (17.74 uH)\nEffective Leakage Inductance (Ld_eff): 0.000023 H (23.06 uH)\nLeakage Reactance (Xd): 1.739 Ohm\nEstimated Short Circuit Voltage (Vcc): 130.04 %\n----------------------------------------------------\n","truncated":false}}
+%   data: {"dataType":"text","outputData":{"text":"--- INITIAL ELECTRICAL PARAMETERS ---\nNominal Power (Sn): 347.82 kVA\nNominal Primary Voltage (Vn): 682.00 V\nNominal Primary Current (I1n): 510.00 V\nNominal Secondary Current (I2n): 194.00 V\nNominal Frequency: 12.00 kHz\n----------------------------------------------------\nCore Section Area (S_Fe): 85.3353 cm^2\nPrimary Turns (n1): 3\nSecondary Turns (n2): 9.090909e+00\nPrimary Copper Area (A_Cu1): 170.00 mm^2\nPrimary Copper Band Length: 17.00 cm\nSecondary Copper Band Length (L_b2): 12.93 cm\nCore Height (AM-NC-412 AMMET): 29.00 cm\nCore Width (AM-NC-412 AMMET): 6.00 cm\nCore Length (AM-NC-412 AMMET): 95.00 cm\nCore Dept (AM-NC-412 AMMET): 14.22 cm\nSpecific Core Loss (AM-NC-412 AMMET): 16.00 W\/kg\n----------------------------------------------------\n--- LOSS ESTIMATION ---\nCore Mass (M_Fe): 63.23 kg\nCore Loss (P_Fe): 1011.74 W\nCopper Loss (P_Cu): 68.74 W\nTotal Losses per Phase (P_tot): 1080.47 W\n----------------------------------------------------\nEstimated Efficiency (Eta, cos(phi)=0.95): 99.67 %\n----------------------------------------------------\n--- LEAKAGE INDUCTANCE AND REACTANCE ESTIMATION ---\nCalculated Leakage Inductance (Ld_calc): 0.000009 H (8.87 uH)\nEffective Leakage Inductance (Ld_eff): 0.000012 H (11.53 uH)\nLeakage Reactance (Xd): 0.869 Ohm\nEstimated Short Circuit Voltage (Vcc): 65.02 %\n----------------------------------------------------\n","truncated":false}}
 %---
 %[output:6c8d3181]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Cs_dab","value":"     1.906787267142677e-04"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Cs_dab","value":"     3.664684014841500e-04"}}
 %---
 %[output:6789dfdf]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Vac_FS","value":"     3.919183588453085e+02"}}
@@ -531,7 +532,7 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"     5.091168824543142e+02"}}
 %---
 %[output:63740541]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Aresd_nom","rows":2,"type":"double","value":[["1.000000000000000e+00","8.333333333333333e-05"],["-1.184352528130723e+01","9.984292036732051e-01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Aresd_nom","rows":2,"type":"double","value":[["1.000000000000000","0.000083333333333"],["-11.843525281307226","0.998429203673205"]]}}
 %---
 %[output:28fc6eb0]
 %   data: {"dataType":"textualVariable","outputData":{"name":"a11d","value":"     1"}}
@@ -540,41 +541,41 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"a12d","value":"     8.333333333333333e-05"}}
 %---
 %[output:1b40e88d]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":"    -1.184352528130723e+01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":" -11.843525281307226"}}
 %---
 %[output:94cef1af]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"     9.984292036732051e-01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.998429203673205"}}
 %---
 %[output:2df16908]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["3.106251915135997e-02"],["1.619345474049183e+00"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.031062519151360"],["1.619345474049183"]]}}
 %---
 %[output:179dae94]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["1.252633460038073e-01"],["3.082938122583556e+01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.125263346003807"],["30.829381225835562"]]}}
 %---
 %[output:56f14b27]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Afht","rows":2,"type":"double","value":[["0","1.000000000000000e+00"],["-9.869604401089359e+04","-1.570796326794897e+01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
 %[output:71d3202f]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Lfht","rows":2,"type":"double","value":[["1.555088363526948e+03"],["2.716608611399846e+05"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
 %[output:8d48ca25]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000e+00","8.333333333333333e-05"],["-8.224670334241132e+00","9.986910030610042e-01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000083333333333"],["-8.224670334241132","0.998691003061004"]]}}
 %---
 %[output:5494b171]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["1.295906969605790e-01"],["2.263840509499871e+01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.129590696960579"],["22.638405094998713"]]}}
 %---
 %[output:5bf03e7d]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAmCAYAAAB0xJ2ZAAAAAXNSR0IArs4c6QAAA5ZJREFUaEPtWjFoIlEQHSGVxLSxsNPGxnQKHkkTTiy94pLDQiQEFOEgiFhI4JqchYjcWZgUKYKlHFxqewsljWlSxcqTpDSmFDxmYZbZn7\/JRrN\/Bf1Vdvf\/+TNv3syfP8Y1m81msMLDZRcADw8PcHBwoEHbarXA6\/U6CnO\/34dUKgWZTAZyuZyui3IA8vk8xONxiMViSgHBfW9ubl44QxkAm5ubcHx8DL1eDy4uLpQCQN7f39+HWq1mAN51eHg4u7y8BFSQBqJ1fX1tULTdbkM2m4VwOAw0v9FoQLVa1dclEgl9Ax4CV1dXUCqVNONpkJz7+3uNmpPJRP9WKBR0mj4\/P+vAeTweOD8\/h3q9Dnd3d9BsNmFnZwf4HBTi8\/kMniY9uVwCRQoAGcsNEkGhZ5HHZBgqRTnADIByuQzpdBqGw6FBDBqKxvn9ft14moDftra24OnpyXSOCIKoOxmPoEtDQExgKJAntMfHR91rRGdag8bgu1AoZFhjJQS4J1HG9va2tg8O8jY5h0BCXcyYiR7H9Rh6nDEEQDAYlAOAGxJtUBEcuAkxQsYQvgbnFYtFywCIFEZZsn3xPc0lgzqdjiEMOZW4HuPxWBoypkmQJw4UynPCRwEgMk1kiQj8RwFAICGYpgCIXuHJj8eQ1RDAOkCMRWIZMUsMo3lDgLNAZAwmTT6kSZAm8CzPMyh+f08SpEKIr0FAk8kknJycSOsBBDYajc6dBCmMsN4QgScG4xzX7u7uzKxSI4\/w+OHaWj0GST7fmI6qSqWihRcOZAIWSTzfzHMMcuN5bpIeg3aVwlK3vvOlLNToHT8Z3hL7aiG0zADITgcyluektwCgkFVaCltRysocnhjnNR7XKb8MWTFuGebYdhl6zTix9LUbCEy4ZkM5ANPpFKK5XzAc\/rPbbl3+l8+f4Pf3BGxsbLzY0xEAvv78A91uVxkAkUgE\/v74Jt1POQCoBYaAyjDAEDALA0cAUOZ6CxutAVjmQsiCAxeeopQB\/DKksi9IFeXR0dGLXqQyAPAidHZ2pvXqbm9v9b\/tbpeLXSaxG60MAPQ+DuzKvuaRhTnNBPDW12g0gtPTU2cYQAbv7e1p3V7x+SON5rIGg4H26Ha7tfac4wDwGERGBAIBw680dgFBF6o1AKsWAsQoxxlADQmivKokuFQAOHUMIghLwQBiATVAVRZCSwOAXVl+EbnKCqFFlLRz7RqA9W1wxf9J6j9KHtbsSTBf6QAAAABJRU5ErkJggg==","height":31,"width":51}}
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAjVJREFUSEvtVi2PKkEQbCQW\/gAGTUIQBPcEEiwBRwhBgXiET4PjM5xBIQgOgsHwAy44LBYUCY4sFrmX6qQ3s\/t4u8vC3SWXGwUzPVVT3dUz69N1XSebMRgMaLfb0Ww2I03TKJ\/PU7lcpkwmY7fNcc2naZoeCAQIBNPplDekUinq9\/vk9\/t5HsSj0YhqtRrt93uOKZVKVCwWqVAomOYajQavr1YrarVaRiywF4sFxeNxul6v5INiVRUiAYYAgNgpxlooFGL1QgTwYDDImYEAwRDiSCRCzWaTWLFKJKedTCY0n89pvV7bphqnV1WD+HQ6sVpRiIzlcjn+L4fyHQ4H3Vo3nN6JOJ1O88k3mw0DYgg4iGV\/OBzmg8uaxHlWHI1GTUZTwV0p9lrjZDJpeKFSqZjUqzW2rhk1lnZSXQ3HijtVc8Hlkl4YJxaLUafT4TQD8HK5GK3mytWOTfdgwPF4NJVB9QxqjsHt9CCuq3A1g9jQ6\/VMl85TxCq4FdjpdJ6J4eLlcsk33Pl8pnq9TsPhkCSVn0asAqOm3W6XxuMx4fp1MzwrFnBJtzXVgb\/v\/\/Bf3\/4Yc08TA+l2u3GbJRIJ16\/WS4hBDuUY0v9O6fZMDHNtt1smkocCv\/GquRmeiUWlvOFf1k7\/UyWPxb1LQ93zlGIrOVJerVap3W7zkl2LvZQYamEyfJ\/Jg5LNZu\/W\/eXEcptBsV2L\/Rzib0n1t5kLdVXbSb4y77XeS2vs5saSmF\/iR7L1VOwH+FUrwd61FWEAAAAASUVORK5CYII=","height":30,"width":30}}
 %---
 %[output:78eda2d1]
-%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"     1.320000000000000e+01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
 %---
 %[output:9a166e04]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"     7.500000000000000e-03"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
 %---
 %[output:1ec537e3]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"     7.500000000000000e-03"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
 %---
 %[output:5e70c90c]
-%   data: {"dataType":"textualVariable","outputData":{"name":"idab_zvs_min","value":"     1.230000000000000e+01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"idab_zvs_min","value":"  12.299999999999999"}}
 %---
