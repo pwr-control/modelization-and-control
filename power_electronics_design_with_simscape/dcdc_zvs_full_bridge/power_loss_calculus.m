@@ -17,6 +17,13 @@ S1 = i1_dab_transformer_rms*u1_dab_transformer_rms
 S2 = i2_dab_transformer_rms*u2_dab_transformer_rms
 S3 = i3_dab_transformer_rms*u3_dab_transformer_rms
 
+ib1 = mean(current_battery_1_sim)
+ib2 = mean(current_battery_2_sim)
+ub1 = mean(voltage_battery_1_sim)
+ub2 = mean(voltage_battery_2_sim)
+Pout1 = ib1*ub1
+Pin2 = ib2*ub2
+
 return 
 idc_grid = mean(current_battery_sim);
 udc_grid = mean(voltage_battery_sim);
