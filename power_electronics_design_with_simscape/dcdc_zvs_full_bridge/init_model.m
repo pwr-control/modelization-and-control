@@ -103,12 +103,12 @@ RCFi_dc1_internal = 1e-3;
 CFi_dc2 = 900e-6*4;
 RCFi_dc2_internal = 1e-3;
 %[text] #### Tank LC and HF-Transformer parameters
-m1 = 6;
-m2 = 12;
+magnetics_design_transformer; %[output:6f08adf0]
+m1 = n1;
+m2 = n2;
 m12 = m1/m2;
-% Ls_dab = m12^2*(Vdab1_dc_nom^2/fPWM_DAB/Pnom/8)
 
-Ls_dab = 20e-6;
+Ls_dab = L_d_eff;
 
 f0 = fPWM_DAB/5;
 Cs_dab = 1/Ls_dab/(2*pi*f0)^2 %[output:6c8d3181]
@@ -118,9 +118,11 @@ Cs1_dab = Cs_dab*2;
 Cs2_dab = Cs1_dab/m12^2;
 Ls2_dab = Ls1_dab*m12^2;
 
-lm_trafo = 2e-3;
-rfe_trafo = 1e3;
-rd1_trafo = 1e-3;
+mu0 = 1.256637e-6;
+mur = 5000;
+lm_trafo = mu0*mur*n1^2*S_Fe/L_core_length * 1e-2;
+rfe_trafo = V1^2/P_Fe;
+rd1_trafo = P_Cu/I1^2/2;
 ld1_trafo = Ls1_dab;
 rd2_trafo = rd1_trafo/m12^2;
 ld2_trafo = Ls2_dab;
@@ -168,8 +170,8 @@ ki_v_dab = 45;
 %%
 %[text] ### AFE current control parameters
 %[text] #### Resonant PI
-Vac_FS = V_phase_normalization_factor %[output:1384c0dc]
-Iac_FS = I_phase_normalization_factor %[output:2bf54a89]
+Vac_FS = V_phase_normalization_factor %[output:6789dfdf]
+Iac_FS = I_phase_normalization_factor %[output:3f404ad4]
 
 kp_afe = 0.15;
 ki_afe = 18;
@@ -179,11 +181,11 @@ res_min = s/(s^2 + 2*delta*omega_grid_min*s + (omega_grid_min)^2);
 res_max = s/(s^2 + 2*delta*omega_grid_max*s + (omega_grid_max)^2);
 
 Ares_nom = [0 1; -omega_grid_nom^2 -2*delta*omega_grid_nom];
-Aresd_nom = eye(2) + Ares_nom*ts_afe %[output:345f228b]
-a11d = 1 %[output:9e69d693]
-a12d = ts_inv %[output:20880618]
-a21d = -omega_grid_nom^2*ts_inv %[output:266aaba1]
-a22d = 1 -2*delta*omega_grid_nom*ts_inv %[output:7a235d1a]
+Aresd_nom = eye(2) + Ares_nom*ts_afe %[output:63740541]
+a11d = 1 %[output:28fc6eb0]
+a12d = ts_inv %[output:5c0f6b69]
+a21d = -omega_grid_nom^2*ts_inv %[output:1b40e88d]
+a22d = 1 -2*delta*omega_grid_nom*ts_inv %[output:94cef1af]
 
 Bres = [0; 1];
 Cres = [0 1];
@@ -220,7 +222,7 @@ Lrso = acker(Arso',Crso',polesrso)';
 
 Adrso = eye(2) + Arso*ts_inv;
 polesdrso = exp(ts_inv*polesrso);
-Ldrso = acker(Adrso',Crso',polesdrso)' %[output:53464e72]
+Ldrso = acker(Adrso',Crso',polesdrso)' %[output:2df16908]
 
 freq_filter = 50;
 tau_f = 1/2/pi/freq_filter;
@@ -234,7 +236,7 @@ polesrso_pll = [-1 -4]*omega_rso;
 Lrso_pll = acker(Arso',Crso',polesrso_pll)';
 Adrso_pll = eye(2) + Arso*ts_afe;
 polesdrso_pll = exp(ts_afe*polesrso_pll);
-Ldrso_pll = acker(Adrso_pll',Crso',polesdrso_pll)' %[output:2b42b309]
+Ldrso_pll = acker(Adrso_pll',Crso',polesdrso_pll)' %[output:179dae94]
 
 %[text] ### PLL DDSRF
 use_advanced_pll = 0;
@@ -247,13 +249,13 @@ ddsrf_fd = c2d(ddsrf_f,ts_afe);
 %%
 %[text] ### First Harmonic Tracker for voltager grid cleaning
 omega0 = 2*pi*50;
-Afht = [0 1; -omega0^2 -0.05*omega0] % impianto nel continuo %[output:19de2814]
+Afht = [0 1; -omega0^2 -0.05*omega0] % impianto nel continuo %[output:56f14b27]
 Cfht = [1 0];
 poles_fht = [-1 -4]*omega0;
-Lfht = acker(Afht',Cfht',poles_fht)' % guadagni osservatore nel continuo %[output:5159e62b]
-Ad_fht = eye(2) + Afht*ts_afe % impianto nel discreto %[output:85434b31]
+Lfht = acker(Afht',Cfht',poles_fht)' % guadagni osservatore nel continuo %[output:71d3202f]
+Ad_fht = eye(2) + Afht*ts_afe % impianto nel discreto %[output:8d48ca25]
 polesd_fht = exp(ts_afe*poles_fht);
-Ld_fht = Lfht*ts_afe % guadagni osservatore nel discreto %[output:613a9f65]
+Ld_fht = Lfht*ts_afe % guadagni osservatore nel discreto %[output:5494b171]
 %%
 %[text] ### Reactive current control gains
 kp_rc_grid = 0.35;
@@ -385,16 +387,16 @@ rKalman = 1;
 Zmodel = (0:1e-3:1);
 ocv_model = E_1*exp(-Zmodel*alpha) + E0 + E1*Zmodel + E2*Zmodel.^2 +...
     E3*Zmodel.^3 + Elog*log(1-Zmodel+ts_inv);
-figure; 
-plot(Zmodel,ocv_model,'LineWidth',2);
-xlabel('state of charge [p.u.]');
-ylabel('open circuit voltage [V]');
-title('open circuit voltage(state of charge)');
-grid on
+figure;  %[output:5bf03e7d]
+plot(Zmodel,ocv_model,'LineWidth',2); %[output:5bf03e7d]
+xlabel('state of charge [p.u.]'); %[output:5bf03e7d]
+ylabel('open circuit voltage [V]'); %[output:5bf03e7d]
+title('open circuit voltage(state of charge)'); %[output:5bf03e7d]
+grid on %[output:5bf03e7d]
 
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] #### HeatSink
-heatsink_liquid_2kW; %[output:038a5c0b] %[output:7c8883f0] %[output:734836a0]
+heatsink_liquid_2kW; %[output:78eda2d1] %[output:9a166e04] %[output:1ec537e3]
 %[text] #### SKM1700MB20R4S2I4
 danfoss_SKM1700MB20R4S2I4; % SiC-Mosfet full leg
 dab_mosfet.Vth = Vth;                                  % [V]
@@ -455,7 +457,7 @@ mosfet.dab.Rsnubber = 1;                               % [Ohm]
 
 
 %[text] ## ZVS constraints 
-idab_zvs_min = 2*mosfet.dab.Coss*Vdab1_dc_nom/dead_time_DAB        % [A] %[output:97f2171d]
+idab_zvs_min = 2*mosfet.dab.Coss*Vdab1_dc_nom/dead_time_DAB        % [A] %[output:5e70c90c]
 %[text] ## C-Caller Settings
 open_system(model);
 % Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
@@ -506,57 +508,63 @@ end
 %[output:60f8fa48]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Vdc_FS","value":"     9.375000000000000e+02"}}
 %---
-%[output:6c8d3181]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Cs_dab","value":"     2.198810408904899e-04"}}
+%[output:6f08adf0]
+%   data: {"dataType":"text","outputData":{"text":"--- INITIAL ELECTRICAL PARAMETERS ---\nNominal Power (Sn): 347.82 kVA\nNominal Primary Voltage (Vn): 682.00 V\nNominal Primary Current (I1n): 510.00 V\nNominal Secondary Current (I2n): 255.00 V\nNominal Frequency: 12.00 kHz\n----------------------------------------------------\nCore Section Area (S_Fe): 42.6677 cm^2\nPrimary Turns (n1): 6\nSecondary Turns (n2): 3\nPrimary Copper Area (A_Cu1): 170.00 mm^2\nPrimary Copper Band Length: 34.00 cm\nSecondary Copper Band Length (L_b2): 17.00 cm\nCore Height (AM-NC-412 AMMET): 29.00 cm\nCore Width (AM-NC-412 AMMET): 6.00 cm\nCore Length (AM-NC-412 AMMET): 95.00 cm\nCore Dept (AM-NC-412 AMMET): 7.11 cm\nSpecific Core Loss (AM-NC-412 AMMET): 16.00 W\/kg\n----------------------------------------------------\n--- LOSS ESTIMATION ---\nCore Mass (M_Fe): 31.62 kg\nCore Loss (P_Fe): 505.87 W\nCopper Loss (P_Cu): 51.76 W\nTotal Losses per Phase (P_tot): 557.62 W\n----------------------------------------------------\nEstimated Efficiency (Eta, cos(phi)=0.95): 99.83 %\n----------------------------------------------------\n--- LEAKAGE INDUCTANCE AND REACTANCE ESTIMATION ---\nCalculated Leakage Inductance (Ld_calc): 0.000018 H (17.74 uH)\nEffective Leakage Inductance (Ld_eff): 0.000023 H (23.06 uH)\nLeakage Reactance (Xd): 1.739 Ohm\nEstimated Short Circuit Voltage (Vcc): 130.04 %\n----------------------------------------------------\n","truncated":false}}
 %---
-%[output:1384c0dc]
+%[output:6c8d3181]
+%   data: {"dataType":"textualVariable","outputData":{"name":"Cs_dab","value":"     1.906787267142677e-04"}}
+%---
+%[output:6789dfdf]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Vac_FS","value":"     3.919183588453085e+02"}}
 %---
-%[output:2bf54a89]
+%[output:3f404ad4]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"     5.091168824543142e+02"}}
 %---
-%[output:345f228b]
+%[output:63740541]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Aresd_nom","rows":2,"type":"double","value":[["1.000000000000000","0.000083333333333"],["-11.843525281307226","0.998429203673205"]]}}
 %---
-%[output:9e69d693]
+%[output:28fc6eb0]
 %   data: {"dataType":"textualVariable","outputData":{"name":"a11d","value":"     1"}}
 %---
-%[output:20880618]
+%[output:5c0f6b69]
 %   data: {"dataType":"textualVariable","outputData":{"name":"a12d","value":"     8.333333333333333e-05"}}
 %---
-%[output:266aaba1]
+%[output:1b40e88d]
 %   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":" -11.843525281307226"}}
 %---
-%[output:7a235d1a]
+%[output:94cef1af]
 %   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.998429203673205"}}
 %---
-%[output:53464e72]
+%[output:2df16908]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.031062519151360"],["1.619345474049183"]]}}
 %---
-%[output:2b42b309]
+%[output:179dae94]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.125263346003807"],["30.829381225835562"]]}}
 %---
-%[output:19de2814]
+%[output:56f14b27]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
-%[output:5159e62b]
+%[output:71d3202f]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
-%[output:85434b31]
+%[output:8d48ca25]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000083333333333"],["-8.224670334241132","0.998691003061004"]]}}
 %---
-%[output:613a9f65]
+%[output:5494b171]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.129590696960579"],["22.638405094998713"]]}}
 %---
-%[output:038a5c0b]
+%[output:5bf03e7d]
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAjVJREFUSEvtVi2PKkEQbCQW\/gAGTUIQBPcEEiwBRwhBgXiET4PjM5xBIQgOgsHwAy44LBYUCY4sFrmX6qQ3s\/t4u8vC3SWXGwUzPVVT3dUz69N1XSebMRgMaLfb0Ww2I03TKJ\/PU7lcpkwmY7fNcc2naZoeCAQIBNPplDekUinq9\/vk9\/t5HsSj0YhqtRrt93uOKZVKVCwWqVAomOYajQavr1YrarVaRiywF4sFxeNxul6v5INiVRUiAYYAgNgpxlooFGL1QgTwYDDImYEAwRDiSCRCzWaTWLFKJKedTCY0n89pvV7bphqnV1WD+HQ6sVpRiIzlcjn+L4fyHQ4H3Vo3nN6JOJ1O88k3mw0DYgg4iGV\/OBzmg8uaxHlWHI1GTUZTwV0p9lrjZDJpeKFSqZjUqzW2rhk1lnZSXQ3HijtVc8Hlkl4YJxaLUafT4TQD8HK5GK3mytWOTfdgwPF4NJVB9QxqjsHt9CCuq3A1g9jQ6\/VMl85TxCq4FdjpdJ6J4eLlcsk33Pl8pnq9TsPhkCSVn0asAqOm3W6XxuMx4fp1MzwrFnBJtzXVgb\/v\/\/Bf3\/4Yc08TA+l2u3GbJRIJ16\/WS4hBDuUY0v9O6fZMDHNtt1smkocCv\/GquRmeiUWlvOFf1k7\/UyWPxb1LQ93zlGIrOVJerVap3W7zkl2LvZQYamEyfJ\/Jg5LNZu\/W\/eXEcptBsV2L\/Rzib0n1t5kLdVXbSb4y77XeS2vs5saSmF\/iR7L1VOwH+FUrwd61FWEAAAAASUVORK5CYII=","height":0,"width":0}}
+%---
+%[output:78eda2d1]
 %   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
 %---
-%[output:7c8883f0]
+%[output:9a166e04]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
 %---
-%[output:734836a0]
+%[output:1ec537e3]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
 %---
-%[output:97f2171d]
+%[output:5e70c90c]
 %   data: {"dataType":"textualVariable","outputData":{"name":"idab_zvs_min","value":"  12.299999999999999"}}
 %---
