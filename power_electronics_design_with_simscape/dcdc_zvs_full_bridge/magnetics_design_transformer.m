@@ -2,10 +2,10 @@
 %% 1. Input Data and Design Parameters
 %--------------------------------------------------------------------------
 V1 = 682;            % Primary RMS Voltage [V]
+n12 = 0.33;          % Transformation Ratio V1/V2 (1:2)
 I1 = 510;            % Primary RMS Current [A]
-I2 = I1/2;            % Primary RMS Current [A]
-f = 12e3;             % Operating Frequency [Hz]
-n12 = I2/I1;             % Transformation Ratio V1/V2 (1:1)
+I2 = I1*n12;         % Primary RMS Current [A]
+f = 12e3;            % Operating Frequency [Hz]
 Sn = V1 * I1;        % Apparent Power [VA]
 
 % Design Parameters (Optimized for Nanocrystalline at 12 kHz)
@@ -31,7 +31,7 @@ fprintf('Nominal Frequency: %.2f kHz\n', f/1e3);
 %% 2. Core Area (S_Fe) and Turns (n) Calculation
 % We constrain N1 to 5 turns to set the magnetic flux density Bmax=0.8T
 n1 = 6; 
-n2 = n1*n12; % N2 = N1 / ratio_V
+n2 = n1/n12; % N2 = N1 / ratio_V
 
 % Calculate the required core area based on Faraday's Law
 S_Fe = V1 * 1e4 / (4.44 * f * Bmax * n1); % Core Area [cm^2]
