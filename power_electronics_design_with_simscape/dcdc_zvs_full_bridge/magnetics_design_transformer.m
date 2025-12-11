@@ -10,7 +10,7 @@ f = 5e3;            % Operating Frequency [Hz]
 Sn = V1 * I1;        % Apparent Power [VA]
 
 % Design Parameters (Optimized for Nanocrystalline at 12 kHz)
-Bmax = 0.5;          % Max Magnetic Flux Density [T]
+Bmax = 0.2;          % Max Magnetic Flux Density [T]
 J = 3.0;             % Current Density [A/mm^2] 
 rho_Cu = 1.72e-8;    % Copper Resistivity [Ohm*m]
 mu0 = 4*pi*1e-7;     % Permeability of Free Space [H/m]
