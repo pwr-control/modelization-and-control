@@ -2,10 +2,10 @@
 %% 1. Input Data and Design Parameters
 %--------------------------------------------------------------------------
 n12 = 1/2;          % Transformation Ratio V1/V2 (1:3)
-V1 = 682;            % Primary RMS Voltage [V]
-V2 = 1200;           % Secondary RMS Voltage [V]
-I1 = 510;            % Primary RMS Current [A]
-I2 = 194;            % Primary RMS Current [A]
+V1 = 650;            % Primary RMS Voltage [V]
+V2 = 950;           % Secondary RMS Voltage [V]
+I1 = 530;            % Primary RMS Current [A]
+I2 = 265;            % Primary RMS Current [A]
 f = 5e3;            % Operating Frequency [Hz]
 Sn = V1 * I1;        % Apparent Power [VA]
 
@@ -31,7 +31,7 @@ fprintf('Nominal Frequency: %.2f kHz\n', f/1e3);
 
 %% 2. Core Area (S_Fe) and Turns (n) Calculation
 % We constrain N1 to 5 turns to set the magnetic flux density Bmax=0.8T
-n1 = 4; 
+n1 = 6; 
 n2 = n1/n12; % N2 = N1 / ratio_V
 
 % Calculate the required core area based on Faraday's Law

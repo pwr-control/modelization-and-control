@@ -8,14 +8,11 @@ clc
 
 i1_dab_transformer_rms = sqrt(mean(i1_dab_transformer_modA_sim.^2))
 i2_dab_transformer_rms = sqrt(mean(i2_dab_transformer_modA_sim.^2))
-i3_dab_transformer_rms = sqrt(mean(i3_dab_transformer_modA_sim.^2))
 u1_dab_transformer_rms = sqrt(mean(u1_dab_transformer_modA_sim.^2))
 u2_dab_transformer_rms = sqrt(mean(u2_dab_transformer_modA_sim.^2))
-u3_dab_transformer_rms = sqrt(mean(u3_dab_transformer_modA_sim.^2))
 
 S1 = i1_dab_transformer_rms*u1_dab_transformer_rms
 S2 = i2_dab_transformer_rms*u2_dab_transformer_rms
-S3 = i3_dab_transformer_rms*u3_dab_transformer_rms
 
 ib1 = mean(current_battery_1_sim)
 ib2 = mean(current_battery_2_sim)
