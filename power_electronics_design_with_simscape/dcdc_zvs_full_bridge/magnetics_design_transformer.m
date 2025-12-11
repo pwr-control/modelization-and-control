@@ -6,7 +6,7 @@ V1 = 682;            % Primary RMS Voltage [V]
 V2 = 1200;           % Secondary RMS Voltage [V]
 I1 = 510;            % Primary RMS Current [A]
 I2 = 194;            % Primary RMS Current [A]
-f = 12e3;            % Operating Frequency [Hz]
+f = 5e3;            % Operating Frequency [Hz]
 Sn = V1 * I1;        % Apparent Power [VA]
 
 % Design Parameters (Optimized for Nanocrystalline at 12 kHz)
