@@ -1,7 +1,7 @@
 
 %% 1. Input Data and Design Parameters
 %--------------------------------------------------------------------------
-n12 = 5/7;          % Transformation Ratio V1/V2 (5:6)
+n12 = 5/4;          % Transformation Ratio V1/V2 (5:6)
 V1 = 650;            % Primary RMS Voltage [V]
 V2 = 800;           % Secondary RMS Voltage [V]
 I1 = 400;            % Primary RMS Current [A]
@@ -33,6 +33,7 @@ fprintf('Nominal Frequency: %.2f kHz\n', f/1e3);
 % We constrain N1 to 5 turns to set the magnetic flux density Bmax=0.8T
 n1 = 5; 
 n2 = n1/n12; % N2 = N1 / ratio_V
+n3 = n1/n12; % N3 = N1 / ratio_V
 
 % Calculate the required core area based on Faraday's Law
 S_Fe = V1 * 1e4 / (4.44 * f * Bmax * n1); % Core Area [cm^2]
@@ -132,6 +133,7 @@ Lsigma_eff = Lsigma * Fp; % Effective Leakage Inductance method 2 [H]
 %% transformer data for model
 m1 = n1;
 m2 = n2;
+m3 = n3;
 m12 = m1/m2;
 mu0 = 1.256637e-6;
 mur = 5000;
@@ -142,9 +144,11 @@ rd1_trafo = P_Cu/I1^2/2;
 % important 
 Ls_dab = 18e-6;
 
-rd2_trafo = rd1_trafo/m12^2;
-ld1_trafo = Ls_dab/2;
-ld2_trafo = ld1_trafo/m12^2;
+rd2_trafo = 2*rd1_trafo/m12^2;
+rd3_trafo = 2*rd1_trafo/m12^2;
+ld1_trafo = Ls_dab;
+ld2_trafo = 0;
+ld3_trafo = 0;
 
 % Output Results Leakage Inductance (Corrected Display)
 disp('--- LEAKAGE INDUCTANCE AND REACTANCE ESTIMATION ---');
