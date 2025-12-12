@@ -1,11 +1,11 @@
 
 %% 1. Input Data and Design Parameters
 %--------------------------------------------------------------------------
-n12 = 1/2;          % Transformation Ratio V1/V2 (1:3)
+n12 = 5/7;          % Transformation Ratio V1/V2 (5:6)
 V1 = 650;            % Primary RMS Voltage [V]
-V2 = 950;           % Secondary RMS Voltage [V]
-I1 = 530;            % Primary RMS Current [A]
-I2 = 265;            % Primary RMS Current [A]
+V2 = 800;           % Secondary RMS Voltage [V]
+I1 = 400;            % Primary RMS Current [A]
+I2 = 280;            % Primary RMS Current [A]
 f = 5e3;            % Operating Frequency [Hz]
 Sn = V1 * I1;        % Apparent Power [VA]
 
@@ -31,7 +31,7 @@ fprintf('Nominal Frequency: %.2f kHz\n', f/1e3);
 
 %% 2. Core Area (S_Fe) and Turns (n) Calculation
 % We constrain N1 to 5 turns to set the magnetic flux density Bmax=0.8T
-n1 = 6; 
+n1 = 5; 
 n2 = n1/n12; % N2 = N1 / ratio_V
 
 % Calculate the required core area based on Faraday's Law
@@ -113,7 +113,7 @@ L_d_calc = (mu0 * n1^2 / L_avv) * ( (h1 + h2)/3 + d );
 
 % Correction Factor for Skin/Proximity Effect (Fp)
 Fp = 1.3; 
-L_d_eff = L_d_calc * Fp; % Effective Leakage Inductance [H]
+L_d_eff = L_d_calc * Fp; % Effective Leakage Inductance method 1 [H]
 
 % Calculate Leakage Reactance (Xd)
 Xd = 2 * pi * f * L_d_eff;
@@ -126,11 +126,32 @@ Lband1_m = Lband1/1000; % [m]
 L_core_depth_m = L_core_depth/100; % [m]
 L_core_width_m = L_core_width/100; % [m]
 Lsigma = mu0 * n1^2 * K * Lband1_m * L_core_depth_m / L_core_width_m;
+Lsigma_eff = Lsigma * Fp; % Effective Leakage Inductance method 2 [H]
+
+
+%% transformer data for model
+m1 = n1;
+m2 = n2;
+m12 = m1/m2;
+mu0 = 1.256637e-6;
+mur = 5000;
+lm_trafo = mu0*mur*n1^2*S_Fe/L_core_length * 1e-2;
+rfe_trafo = V1^2/P_Fe;
+rd1_trafo = P_Cu/I1^2/2;
+
+% important 
+Ls_dab = 18e-6;
+
+rd2_trafo = rd1_trafo/m12^2;
+ld1_trafo = Ls_dab/2;
+ld2_trafo = ld1_trafo/m12^2;
 
 % Output Results Leakage Inductance (Corrected Display)
 disp('--- LEAKAGE INDUCTANCE AND REACTANCE ESTIMATION ---');
-fprintf('Calculated Leakage Inductance (Ld_calc): %.6f H (%.2f uH)\n', L_d_calc, L_d_calc * 1e6);
-fprintf('Effective Leakage Inductance (Ld_eff): %.6f H (%.2f uH)\n', L_d_eff, L_d_eff * 1e6);
-fprintf('Leakage Reactance (Xd): %.3f Ohm\n', Xd);
+fprintf('Calculated Leakage Inductance method 1 (Ld_calc): %.6f H (%.2f uH)\n', L_d_calc, L_d_calc * 1e6);
+fprintf('Calculated Leakage Inductance method 2 (Lsigma): %.6f H (%.2f uH)\n', Lsigma, Lsigma * 1e6);
+fprintf('Effective Leakage Inductance method 1 (Ld_eff): %.6f H (%.2f uH)\n', L_d_eff, L_d_eff * 1e6);
+fprintf('Effective Leakage Inductance method 2 (Lsigma_eff): %.6f H (%.2f uH)\n', Lsigma_eff, Lsigma_eff * 1e6);
+fprintf('Calculated Magnetizing Inductance (lm_trafo): %.6f H (%.2f uH)\n', lm_trafo, lm_trafo * 1e6);
 fprintf('Estimated Short Circuit Voltage (Vcc): %.2f %%\n', Vcc_perc);
 disp('----------------------------------------------------');
