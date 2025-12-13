@@ -1,5 +1,7 @@
+clear all
 close all
 clc
+load sim_results_6;
 
 tratto1=2.5;
 tratto2=2.5;
@@ -7,7 +9,7 @@ tratto3=3;
 colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
-t1c = time_tc_sim(end) - Nc*tc/1000;
+t1c = time_tc_sim(end) - Nc*tc/1250;
 t2c = time_tc_sim(end);
 t1s = time_ts_dab_sim(end) - Ns_dab*ts_dab;
 t2s = time_ts_dab_sim(end);
@@ -86,7 +88,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('transformer_current_voltage','-depsc');
-movefile('transformer_current_voltage.eps', 'figures');
+% movefile('transformer_current_voltage.eps', 'figures');
 
 
 figure(2);
@@ -96,7 +98,7 @@ yyaxis left;
 plot(time_tc_sim,current_battery_1_sim,'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-set(gca,'ylim',[240 250]);
+% set(gca,'ylim',[240 250]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
@@ -108,7 +110,7 @@ legend('$i_{1}^{dc}$','$u_{1}^{dc}$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
 set(gca,'xlim',[t1s t2s]);
-set(gca,'ylim',[760 770]);
+% set(gca,'ylim',[760 770]);
 grid on
 subplot 212
 colororder({'k','k'})
@@ -116,13 +118,13 @@ yyaxis left;
 plot(time_tc_sim,-current_battery_2_sim,'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-set(gca,'ylim',[295 305]);
+% set(gca,'ylim',[295 305]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
 plot(time_tc_sim,voltage_battery_2_sim,'-','LineWidth',tratto2,'Color',colore2);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[600 610]);
+% set(gca,'ylim',[600 610]);
 hold off
 title('DC output current and voltage','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$i_{2}^{dc}$','$u_{2}^{dc}$','Location','northwestoutside',...
@@ -136,7 +138,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('dc_inout_voltage_current','-depsc');
-movefile('dc_inout_voltage_current.eps', 'figures');
+% movefile('dc_inout_voltage_current.eps', 'figures');
 
 
 figure(3);
@@ -146,7 +148,7 @@ yyaxis left;
 plot(time_tc_sim,full_bridge_inverter_1_device_data_sim(:,2),'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-set(gca,'ylim',[-20 850]);
+set(gca,'ylim',[-20 1000]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
@@ -175,7 +177,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('full_bridge_Q1','-depsc');
-movefile('full_bridge_Q1.eps', 'figures');
+% movefile('full_bridge_Q1.eps', 'figures');
 
 figure(4);
 subplot 211
@@ -184,7 +186,7 @@ yyaxis left;
 plot(time_tc_sim,full_bridge_inverter_1_device_data_sim(:,7),'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-set(gca,'ylim',[-20 850]);
+set(gca,'ylim',[-20 1000]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
@@ -213,7 +215,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('full_bridge_Q2','-depsc');
-movefile('full_bridge_Q2.eps', 'figures');
+% movefile('full_bridge_Q2.eps', 'figures');
 
 
 figure(5);
@@ -223,7 +225,7 @@ yyaxis left;
 plot(time_tc_sim,full_bridge_inverter_1_device_data_sim(:,12),'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-set(gca,'ylim',[-20 850]);
+set(gca,'ylim',[-20 1000]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
@@ -252,8 +254,8 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('full_bridge_Q3','-depsc');
-movefile('full_bridge_Q3.eps', 'figures');
-
+% movefile('full_bridge_Q3.eps', 'figures');
+% 
 figure(6);
 subplot 211
 colororder({'k','k'})
@@ -261,7 +263,7 @@ yyaxis left;
 plot(time_tc_sim,full_bridge_inverter_1_device_data_sim(:,17),'-','LineWidth',tratto1,'Color',colore1);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-set(gca,'ylim',[-20 850]);
+set(gca,'ylim',[-20 1000]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
@@ -290,7 +292,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('full_bridge_Q4','-depsc');
-movefile('full_bridge_Q4.eps', 'figures');
+% movefile('full_bridge_Q4.eps', 'figures');
 
 
 figure(7);
@@ -340,6 +342,6 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('full_bridge_device_losses','-depsc');
-movefile('full_bridge_device_losses.eps', 'figures')
+% movefile('full_bridge_device_losses.eps', 'figures')
 
 
