@@ -5,7 +5,7 @@ load sim_results_1;
 
 tratto1=2.5;
 tratto2=2.5;
-tratto3=3;
+tratto3=4;
 colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
@@ -95,39 +95,39 @@ figure(2);
 subplot 211
 colororder({'k','k'})
 yyaxis left;
-plot(time_tc_sim,current_battery_1_sim,'-','LineWidth',tratto1,'Color',colore1);
+plot(time_tc_sim,current_battery_1_sim,'-','LineWidth',tratto3,'Color',colore1);
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-% set(gca,'ylim',[240 250]);
+set(gca,'ylim',[240 270]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
-plot(time_tc_sim,voltage_battery_1_sim,'-','LineWidth',tratto2,'Color',colore2);
+plot(time_tc_sim,voltage_battery_1_sim,'-','LineWidth',tratto3,'Color',colore2);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
 hold off
 title('DC input current and voltage','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$i_{1}^{dc}$','$u_{1}^{dc}$','Location','northwestoutside',...
+legend('$i_{in}^{dc}$','$u_{in}^{dc}$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
 set(gca,'xlim',[t1s t2s]);
-% set(gca,'ylim',[760 770]);
+set(gca,'ylim',[700 780]);
 grid on
 subplot 212
 colororder({'k','k'})
 yyaxis left;
-plot(time_tc_sim,-current_battery_2_sim,'-','LineWidth',tratto1,'Color',colore1);
+plot(time_tc_sim,-current_battery_2_sim,'-','LineWidth',tratto3,'Color',colore1);
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
-% set(gca,'ylim',[295 305]);
+set(gca,'ylim',[290 330]);
 yyaxis right;
 ax = gca;
 ax.YColor = [0.5 0.5 0.5]; 
-plot(time_tc_sim,voltage_battery_2_sim,'-','LineWidth',tratto2,'Color',colore2);
+plot(time_tc_sim,voltage_battery_2_sim,'-','LineWidth',tratto3,'Color',colore2);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
-% set(gca,'ylim',[600 610]);
+set(gca,'ylim',[500 630]);
 hold off
 title('DC output current and voltage','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$i_{2}^{dc}$','$u_{2}^{dc}$','Location','northwestoutside',...
+legend('$i_{out}^{dc}$','$u_{out}^{dc}$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
 set(gca,'xlim',[t1s t2s]);
@@ -139,7 +139,6 @@ set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('dc_inout_voltage_current','-depsc');
 % movefile('dc_inout_voltage_current.eps', 'figures');
-
 
 figure(3);
 subplot 211
