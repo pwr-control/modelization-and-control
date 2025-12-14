@@ -345,3 +345,49 @@ print('full_bridge_device_losses','-depsc');
 % movefile('full_bridge_device_losses.eps', 'figures')
 
 
+figure(8);
+subplot 211
+yyaxis left;
+ax = gca;
+ax.YColor = [0 0 0]; 
+plot(time_tc_sim,diode_rectifier_bridge_1_sim(:,1),'-','LineWidth',tratto1,'Color',colore1);
+ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
+xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
+% set(gca,'ylim',[500 700]);
+yyaxis right;
+ax = gca;
+ax.YColor = [0.5 0.5 0.5]; 
+plot(time_tc_sim,diode_rectifier_bridge_1_sim(:,2),'-','LineWidth',tratto1,'Color',colore2);
+ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
+grid on
+legend('$u_{d1}$','$i_{d1}$','Location','northwestoutside',...
+    'Interpreter','latex','FontSize',fontsize_plotting);
+set(gca,'xlim',[t1c t2c]);
+% set(gca,'ylim',[500 700]);
+title('Full-bridge rectifier 1: D1 voltage and current','Interpreter','latex','FontSize',fontsize_plotting);
+grid on
+subplot 212
+yyaxis left;
+ax = gca;
+ax.YColor = [0 0 0]; 
+plot(time_tc_sim,diode_rectifier_bridge_2_sim(:,1),'-','LineWidth',tratto1,'Color',colore1);
+ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
+xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
+% set(gca,'ylim',[500 700]);
+yyaxis right;
+ax = gca;
+ax.YColor = [0.5 0.5 0.5]; 
+plot(time_tc_sim,diode_rectifier_bridge_2_sim(:,2),'-','LineWidth',tratto1,'Color',colore2);
+ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
+grid on
+legend('$u_{d1}$','$i_{d1}$','Location','northwestoutside',...
+    'Interpreter','latex','FontSize',fontsize_plotting);
+set(gca,'xlim',[t1c t2c]);
+% set(gca,'ylim',[500 700]);
+title('Full-bridge rectifier 2: D1 voltage and current','Interpreter','latex','FontSize',fontsize_plotting);
+grid on
+h=gcf;
+set(h,'PaperOrientation','landscape');
+set(h,'PaperUnits','normalized');
+set(h,'PaperPosition', [0 0 1 1]);
+print('rectifiers_diode_voltage_current','-depsc');

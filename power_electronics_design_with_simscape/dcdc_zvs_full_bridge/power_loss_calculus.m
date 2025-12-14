@@ -36,10 +36,12 @@ i_ctrl_out_dab_avg = mean(i_ctrl_out_dab_sim)
 i_ref_pu = mean(u_ctrl_out_dab_sim)
 i_pu = mean(i_out_pu_dab_sim)
 
-p_loss_Q1 = mean(dab_inverter_1_device_data_sim(:,1));
-p_loss_Q2 = mean(dab_inverter_1_device_data_sim(:,6));
-p_loss_Q3 = mean(dab_inverter_1_device_data_sim(:,11));
-p_loss_Q4 = mean(dab_inverter_1_device_data_sim(:,16));
+p_loss_Q1 = mean(full_bridge_inverter_1_device_data_sim(:,1));
+p_loss_Q2 = mean(full_bridge_inverter_1_device_data_sim(:,6));
+p_loss_Q3 = mean(full_bridge_inverter_1_device_data_sim(:,11));
+p_loss_Q4 = mean(full_bridge_inverter_1_device_data_sim(:,16));
 
 p_loss_dab = p_loss_Q1+p_loss_Q2+p_loss_Q3+p_loss_Q4
 
+diode_rectifier_bridge_1_rms = sqrt(mean(diode_rectifier_bridge_1_sim.^2))
+diode_rectifier_bridge_2_rms = sqrt(mean(diode_rectifier_bridge_2_sim.^2))
