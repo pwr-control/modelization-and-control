@@ -11,7 +11,7 @@ simlength = 1;
 transmission_delay = 125e-6*2;
 s=tf('s');
 
-model = 'dcdc_llc';
+model = 'dcdc_cllc';
 rpi_enable = 0;
 rpi_ccaller = 0;
 %[text] ### Settings voltage application
