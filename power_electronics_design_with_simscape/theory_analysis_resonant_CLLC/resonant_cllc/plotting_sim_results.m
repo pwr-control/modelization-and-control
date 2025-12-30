@@ -72,3 +72,51 @@ print('CLLC_ac_quantities','-depsc');
 movefile('CLLC_ac_quantities.eps', 'figures');
 
 
+figure;
+subplot 211
+colororder({'k','k'})
+yyaxis left;
+plot(time_tc_sim,inverter_1_cllc_devices_data_modA_sim(:,3),'-','LineWidth',tratto1,'Color',colore1);
+hold on
+ylabel('$p/W$','Interpreter','latex','FontSize', fontsize_plotting);
+% set(gca,'ylim',[0 400]);
+hold on
+yyaxis right;
+ax = gca;
+ax.YColor = [0.5 0.5 0.5]; 
+plot(time_tc_sim,inverter_1_cllc_devices_data_modA_sim(:,2),'-','LineWidth',tratto1,'Color',colore2);
+hold off
+ylabel('$p/W$','Interpreter','latex','FontSize', fontsize_plotting);
+% set(gca,'ylim',[0 400]);
+title('CLLC output current and voltage','Interpreter','latex','FontSize',fontsize_plotting);
+legend('$u_{2}^{dc}$','$u_{1}^{dc}$','$i_{2}^{dc}$','$i_{1}^{dc}$','Location','northwestoutside',...
+    'Interpreter','latex','FontSize',fontsize_plotting);
+xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
+set(gca,'xlim',[t5c t6c]);
+grid on
+subplot 212
+colororder({'k','k'})
+yyaxis left;
+plot(time_tc_sim,inverter_1_cllc_devices_data_modA_sim(:,3),'-','LineWidth',tratto1,'Color',colore1);
+ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
+% set(gca,'ylim',[-1250 1000]);
+hold on
+yyaxis right;
+ax = gca;
+ax.YColor = [0.5 0.5 0.5]; 
+plot(time_tc_sim,inverter_1_cllc_devices_data_modA_sim(:,2),'-','LineWidth',tratto1,'Color',colore2);
+hold off
+ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
+% set(gca,'ylim',[500 1850]);
+title('CLLC output current and voltage','Interpreter','latex','FontSize',fontsize_plotting);
+legend('$i_{1}^{ac}$','$u_{1}^{ac}$','$u_{2}^{ac}$','Location','northwestoutside',...
+    'Interpreter','latex','FontSize',fontsize_plotting);
+xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
+set(gca,'xlim',[t7c t8c]);
+grid on
+h=gcf;
+set(h,'PaperOrientation','landscape');
+set(h,'PaperUnits','normalized');
+set(h,'PaperPosition', [0 0 1 1]);
+print('CLLC_device_quantities','-depsc');
+movefile('CLLC_device_quantities.eps', 'figures');
