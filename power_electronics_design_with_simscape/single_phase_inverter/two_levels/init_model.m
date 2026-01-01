@@ -25,7 +25,6 @@ fPWM_INV = fPWM; % PWM frequency
 tPWM_INV = 1/fPWM_INV;
 fPWM_DAB = fPWM; % PWM frequency 
 tPWM_DAB = 1/fPWM_DAB;
-half_phase_pulses = 1/fPWM_DAB/2;
 
 double_sampling = 0;
 
@@ -46,7 +45,7 @@ z_dab = tf('z',ts_dab);
 z_afe = tf('z',ts_afe);
 z_inv = tf('z',ts_inv);
 
-t_misura = simlength - 0.2;
+t_misura = simlength;
 Nc = ceil(t_misura/tc);
 Ns_battery = ceil(t_misura/ts_battery);
 Ns_dab = ceil(t_misura/ts_dab);
@@ -439,7 +438,7 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 %   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"     8.485281374238571e+02"}}
 %---
 %[output:700f1fc7]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAFhJREFUSEvt1MENACAIA8C6FpOxF8PxxBeJ8Q8mUgawyVlYERF4MIvBXeqk7pIGqf+kdneoKsys948zWESGBZO6fJXmlesk5a0uL1gGkJrUZQIsVxnt\/fAGfC6iVT8Auz8AAAAASUVORK5CYII=","height":30,"width":30}}
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAFhJREFUSEvt1MENACAIA8C6FpOxF8PxxBeJ8Q8mUgawyVlYERF4MIvBXeqk7pIGqf+kdneoKsys948zWESGBZO6fJXmlesk5a0uL1gGkJrUZQIsVxnt\/fAGfC6iVT8Auz8AAAAASUVORK5CYII=","height":0,"width":0}}
 %---
 %[output:97e357dd]
 %   data: {"dataType":"matrix","outputData":{"columns":3,"exponent":"-3","name":"num","rows":1,"type":"double","value":[["0","0.966531084866133","0.946498544476604"]]}}
@@ -484,7 +483,7 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.037191061070411"],["1.937144673860303"]]}}
 %---
 %[output:2e5b507a]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAjVJREFUSEvtVi2PKkEQbCQW\/gAGTUIQBPcEEiwBRwhBgXiET4PjM5xBIQgOgsHwAy44LBYUCY4sFrmX6qQ3s\/t4u8vC3SWXGwUzPVVT3dUz69N1XSebMRgMaLfb0Ww2I03TKJ\/PU7lcpkwmY7fNcc2naZoeCAQIBNPplDekUinq9\/vk9\/t5HsSj0YhqtRrt93uOKZVKVCwWqVAomOYajQavr1YrarVaRiywF4sFxeNxul6v5INiVRUiAYYAgNgpxlooFGL1QgTwYDDImYEAwRDiSCRCzWaTWLFKJKedTCY0n89pvV7bphqnV1WD+HQ6sVpRiIzlcjn+L4fyHQ4H3Vo3nN6JOJ1O88k3mw0DYgg4iGV\/OBzmg8uaxHlWHI1GTUZTwV0p9lrjZDJpeKFSqZjUqzW2rhk1lnZSXQ3HijtVc8Hlkl4YJxaLUafT4TQD8HK5GK3mytWOTfdgwPF4NJVB9QxqjsHt9CCuq3A1g9jQ6\/VMl85TxCq4FdjpdJ6J4eLlcsk33Pl8pnq9TsPhkCSVn0asAqOm3W6XxuMx4fp1MzwrFnBJtzXVgb\/v\/\/Bf3\/4Yc08TA+l2u3GbJRIJ16\/WS4hBDuUY0v9O6fZMDHNtt1smkocCv\/GquRmeiUWlvOFf1k7\/UyWPxb1LQ93zlGIrOVJerVap3W7zkl2LvZQYamEyfJ\/Jg5LNZu\/W\/eXEcptBsV2L\/Rzib0n1t5kLdVXbSb4y77XeS2vs5saSmF\/iR7L1VOwH+FUrwd61FWEAAAAASUVORK5CYII=","height":30,"width":30}}
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAjVJREFUSEvtVi2PKkEQbCQW\/gAGTUIQBPcEEiwBRwhBgXiET4PjM5xBIQgOgsHwAy44LBYUCY4sFrmX6qQ3s\/t4u8vC3SWXGwUzPVVT3dUz69N1XSebMRgMaLfb0Ww2I03TKJ\/PU7lcpkwmY7fNcc2naZoeCAQIBNPplDekUinq9\/vk9\/t5HsSj0YhqtRrt93uOKZVKVCwWqVAomOYajQavr1YrarVaRiywF4sFxeNxul6v5INiVRUiAYYAgNgpxlooFGL1QgTwYDDImYEAwRDiSCRCzWaTWLFKJKedTCY0n89pvV7bphqnV1WD+HQ6sVpRiIzlcjn+L4fyHQ4H3Vo3nN6JOJ1O88k3mw0DYgg4iGV\/OBzmg8uaxHlWHI1GTUZTwV0p9lrjZDJpeKFSqZjUqzW2rhk1lnZSXQ3HijtVc8Hlkl4YJxaLUafT4TQD8HK5GK3mytWOTfdgwPF4NJVB9QxqjsHt9CCuq3A1g9jQ6\/VMl85TxCq4FdjpdJ6J4eLlcsk33Pl8pnq9TsPhkCSVn0asAqOm3W6XxuMx4fp1MzwrFnBJtzXVgb\/v\/\/Bf3\/4Yc08TA+l2u3GbJRIJ16\/WS4hBDuUY0v9O6fZMDHNtt1smkocCv\/GquRmeiUWlvOFf1k7\/UyWPxb1LQ93zlGIrOVJerVap3W7zkl2LvZQYamEyfJ\/Jg5LNZu\/W\/eXEcptBsV2L\/Rzib0n1t5kLdVXbSb4y77XeS2vs5saSmF\/iR7L1VOwH+FUrwd61FWEAAAAASUVORK5CYII=","height":0,"width":0}}
 %---
 %[output:6f3c261a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"    44"}}
