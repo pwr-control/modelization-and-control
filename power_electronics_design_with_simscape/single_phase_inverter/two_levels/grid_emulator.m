@@ -5,13 +5,14 @@
 % vn_eta_pu = 0.05;
 
 vp_xi_pu = 1;
+vp_eta_pu = 0;
 vn_xi_pu = 0;
 vn_eta_pu = 0;
 
 %% grid emulator output transformer
-Ptrafo = 250e3;
-I0 = 5; % no load current
-Vcc_perc = 6.6; %cc voltage percente
+Ptrafo = 0.25e6;
+I0 = 20; % no load current
+Vcc_perc = 4; %cc voltage percente
 
 if (application690 == 1)
     Vline1 = 690; % primary voltage
@@ -35,11 +36,11 @@ omega_grid_emulator_nom = w_grid;
 omega_grid_nom = w_grid;
 omega_grid_min = w_grid*0.96;
 omega_grid_max = w_grid*1.04;
-Inom_trafo=Ptrafo/Vline2/sqrt(3);
-Ld2_trafo= Vphase2/(100/Vcc_perc)/Inom_trafo/(w_grid); %leakage inductace
-Rd2_trafo = 0.05*Ptrafo/3/Inom_trafo^2; 
-Lmu2_trafo= Vphase2/I0/(w_grid); %magentization inductance
-Piron = 1.4e3;
+Inom_trafo = Ptrafo/Vline2/sqrt(3);
+Ld2_trafo = Vphase2/(100/Vcc_perc)/Inom_trafo/(w_grid); %leakage inductace
+Rd2_trafo = 0.02*Ptrafo/3/Inom_trafo^2; 
+Lmu2_trafo = Vphase2/I0/(w_grid); %magentization inductance
+Piron = 0.8e3;
 Rm2_trafo = Vphase2^2/(Piron/3);
 psi_trafo = Lmu2_trafo*I0*sqrt(2);
 

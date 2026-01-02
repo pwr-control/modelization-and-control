@@ -18,7 +18,7 @@ application400 = 1;
 application690 = 0;
 application480 = 0;
 %[text] ### PWM and sampling time and data length storage
-fPWM = 10e3;
+fPWM = 20e3;
 fPWM_AFE = fPWM; % PWM frequency 
 tPWM_AFE = 1/fPWM_AFE;
 fPWM_INV = fPWM; % PWM frequency 
@@ -65,14 +65,22 @@ elseif (application480 == 1)
 else
     Vdc_nom = 660; % DClink voltage reference
 end
-%[text] ### 
-%[text] ### DClink, and dclink-brake parameters
+%[text] ### Grid Filter
+f5 = f_grid*5;
+f7 = f_grid*7;
+omega5 = 2*pi*f5;
+omega7 = 2*pi*f7;
+
+L5 = 1e-3;
+C5 = 1/(omega5^2)/L5;
+L7 = 1e-3;
+C7 = 1/(omega7^2)/L7;
+%[text] ### DClink
 Vdc_ref = Vdc_nom; % DClink voltage reference
 Rprecharge = 1; % Resistance of the DClink pre-charge circuit
 Pload = 250e3;
-Rbrake = 4;
 CFi_dc1 = 1400e-6*4;
-RCFi_dc1_internal = 1e-3;
+RCFi_dc1 = 1e-3;
 %[text] ### Load Transformer Parameters
 m1_load_trafo = 50;
 m2_load_trafo = 1;
@@ -87,7 +95,8 @@ I2rms_load_trafo = I1rms_load_trafo*m12_load_trafo %[output:617b30e4]
 lm_load_trafo = V1rms_load_trafo/I0rms_load_trafo/2/pi/ftr_nom_load_trafo;
 rfe_load_trafo = 2e3;
 rd1_load_trafo = 1e-3;
-ld1_load_trafo = 400e-6;
+ld1_load_trafo = 20e-6; % for 400Hz output 
+% ld1_load_trafo = 400e-6; % for 50Hz output
 rd2_load_trafo = rd1_load_trafo/m12_load_trafo^2;
 ld2_load_trafo = ld1_load_trafo/m12_load_trafo^2;
 %[text] ### Current sensor endscale, and quantization
@@ -127,13 +136,13 @@ ki_inv = 45;
 if system_identification_enable
     freq = 300;
 else
-    freq = 50;
+    freq = 400;
 end
 omega_set = 2*pi*freq;
 
 flt_dq = 2/(s/omega_set+1)^2;
 flt_dq_d = c2d(flt_dq,ts_inv);
-figure; bode(flt_dq_d, options); grid on %[output:700f1fc7]
+figure; bode(flt_dq_d, options); grid on %[output:647a9dbc]
 [num, den]=tfdata(flt_dq_d,'v') %[output:97e357dd] %[output:9d1224cc]
 
 %[text] #### Resonant PI
@@ -344,55 +353,53 @@ Ubez = V1rms_load_trafo*sqrt(2);
 Xbez = Ubez/Ibez;
 %[text] ## IGBT, MOSFET, DIODE and snubber data
 %[text] ### Diode rectifier
-Vf_diode_rectifier = 0.7;
-Rdon_diode_rectifier = 1.85e-3;
-%[text] ### HeatSink
-weigth = 0.050; % kg
-cp_al = 880; % J/K/kg
-heat_capacity = cp_al*weigth % J/K %[output:6f3c261a]
-thermal_conducibility = 204; % W/(m K)
-Rth_mosfet_HA = 30/1000 % K/W %[output:7d5e9062]
-Tambient = 40;
-DThs_init = 0;
+Vf_diode_rectifier = 0.35;
+Rdon_diode_rectifier = 3.5e-3;
+%[text] #### HeatSink settings
+heatsink_liquid_2kW; %[output:71a97270] %[output:5cd9d49f] %[output:60ed39a0]
+%[text] #### DEVICES settings
 %[text] ### SKM1700MB20R4S2I4
-Rds_on = 1.04e-3; % Rds [Ohm]
-Vdon_diode = 4; % V
-Vgamma = 4; % V
-Rdon_diode = 1.85e-3; % V
-Eon = 77e-3; % J @ Tj = 125°C
-Eoff = 108e-3; % J @ Tj = 125°C
-Eerr = 9.7e-3; % J @ Tj = 125°C
-Voff_sw_losses = 1300; % V
-Ion_sw_losses = 1000; % A
+danfoss_SKM1700MB20R4S2I4;
+mosfet.inv.Vth = Vth;                                            % [V]
+mosfet.inv.Rds_on = Rds_on;                                      % [Ohm]
+mosfet.inv.g_fs = g_fs;                                          % [A/V]
+mosfet.inv.Vdon_diode = Vdon_diode;                              % [V]
+mosfet.inv.Vgamma = Vgamma;                                      % [V]
+mosfet.inv.Rdon_diode = Rdon_diode;                              % [Ohm]
+mosfet.inv.Eon = Eon;                                            % [J] @ Tj = 125°C
+mosfet.inv.Eoff = Eoff;                                          % [J] @ Tj = 125°C
+mosfet.inv.Eerr = Eerr;                                          % [J] @ Tj = 125°C
+mosfet.inv.Voff_sw_losses = Voff_sw_losses;                      % [V]
+mosfet.inv.Ion_sw_losses = Ion_sw_losses;                        % [A]
+mosfet.inv.JunctionTermalMass = JunctionTermalMass;              % [J/K]
+mosfet.inv.Rtim = Rtim;                                          % [K/W]
+mosfet.inv.Rth_mosfet_JC = Rth_mosfet_JC;                        % [K/W]
+mosfet.inv.Rth_mosfet_CH = Rth_mosfet_CH;                        % [K/W]
+mosfet.inv.Rth_mosfet_JH = Rth_mosfet_JH;                        % [K/W]
+mosfet.inv.Lstray_module = Lstray_module;                        % [H]
+mosfet.inv.Lstray_d = Lstray_d;                                  % [H]
+mosfet.inv.RLd = RLd;                                            % [Ohm]
+mosfet.inv.Lstray_s = Lstray_s;                                  % [H]
+mosfet.inv.RLs = RLs;                                            % [Ohm]
+mosfet.inv.Ciss = Ciss;                                          % [F]
+mosfet.inv.Coss = Coss;                                          % [F]
+mosfet.inv.Crss = Crss;                                          % [F]
+mosfet.inv.Cgs = Cgs;                                            % [F]
+mosfet.inv.Cgd = Cgd;                                            % [F]
+mosfet.inv.Cds = Cds;                                            % [F]
+mosfet.inv.Rgate_internal = Rgate_internal;                      % [Ohm]
+mosfet.inv.Irr = Irr;                                            % [A]
+mosfet.inv.Csnubber = Csnubber;                                  % [F]
+mosfet.inv.Rsnubber = Rsnubber;                                  % [Ohm]
+% ------------------------------------------------------------
 
-JunctionTermalMass = 2; % J/K
-Rtim = 0.05;
-Rth_mosfet_JC = 19/1000; % K/W
-Rth_mosfet_CH = 6/1000; % K/W
-Rth_mosfet_JH = Rtim + Rth_mosfet_JC + Rth_mosfet_CH % K/W %[output:71a97270]
-Lstray_module = 12e-9;
-
-Irr = 475;
-Csnubber = Irr^2*Lstray_module/Vdc_nom^2 %[output:5cd9d49f]
-Rsnubber = 1/(Csnubber*fPWM_INV)/5 %[output:60ed39a0]
 %[text] ### Load
 uload = 3;
 rload = uload/I2rms_load_trafo;
-%[text] ### FF1000UXTR23T2M1
+lload = 1e-6/m12_load_trafo^2;
 
-% Ron = 2.13e-3; % Rds [Ohm]
-% Vgamma = 5.5; % V
-% Eon = 540e-3; % J @ Tj = 125°C
-% Eoff = 370e-3; % J @ Tj = 125°C
-% Eerr = 0.075e-3; % J @ Tj = 125°C
-% Voff_sw_losses = 1500; % V
-% Ion_sw_losses = 2000; % A
-% 
-% JunctionTermalMass = 0.025; % J/K
-% Rtim = 0.05;
-% Rth_mosfet_JC = 20/1000; % K/W
-% Rth_mosfet_CH = 5.8/1000; % K/W
-% Rth_mosfet_JH = Rtim + Rth_mosfet_JC + Rth_mosfet_CH % K/W
+% rload = 0.86/m12_load_trafo^2;
+% lload = 3e-3/m12_load_trafo^2;
 %[text] ## C-Caller Settings
 model = 'single_phase_inverter';
 open_system(model);
@@ -437,35 +444,35 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 %[output:19be7e26]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"     8.485281374238571e+02"}}
 %---
-%[output:700f1fc7]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAFhJREFUSEvt1MENACAIA8C6FpOxF8PxxBeJ8Q8mUgawyVlYERF4MIvBXeqk7pIGqf+kdneoKsys948zWESGBZO6fJXmlesk5a0uL1gGkJrUZQIsVxnt\/fAGfC6iVT8Auz8AAAAASUVORK5CYII=","height":0,"width":0}}
+%[output:647a9dbc]
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAFhJREFUSEvt1MENACAIA8C6FpOxF8PxxBeJ8Q8mUgawyVlYERF4MIvBXeqk7pIGqf+kdneoKsys948zWESGBZO6fJXmlesk5a0uL1gGkJrUZQIsVxnt\/fAGfC6iVT8Auz8AAAAASUVORK5CYII=","height":30,"width":30}}
 %---
 %[output:97e357dd]
-%   data: {"dataType":"matrix","outputData":{"columns":3,"exponent":"-3","name":"num","rows":1,"type":"double","value":[["0","0.966531084866133","0.946498544476604"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":3,"name":"num","rows":1,"type":"double","value":[["0","0.014528738829343","0.013361106321529"]]}}
 %---
 %[output:9d1224cc]
-%   data: {"dataType":"matrix","outputData":{"columns":3,"name":"den","rows":1,"type":"double","value":[["1.000000000000000","-1.938144852609621","0.939101367424292"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":3,"name":"den","rows":1,"type":"double","value":[["1.000000000000000","-1.763822756596352","0.777767679171789"]]}}
 %---
 %[output:26f707e8]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Ares_nom","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"6","name":"Ares_nom","rows":2,"type":"double","value":[["0","0.000001000000000"],["-6.316546816697190","-0.000125663706144"]]}}
 %---
 %[output:2214b3d6]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Aresd_nom","rows":2,"type":"double","value":[["1.000000000000000","0.000100000000000"],["-9.869604401089360","0.998429203673205"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"2","name":"Aresd_nom","rows":2,"type":"double","value":[["0.010000000000000","0.000000500000000"],["-3.158273408348595","0.009937168146928"]]}}
 %---
 %[output:6e27c0a7]
 %   data: {"dataType":"textualVariable","outputData":{"name":"a11d","value":"     1"}}
 %---
 %[output:7996ad92]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a12d","value":"     1.000000000000000e-04"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a12d","value":"     5.000000000000000e-05"}}
 %---
 %[output:9ad8d2a8]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":"  -9.869604401089360"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":"    -3.158273408348595e+02"}}
 %---
 %[output:637faca4]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.998429203673205"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.993716814692820"}}
 %---
 %[output:61f9eea3]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.149016195397013"],["36.521945502464568"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.076483869223994"],["18.982392004991411"]]}}
 %---
 %[output:306c88de]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
@@ -474,29 +481,23 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 %   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
 %[output:11c23dfc]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000100000000000"],["-9.869604401089360","0.998429203673205"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000050000000000"],["-4.934802200544680","0.999214601836603"]]}}
 %---
 %[output:4b099645]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.155508836352695"],["27.166086113998457"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.077754418176347"],["13.583043056999228"]]}}
 %---
 %[output:00aa870f]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.037191061070411"],["1.937144673860303"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.018721899663332"],["0.977712707506129"]]}}
 %---
 %[output:2e5b507a]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAjVJREFUSEvtVi2PKkEQbCQW\/gAGTUIQBPcEEiwBRwhBgXiET4PjM5xBIQgOgsHwAy44LBYUCY4sFrmX6qQ3s\/t4u8vC3SWXGwUzPVVT3dUz69N1XSebMRgMaLfb0Ww2I03TKJ\/PU7lcpkwmY7fNcc2naZoeCAQIBNPplDekUinq9\/vk9\/t5HsSj0YhqtRrt93uOKZVKVCwWqVAomOYajQavr1YrarVaRiywF4sFxeNxul6v5INiVRUiAYYAgNgpxlooFGL1QgTwYDDImYEAwRDiSCRCzWaTWLFKJKedTCY0n89pvV7bphqnV1WD+HQ6sVpRiIzlcjn+L4fyHQ4H3Vo3nN6JOJ1O88k3mw0DYgg4iGV\/OBzmg8uaxHlWHI1GTUZTwV0p9lrjZDJpeKFSqZjUqzW2rhk1lnZSXQ3HijtVc8Hlkl4YJxaLUafT4TQD8HK5GK3mytWOTfdgwPF4NJVB9QxqjsHt9CCuq3A1g9jQ6\/VMl85TxCq4FdjpdJ6J4eLlcsk33Pl8pnq9TsPhkCSVn0asAqOm3W6XxuMx4fp1MzwrFnBJtzXVgb\/v\/\/Bf3\/4Yc08TA+l2u3GbJRIJ16\/WS4hBDuUY0v9O6fZMDHNtt1smkocCv\/GquRmeiUWlvOFf1k7\/UyWPxb1LQ93zlGIrOVJerVap3W7zkl2LvZQYamEyfJ\/Jg5LNZu\/W\/eXEcptBsV2L\/Rzib0n1t5kLdVXbSb4y77XeS2vs5saSmF\/iR7L1VOwH+FUrwd61FWEAAAAASUVORK5CYII=","height":0,"width":0}}
-%---
-%[output:6f3c261a]
-%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"    44"}}
-%---
-%[output:7d5e9062]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.030000000000000"}}
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAjVJREFUSEvtVi2PKkEQbCQW\/gAGTUIQBPcEEiwBRwhBgXiET4PjM5xBIQgOgsHwAy44LBYUCY4sFrmX6qQ3s\/t4u8vC3SWXGwUzPVVT3dUz69N1XSebMRgMaLfb0Ww2I03TKJ\/PU7lcpkwmY7fNcc2naZoeCAQIBNPplDekUinq9\/vk9\/t5HsSj0YhqtRrt93uOKZVKVCwWqVAomOYajQavr1YrarVaRiywF4sFxeNxul6v5INiVRUiAYYAgNgpxlooFGL1QgTwYDDImYEAwRDiSCRCzWaTWLFKJKedTCY0n89pvV7bphqnV1WD+HQ6sVpRiIzlcjn+L4fyHQ4H3Vo3nN6JOJ1O88k3mw0DYgg4iGV\/OBzmg8uaxHlWHI1GTUZTwV0p9lrjZDJpeKFSqZjUqzW2rhk1lnZSXQ3HijtVc8Hlkl4YJxaLUafT4TQD8HK5GK3mytWOTfdgwPF4NJVB9QxqjsHt9CCuq3A1g9jQ6\/VMl85TxCq4FdjpdJ6J4eLlcsk33Pl8pnq9TsPhkCSVn0asAqOm3W6XxuMx4fp1MzwrFnBJtzXVgb\/v\/\/Bf3\/4Yc08TA+l2u3GbJRIJ16\/WS4hBDuUY0v9O6fZMDHNtt1smkocCv\/GquRmeiUWlvOFf1k7\/UyWPxb1LQ93zlGIrOVJerVap3W7zkl2LvZQYamEyfJ\/Jg5LNZu\/W\/eXEcptBsV2L\/Rzib0n1t5kLdVXbSb4y77XeS2vs5saSmF\/iR7L1VOwH+FUrwd61FWEAAAAASUVORK5CYII=","height":30,"width":30}}
 %---
 %[output:71a97270]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_JH","value":"   0.075000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
 %---
 %[output:5cd9d49f]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Csnubber","value":"     6.215564738292011e-09"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
 %---
 %[output:60ed39a0]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"     3.217728531855956e+03"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
 %---
