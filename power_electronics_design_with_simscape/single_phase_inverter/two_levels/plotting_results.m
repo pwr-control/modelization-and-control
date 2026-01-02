@@ -24,7 +24,7 @@ N2s = floor(Nc);
 t1s = time_tc_sim(N2s) - N1s*tc;
 t2s = time_tc_sim(N2s);
 
-N3s = floor(Nc/20);
+N3s = floor(Nc/10);
 N4s = floor(Nc);
 t3s = time_tc_sim(N4s) - N3s*tc;
 t4s = time_tc_sim(N4s);
