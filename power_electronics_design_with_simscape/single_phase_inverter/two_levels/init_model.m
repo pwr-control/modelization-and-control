@@ -95,7 +95,7 @@ I2rms_load_trafo = I1rms_load_trafo*m12_load_trafo %[output:617b30e4]
 lm_load_trafo = V1rms_load_trafo/I0rms_load_trafo/2/pi/ftr_nom_load_trafo;
 rfe_load_trafo = 2e3;
 rd1_load_trafo = 1e-3;
-ld1_load_trafo = 20e-6; % for 400Hz output 
+ld1_load_trafo = 100e-6; % for 400Hz output 
 % ld1_load_trafo = 400e-6; % for 50Hz output
 rd2_load_trafo = rd1_load_trafo/m12_load_trafo^2;
 ld2_load_trafo = ld1_load_trafo/m12_load_trafo^2;
@@ -136,7 +136,7 @@ ki_inv = 45;
 if system_identification_enable
     freq = 300;
 else
-    freq = 400;
+    freq = 50;
 end
 omega_set = 2*pi*freq;
 
@@ -433,71 +433,71 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 %   data: {"layout":"onright","rightPanelPercent":5.1}
 %---
 %[output:4e4d9ab0]
-%   data: {"dataType":"textualVariable","outputData":{"name":"V2rms_load_trafo","value":"   6.600000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"V2rms_load_trafo","value":"6.6000"}}
 %---
 %[output:617b30e4]
-%   data: {"dataType":"textualVariable","outputData":{"name":"I2rms_load_trafo","value":"       30000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"I2rms_load_trafo","value":"30000"}}
 %---
 %[output:45db0fb3]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Vac_FS","value":"     4.666904755831214e+02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Vac_FS","value":"466.6905"}}
 %---
 %[output:19be7e26]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"     8.485281374238571e+02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"848.5281"}}
 %---
 %[output:647a9dbc]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAFhJREFUSEvt1MENACAIA8C6FpOxF8PxxBeJ8Q8mUgawyVlYERF4MIvBXeqk7pIGqf+kdneoKsys948zWESGBZO6fJXmlesk5a0uL1gGkJrUZQIsVxnt\/fAGfC6iVT8Auz8AAAAASUVORK5CYII=","height":30,"width":30}}
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAADYAAAAhCAYAAACSllj+AAAAAXNSR0IArs4c6QAAAtRJREFUWEftWD1IqmEUfhwdgnAppGgwkabEKQRFcXQowf4gUQkNB10E\/wbFoTDQxV3IEEvcdGyyQVqbI6lQIQS3aBDxcl54Rb3eq3JBfS8dkA\/5jh\/n+Z7zPOe8Snq9Xg8ChsPhwOPj41DlUqkUpVIJCoUCEhGBvb6+wmKxIBqNotvtYmtrC+\/v7wzk8fExuwoLzG63I5vNotVqoVKpwOVyIR6PIxaLQSaTiQns+\/sbHo8Her0eOp0OTqcTzWYTu7u7yGQy4gJrt9s4OTnBy8sLJBIJuE2oVCrk83lxgU3jdUJqjBjb399Ho9EYwkjMra+v4\/b2VkyNEbCDgwOo1Wqk02kGrlAosCs55N3dnZjAyO65K9LMoiCw5Io+n4+BFbIVyRVPT0+xurqKm5ubPmPVahWBQAC5XE4sYMTK+fk5np+fx\/rHzs4ONjc3YTQaxQI2jRvyHOFakWYXH8jkgjTHeCxsQJM2QqEQyuXy0Mu\/uLhAMBicSAj\/vdlsZs63traGTqeDw8PDxe6KvDCtVttfVieiGUgYdT6bzYZiscg2jYXuin8DRnOIXO3j44OtSxqN5rcdkDB6vV6Wt7Kygr29PdRqNXx9feHz85MdV+g5Dw8P8zWPca3IdUHF3N\/fsyWWwu\/3IxKJQKlUsmLf3t5gtVrZ5\/r6mll9MplkoGghpvzLy0t2n\/Lnah7TMJZIJFCv1\/tsDRrD2dkZO4PRc8bFwhkbpzHeihzY1dUVUqkU0w+Pp6cnxhY\/mnAmSV8038iAqD2XljFihAolrdGJmIN2u904Ojr6I2MbGxusnQn8UrYi\/XcxOK+4DvnRn3ZFCpPJhO3tbcYUgQ+Hw5DL5TAYDPMFNou1T8rlGz7pkWJwONP3uTI2qdhZ73ONEWOj+hMW2GCrCs\/Y4HY\/2nqjbAvF2KRjy8KW4Fk19C\/5QjE2C9AfYLO8rWXI\/WFsGViYpYb\/lrFfAsYpKu9jKxAAAAAASUVORK5CYII=","height":0,"width":0}}
 %---
 %[output:97e357dd]
-%   data: {"dataType":"matrix","outputData":{"columns":3,"name":"num","rows":1,"type":"double","value":[["0","0.014528738829343","0.013361106321529"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":3,"exponent":"-3","name":"num","rows":1,"type":"double","value":[["0","0.2442","0.2416"]]}}
 %---
 %[output:9d1224cc]
-%   data: {"dataType":"matrix","outputData":{"columns":3,"name":"den","rows":1,"type":"double","value":[["1.000000000000000","-1.763822756596352","0.777767679171789"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":3,"name":"den","rows":1,"type":"double","value":[["1.0000","-1.9688","0.9691"]]}}
 %---
 %[output:26f707e8]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"6","name":"Ares_nom","rows":2,"type":"double","value":[["0","0.000001000000000"],["-6.316546816697190","-0.000125663706144"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Ares_nom","rows":2,"type":"double","value":[["0","0.0001"],["-9.8696","-0.0016"]]}}
 %---
 %[output:2214b3d6]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"2","name":"Aresd_nom","rows":2,"type":"double","value":[["0.010000000000000","0.000000500000000"],["-3.158273408348595","0.009937168146928"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Aresd_nom","rows":2,"type":"double","value":[["1.0000","0.0001"],["-4.9348","0.9992"]]}}
 %---
 %[output:6e27c0a7]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a11d","value":"     1"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a11d","value":"1"}}
 %---
 %[output:7996ad92]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a12d","value":"     5.000000000000000e-05"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a12d","value":"5.0000e-05"}}
 %---
 %[output:9ad8d2a8]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":"    -3.158273408348595e+02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":"-4.9348"}}
 %---
 %[output:637faca4]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.993716814692820"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"0.9992"}}
 %---
 %[output:61f9eea3]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.076483869223994"],["18.982392004991411"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.0765"],["18.9824"]]}}
 %---
 %[output:306c88de]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.0001"],["-9.8696","-0.0016"]]}}
 %---
 %[output:23fb1bfd]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.0156"],["2.7166"]]}}
 %---
 %[output:11c23dfc]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000050000000000"],["-4.934802200544680","0.999214601836603"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.0000","0.0001"],["-4.9348","0.9992"]]}}
 %---
 %[output:4b099645]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.077754418176347"],["13.583043056999228"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.0778"],["13.5830"]]}}
 %---
 %[output:00aa870f]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.018721899663332"],["0.977712707506129"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.0187"],["0.9777"]]}}
 %---
 %[output:2e5b507a]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IArs4c6QAAAjVJREFUSEvtVi2PKkEQbCQW\/gAGTUIQBPcEEiwBRwhBgXiET4PjM5xBIQgOgsHwAy44LBYUCY4sFrmX6qQ3s\/t4u8vC3SWXGwUzPVVT3dUz69N1XSebMRgMaLfb0Ww2I03TKJ\/PU7lcpkwmY7fNcc2naZoeCAQIBNPplDekUinq9\/vk9\/t5HsSj0YhqtRrt93uOKZVKVCwWqVAomOYajQavr1YrarVaRiywF4sFxeNxul6v5INiVRUiAYYAgNgpxlooFGL1QgTwYDDImYEAwRDiSCRCzWaTWLFKJKedTCY0n89pvV7bphqnV1WD+HQ6sVpRiIzlcjn+L4fyHQ4H3Vo3nN6JOJ1O88k3mw0DYgg4iGV\/OBzmg8uaxHlWHI1GTUZTwV0p9lrjZDJpeKFSqZjUqzW2rhk1lnZSXQ3HijtVc8Hlkl4YJxaLUafT4TQD8HK5GK3mytWOTfdgwPF4NJVB9QxqjsHt9CCuq3A1g9jQ6\/VMl85TxCq4FdjpdJ6J4eLlcsk33Pl8pnq9TsPhkCSVn0asAqOm3W6XxuMx4fp1MzwrFnBJtzXVgb\/v\/\/Bf3\/4Yc08TA+l2u3GbJRIJ16\/WS4hBDuUY0v9O6fZMDHNtt1smkocCv\/GquRmeiUWlvOFf1k7\/UyWPxb1LQ93zlGIrOVJerVap3W7zkl2LvZQYamEyfJ\/Jg5LNZu\/W\/eXEcptBsV2L\/Rzib0n1t5kLdVXbSb4y77XeS2vs5saSmF\/iR7L1VOwH+FUrwd61FWEAAAAASUVORK5CYII=","height":30,"width":30}}
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAADYAAAAhCAYAAACSllj+AAAAAXNSR0IArs4c6QAAA0xJREFUWEftWb9PIkEUfhRX0GJoCIXmot2FhFh4dFdQYq4wIdoRQ6ykAQVtCI38EBqtLIidLg0FtvcHYGlxDTRICA2B1uv28k3yNrNzC4tkd7kYJyGBnZk33\/e+N2\/eDj5d13X6gM33YYn1ej19e3vbEc2q1Sp1u11qNpsUCATE99fXV0omk47YV430+306Pz+nWq1GKgefW8Sm0ymlUik6PT11jRgcOR6PqVKpkN\/vN\/H2bW1t6Q8PD7S3tyc63t7eqFAoiO88QVUCv+\/u7sSYRCLxz7jr62s6Ozujl5cXMebk5ITS6TQdHx+bnuXzedHfarXo4uLCGAvbjGk2m5nm8XOopTpOxmWpGBbSNE2EFBoAgTiAyCQX9amKYd7m5qZQj4kA5MbGhgAIB7F9JhaJRExO7nQ6dHt7S\/f39wT7uVxOfEcYIuyPjo6EQ2DTkhh7o16vC2I8YWdnx0SSvc2LtdttY49ZhaKV97EHoRYroQKUVZFxYR6vKxMDJtiyJMbhGAqFBDFOCFZg4X07Yvv7+8LzT09PYlHZWfMAyuPUpFEul2kwGAh7rBhjxjO0ucmDAQeDQSMM2eMclssqFo1GTftBVuU9iskEZYeqGRF9c4mx7Mg6cnJZZY\/F43EjhDOZjEk9eY+pfXZ7jLcIHC0TDYfDJLIipFXPGpZ2OBwa5xJ7TM4+yHic3WTSSL8cfkgMu7u7VCwWhQkAnkwmxlHgSlZcd+Whpu1FIabuNTgSjR0r9\/8XJZUcAQBnFUEqKfxeWHmsWzErwE48c02x0WhE+HjRkCzwcT0UQehn\/RcNZ3+84EU\/vvymRilvIueKYiCWLVbp+fnZE2Lfv30l1Keyaq4QA5sPGYqeyGSziGuKrZvcJ7FlFeAC9z0H7bK2rcZx6Xd4eGi8LIvq3skDGtV\/Npuly8tLgeHq6ooajYa4\/3Cjye93cqHuODGohfIIb95cBKuedIoglLq5uaGDgwPxJo16ka83XCH2+Pgo7kDQUN3HYjHXLnOwBqv2SWyVkPEyFBmfJ4p5nTw8C0UsJKd7NVOtEgV2czxRzA6El\/2OnmNeArdby6dpmu7EnwbyvZ58wTMPwLyKwQ7wsv2OEUOsl0olcRO1TKXhNrG\/XwFExlbL6nAAAAAASUVORK5CYII=","height":0,"width":0}}
 %---
 %[output:71a97270]
-%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"13.2000"}}
 %---
 %[output:5cd9d49f]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"0.0075"}}
 %---
 %[output:60ed39a0]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"0.0075"}}
 %---
