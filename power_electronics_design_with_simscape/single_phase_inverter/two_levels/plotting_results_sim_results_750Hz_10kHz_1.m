@@ -12,17 +12,17 @@ colore2b = [0.35 0.35 0.35];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 
-N1c = floor(Nc/200/(freq/f_grid));
+N1c = floor(Nc/200/(frequency_set/f_grid));
 N2c = floor(Nc);
 t1c = time_tc_sim(N2c) - N1c*tc;
 t2c = time_tc_sim(N2c);
 
-N3c = floor(Nc/1000/(freq/f_grid));
+N3c = floor(Nc/1000/(frequency_set/f_grid));
 N4c = floor(Nc);
 t3c = time_tc_sim(N4c) - N3c*tc;
 t4c = time_tc_sim(N4c);
 
-N1s = floor(Nc/10/(freq/f_grid));
+N1s = floor(Nc/10/(frequency_set/f_grid));
 N2s = floor(Nc);
 t1s = time_tc_sim(N2s) - N1s*tc;
 t2s = time_tc_sim(N2s);
