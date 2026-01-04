@@ -1,7 +1,7 @@
-clear all
 close all
 clc
 
+clear all
 load sim_results_750Hz_10kHz_1;
 
 tratto1=1;
@@ -12,7 +12,7 @@ colore2b = [0.35 0.35 0.35];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 
-N1c = floor(Nc/200/(frequency_set/f_grid));
+N1c = floor(Nc/50/(frequency_set/f_grid));
 N2c = floor(Nc);
 t1c = time_tc_sim(N2c) - N1c*tc;
 t2c = time_tc_sim(N2c);
@@ -32,7 +32,7 @@ N4s = floor(Nc);
 t3s = time_tc_sim(N4s) - N3s*tc;
 t4s = time_tc_sim(N4s);
 
-N5s = floor(Nc/20);
+N5s = floor(Nc/40);
 N6s = floor(Nc);
 t5s = time_tc_sim(N6s) - N5s*tc;
 t6s = time_tc_sim(N6s);
@@ -114,32 +114,32 @@ movefile('grid_quantities.eps', 'figures/sim_results_750Hz_10kHz_1');
 % print('line_quantities','-depsc');
 % movefile('line_quantities.eps', 'figures/sim_results_750Hz_10kHz_1');
 
-%% figure (3)
-figure(3);
-subplot 211
-plot(time_tc_sim,inverter_current_output_sim,'-','LineWidth',tratto3,'Color',colore1);
-ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
-title('Inverter Output Current');
-legend('$i_{out}^{inv}$','Location','northwestoutside',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'xlim',[t1s t2s]);
-grid on
-subplot 212
-plot(time_tc_sim,inverter_voltage_output_sim,'-','LineWidth',tratto2,'Color',colore1);
-ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
-title('Inverter Output Voltage');
-legend('$u_{out}^{inv}$','Location','northwestoutside',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'xlim',[t1s t2s]);
-grid on
-h=gcf;
-set(h,'PaperOrientation','landscape');
-set(h,'PaperUnits','normalized');
-set(h,'PaperPosition', [0 0 1 1]);
-print('inverter_outputs','-depsc');
-movefile('inverter_outputs.eps', 'figures/sim_results_750Hz_10kHz_1');
+% %% figure (3)
+% figure(3);
+% subplot 211
+% plot(time_tc_sim,inverter_current_output_sim,'-','LineWidth',tratto3,'Color',colore1);
+% ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
+% title('Inverter Output Current');
+% legend('$i_{out}^{inv}$','Location','northwestoutside',...
+%     'Interpreter','latex','FontSize',fontsize_plotting);
+% xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
+% set(gca,'xlim',[t1s t2s]);
+% grid on
+% subplot 212
+% plot(time_tc_sim,inverter_voltage_output_sim,'-','LineWidth',tratto2,'Color',colore1);
+% ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
+% title('Inverter Output Voltage');
+% legend('$u_{out}^{inv}$','Location','northwestoutside',...
+%     'Interpreter','latex','FontSize',fontsize_plotting);
+% xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
+% set(gca,'xlim',[t1s t2s]);
+% grid on
+% h=gcf;
+% set(h,'PaperOrientation','landscape');
+% set(h,'PaperUnits','normalized');
+% set(h,'PaperPosition', [0 0 1 1]);
+% print('inverter_outputs','-depsc');
+% movefile('inverter_outputs.eps', 'figures/sim_results_750Hz_10kHz_1');
 
 % %% figure (4)
 % x1 = time_tc_sim(N1s:N2s);
@@ -209,7 +209,7 @@ set(gca,'xlim',[t1s t2s]);
 ax2 = axes('Position',[0.7,0.735,0.225,0.225]);
 plot(ax2,x2,y2,'-','LineWidth',tratto2,'Color',colore1);
 grid on
-set(gca,'xlim',[t3c t4c]);
+set(gca,'xlim',[t1c t2c]);
 subplot 212
 x1 = time_tc_sim(N1s:N2s);
 y1 = inverter_voltage_output_sim(N1s:N2s);
@@ -480,7 +480,7 @@ title('Grid Active Power');
 legend('$p_{g}$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'xlim',[t3s t4s]);
+set(gca,'xlim',[t5s t6s]);
 grid on
 subplot 212
 plot(time_tc_sim,grid_metering_sim(:,1)./1e3,'-','LineWidth',tratto3,'Color',colore1);
@@ -489,7 +489,7 @@ title('Grid Reactive Power');
 legend('$q_{g}$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'xlim',[t3s t4s]);
+set(gca,'xlim',[t5s t6s]);
 grid on
 h=gcf;
 set(h,'PaperOrientation','landscape');
@@ -521,7 +521,7 @@ set(gca,'Children',[chH(3); chH(2); chH(1)])
 ax2 = axes('Position',[0.7,0.735,0.225,0.225]);
 plot(ax2,x2,y2,'-','LineWidth',tratto2,'Color',colore2b);
 grid on
-set(gca,'xlim',[t1s t2s]);
+set(gca,'xlim',[t5s t6s]);
 subplot 212
 y2 = iq_pu_sim;
 plot(time_ts_inv_sim, iq_pu_ref_sim,'-','LineWidth',tratto3,'Color',colore1);
@@ -542,7 +542,7 @@ set(gca,'Children',[chH(3); chH(2); chH(1)])
 ax2 = axes('Position',[0.7,0.275,0.225,0.225]);
 plot(ax2,x2,y2,'-','LineWidth',tratto2,'Color',colore2b);
 grid on
-set(gca,'xlim',[t1s t2s]);
+set(gca,'xlim',[t5s t6s]);
 h=gcf;
 set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
