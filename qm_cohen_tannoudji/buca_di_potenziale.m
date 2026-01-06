@@ -12,13 +12,13 @@ dx = x(2) - x(1);   % Passo della griglia
 % Esempio: Buca di potenziale finita (Finite Square Well)
 V0 = 50;            % Profondità della buca (o altezza delle barriere)
 width = 2;          % Semilarghezza della buca
-V = zeros(N, 1);    
+% V = zeros(N, 1);    
 
 % Definiamo la buca: 0 dentro, V0 fuori
-V(abs(x) > width) = V0; 
+% V(abs(x) > width) = V0; 
 
 % --- ALTERNATIVA: Oscillatore Armonico (decommentare per provare) ---
-% k = 10; V = 0.5 * k * x.^2; 
+k = 10; V = 0.5 * k * x.^2; 
 % --------------------------------------------------------------------
 
 %% 3. Costruzione della Matrice Hamiltoniana (H)
