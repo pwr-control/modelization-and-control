@@ -6,13 +6,13 @@ beep off
 pm_addunit('percent', 0.01, '1');
 options = bodeoptions;
 options.FreqUnits = 'Hz';
-% simlength = 3.75;
-simlength = 2;
+simlength = 3.75;
+% simlength = 2;
 transmission_delay = 125e-6*2;
 model = 'afe_abc_inv_psm';
 
 use_mosfet_thermal_model = 0;
-use_thermal_model = 1;
+use_thermal_model = 0;
 load_step_time = 1.25;
 %[text] #### local time allignment to master time
 kp_align = 0.6;
@@ -145,6 +145,16 @@ Kd = (acker(Asod',Cso',p2placed))';
 l1 = Kd(2) %[output:08bc4522]
 l2 = Kd(1) %[output:858ca950]
 
+%[text] #### Linear double integrator observer
+Aso = [0 1; 0 0];
+Asod = eye(2)+Aso*ts_afe;
+Cso = [1 0];
+omega_rso = 2*pi*50;
+p2place = [-5 -20]*omega_rso;
+p2placed = exp(p2place*ts_afe);
+Kd = (acker(Asod',Cso',p2placed))';
+kv = Kd(2)/ts_afe;
+kx = Kd(1)/ts_afe;
 %[text] #### Grid fault generator 
 grid_fault_generator;
 %[text] ### Current sensor endscale, and quantization
@@ -545,6 +555,7 @@ Simulink.importExternalCTypes(model,'Names',{'first_harmonic_tracker_output_t'})
 Simulink.importExternalCTypes(model,'Names',{'dqpll_thyr_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dqpll_grid_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_output_t'});
 
 %[text] ## Remove Scopes Opening Automatically
 open_scopes = find_system(model, 'BlockType', 'Scope');
