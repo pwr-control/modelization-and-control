@@ -12,7 +12,7 @@ transmission_delay = 125e-6*2;
 model = 'inv_psm';
 
 use_mosfet_thermal_model = 0;
-use_thermal_model = 1;
+use_thermal_model = 0;
 load_step_time = 1.25;
 %[text] #### local time allignment to master time
 kp_align = 0.6;
@@ -23,7 +23,7 @@ lim_down_align = -0.2;
 number_of_modules = 1;
 enable_two_modules = number_of_modules;
 %[text] ### Settings for speed control or wind application
-use_torque_curve = 1; % for wind application
+use_torque_curve = 0; % for wind application
 use_speed_control = 1-use_torque_curve; %
 use_mtpa = 1; %
 use_psm_encoder = 0; % 
