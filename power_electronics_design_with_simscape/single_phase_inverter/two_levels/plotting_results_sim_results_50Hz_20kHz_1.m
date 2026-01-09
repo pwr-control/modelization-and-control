@@ -14,27 +14,27 @@ colore3 = [0.75 0.75 0.75];
 
 N1c = floor(Nc/50/(frequency_set/f_grid));
 N2c = floor(Nc);
-t1c = time_tc_sim(N2c) - N1c*tc;
+t1c = time_tc_sim(N2c) - N1c*tc*decimation_tc;
 t2c = time_tc_sim(N2c);
 
 N3c = floor(Nc/1000/(frequency_set/f_grid));
 N4c = floor(Nc);
-t3c = time_tc_sim(N4c) - N3c*tc;
+t3c = time_tc_sim(N4c) - N3c*tc*decimation_tc;
 t4c = time_tc_sim(N4c);
 
 N1s = floor(Nc/10/(frequency_set/f_grid));
 N2s = floor(Nc);
-t1s = time_tc_sim(N2s) - N1s*tc;
+t1s = time_tc_sim(N2s) - N1s*tc*decimation_tc;
 t2s = time_tc_sim(N2s);
 
 N3s = floor(Nc/10);
 N4s = floor(Nc);
-t3s = time_tc_sim(N4s) - N3s*tc;
+t3s = time_tc_sim(N4s) - N3s*tc*decimation_tc;
 t4s = time_tc_sim(N4s);
 
 N5s = floor(Nc/40);
 N6s = floor(Nc);
-t5s = time_tc_sim(N6s) - N5s*tc;
+t5s = time_tc_sim(N6s) - N5s*tc*decimation_tc;
 t6s = time_tc_sim(N6s);
 
 fontsize_plotting = 14;
@@ -515,6 +515,7 @@ legend('$i_{d}^{ref}$','$i_{d}$','$u_{d}^{ctrl}$','Location','northwestoutside',
     'Interpreter','latex','FontSize',fontsize_plotting);
 xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
 set(gca,'xlim',[time_ts_inv_sim(1) time_ts_inv_sim(end)]);
+set(gca,'ylim',[-0.25 1.25]);
 grid on
 chH = get(gca,'Children');
 set(gca,'Children',[chH(3); chH(2); chH(1)])
@@ -536,6 +537,7 @@ legend('$i_{q}^{ref}$','$i_{q}$','$u_{q}^{ctrl}$','Location','northwestoutside',
     'Interpreter','latex','FontSize',fontsize_plotting);
 xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
 set(gca,'xlim',[time_ts_inv_sim(1) time_ts_inv_sim(end)]);
+set(gca,'ylim',[-0.25 1.25]);
 grid on
 chH = get(gca,'Children');
 set(gca,'Children',[chH(3); chH(2); chH(1)])
@@ -580,14 +582,14 @@ print('inverter_current_control_2','-depsc');
 movefile('inverter_current_control_2.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% spectrum phase grid R
-N1=Nc-floor(200e-3/tc);
+N1=Nc-floor(200e-3/(tc*decimation_tc));
 N2=Nc;
 signal = ig_abc_sim(N1:N2,1);
 time = time_tc_sim(N1:N2);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*tc*decimation_tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -620,7 +622,7 @@ signal = ig_abc_sim(N1:N2,2);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*tc*decimation_tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -653,7 +655,7 @@ signal = ig_abc_sim(N1:N2,3);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*tc*decimation_tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';

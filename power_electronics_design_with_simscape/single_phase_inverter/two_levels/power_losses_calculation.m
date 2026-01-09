@@ -2,7 +2,7 @@ clc
 
 Vdc_nom = 400*1.35;
 T = 0.8;
-N1 = floor(Nc) - floor(T/tc);
+N1 = floor(Nc) - floor(T/(tc*decimation_tc));
 N2 = floor(Nc);
 N1s = floor(Ns_inv) - floor(T/ts_inv);
 N2s = floor(Ns_inv);
