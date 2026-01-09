@@ -11,7 +11,7 @@ simlength = 2;
 transmission_delay = 125e-6*2;
 s=tf('s');
 
-rpi_enable = 0; % use RPI otherwise DQ PI
+rpi_enable = 1; % use RPI otherwise DQ PI
 system_identification_enable = 0;
 use_current_controller_from_ccaller_mod1 = 1;
 use_phase_shift_filter_from_ccaller_mod1 = 1;
