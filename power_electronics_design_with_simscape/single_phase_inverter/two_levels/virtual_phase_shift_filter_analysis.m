@@ -17,3 +17,4 @@ Vbeta = 2/3*(sqrt(3)/2*V2 -sqrt(3)/2*V3);
 figure; plot(time, Valpha, time, Vbeta); grid on
 legend('\alpha','\beta');
 
+ 
