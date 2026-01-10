@@ -13,7 +13,7 @@ s=tf('s');
 
 rpi_enable = 0; % use RPI otherwise DQ PI
 system_identification_enable = 0;
-use_current_controller_from_ccaller_mod1 = 0;
+use_current_controller_from_ccaller_mod1 = 1;
 use_phase_shift_filter_from_ccaller_mod1 = 1;
 use_sogi_from_ccaller_mod1 = 1;
 %[text] ### Voltage application
@@ -89,7 +89,7 @@ RCFi_dc1 = 1e-3;
 if system_identification_enable
     frequency_set = 300;
 else
-    frequency_set = 400;
+    frequency_set = 750;
 end
 omega_set = 2*pi*frequency_set;
 
@@ -219,15 +219,15 @@ G = sogid_flt_alpha * pid_ctrl * plantd;
 %[text] #### Resonant PI
 kp_rpi = 0.25;
 ki_rpi = 45;
-delta = 0.025;
-res_nom = s/(s^2 + 2*delta*omega_set*s + (omega_set)^2);
+delta_rpi = 0.05;
+res_nom = s/(s^2 + 2*delta_rpi*omega_set*s + (omega_set)^2);
 
-Ares_nom = [0 1; -omega_set^2 -2*delta*omega_set] %[output:2c389496]
+Ares_nom = [0 1; -omega_set^2 -2*delta_rpi*omega_set] %[output:2c389496]
 Aresd_nom = eye(2) + Ares_nom*ts_inv %[output:75942329]
 a11d = 1 %[output:80bbc6d8]
 a12d = ts_inv %[output:2928378c]
 a21d = -omega_set^2*ts_inv %[output:68004a6c]
-a22d = 1 -2*delta*omega_set*ts_inv %[output:485bb164]
+a22d = 1 -2*delta_rpi*omega_set*ts_inv %[output:485bb164]
 
 Bres = [0; 1];
 Cres = [0 1];
@@ -382,6 +382,16 @@ freq_filter = freq_pll;
 tau_f = 1/2/pi/freq_filter;
 Hs = 1/(s*tau_f+1);
 Hd = c2d(Hs,ts_inv);
+%[text] #### Linear double integrator observer
+Aso = [0 1; 0 0];
+Asod = eye(2)+Aso*ts_inv;
+Cso = [1 0];
+omega_rso = 2*pi*frequency_set;
+p2place = [-1 -10]*omega_rso;
+p2placed = exp(p2place*ts_inv);
+Kd = (acker(Asod',Cso',p2placed))';
+kv = Kd(2)/ts_inv;
+kx = Kd(1)/ts_inv;
 %[text] ### Lithium Ion Battery
 ubattery = 600;
 Pbattery_nom = 750e3;
@@ -493,6 +503,7 @@ Simulink.importExternalCTypes(model,'Names',{'dqpll_grid_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'phase_shift_flt_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'sogi_flt_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_output_t'});
 
 %[text] ## Remove Scopes Opening Automatically
 % open_scopes = find_system(model, 'BlockType', 'Scope');
@@ -525,10 +536,10 @@ Simulink.importExternalCTypes(model,'Names',{'sogi_flt_output_t'});
 %   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"     8.485281374238571e+02"}}
 %---
 %[output:2c389496]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"6","name":"Ares_nom","rows":2,"type":"double","value":[["0","0.000001000000000"],["-6.316546816697190","-0.000125663706144"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"6","name":"Ares_nom","rows":2,"type":"double","value":[["0","0.000001000000000"],["-6.316546816697190","-0.000251327412287"]]}}
 %---
 %[output:75942329]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"2","name":"Aresd_nom","rows":2,"type":"double","value":[["0.010000000000000","0.000000500000000"],["-3.158273408348595","0.009937168146928"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"2","name":"Aresd_nom","rows":2,"type":"double","value":[["0.010000000000000","0.000000500000000"],["-3.158273408348595","0.009874336293856"]]}}
 %---
 %[output:80bbc6d8]
 %   data: {"dataType":"textualVariable","outputData":{"name":"a11d","value":"     1"}}
@@ -540,7 +551,7 @@ Simulink.importExternalCTypes(model,'Names',{'sogi_flt_output_t'});
 %   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":"    -3.158273408348595e+02"}}
 %---
 %[output:485bb164]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.993716814692820"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.987433629385641"}}
 %---
 %[output:3027a533]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.076483869223994"],["18.982392004991411"]]}}

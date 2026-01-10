@@ -2,7 +2,7 @@ close all
 clc
 
 clear all
-load sim_results_80Hz_10kHz_2;
+load sim_results_80Hz_20kHz_2;
 
 tratto1=1;
 tratto2=2;
@@ -14,27 +14,27 @@ colore3 = [0.75 0.75 0.75];
 
 N1c = floor(Nc/50/(frequency_set/f_grid));
 N2c = floor(Nc);
-t1c = time_tc_sim(N2c) - N1c*tc;
+t1c = time_tc_sim(N2c) - N1c*tc*decimation_tc;
 t2c = time_tc_sim(N2c);
 
 N3c = floor(Nc/1000/(frequency_set/f_grid));
 N4c = floor(Nc);
-t3c = time_tc_sim(N4c) - N3c*tc;
+t3c = time_tc_sim(N4c) - N3c*tc*decimation_tc;
 t4c = time_tc_sim(N4c);
 
 N1s = floor(Nc/10/(frequency_set/f_grid));
 N2s = floor(Nc);
-t1s = time_tc_sim(N2s) - N1s*tc;
+t1s = time_tc_sim(N2s) - N1s*tc*decimation_tc;
 t2s = time_tc_sim(N2s);
 
 N3s = floor(Nc/10);
 N4s = floor(Nc);
-t3s = time_tc_sim(N4s) - N3s*tc;
+t3s = time_tc_sim(N4s) - N3s*tc*decimation_tc;
 t4s = time_tc_sim(N4s);
 
 N5s = floor(Nc/40);
 N6s = floor(Nc);
-t5s = time_tc_sim(N6s) - N5s*tc;
+t5s = time_tc_sim(N6s) - N5s*tc*decimation_tc;
 t6s = time_tc_sim(N6s);
 
 fontsize_plotting = 14;
@@ -74,7 +74,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('grid_quantities','-depsc');
-movefile('grid_quantities.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('grid_quantities.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 
 %% figure (2)
@@ -112,7 +112,7 @@ movefile('grid_quantities.eps', 'figures/sim_results_80Hz_10kHz_1');
 % set(h,'PaperUnits','normalized');
 % set(h,'PaperPosition', [0 0 1 1]);
 % print('line_quantities','-depsc');
-% movefile('line_quantities.eps', 'figures/sim_results_80Hz_10kHz_1');
+% movefile('line_quantities.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 % %% figure (3)
 % figure(3);
@@ -139,7 +139,7 @@ movefile('grid_quantities.eps', 'figures/sim_results_80Hz_10kHz_1');
 % set(h,'PaperUnits','normalized');
 % set(h,'PaperPosition', [0 0 1 1]);
 % print('inverter_outputs','-depsc');
-% movefile('inverter_outputs.eps', 'figures/sim_results_80Hz_10kHz_1');
+% movefile('inverter_outputs.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 % %% figure (4)
 % x1 = time_tc_sim(N1s:N2s);
@@ -164,7 +164,7 @@ movefile('grid_quantities.eps', 'figures/sim_results_80Hz_10kHz_1');
 % set(h,'PaperUnits','normalized');
 % set(h,'PaperPosition', [0 0 1 1]);
 % print('inverter_output_current','-depsc');
-% movefile('inverter_output_current.eps', 'figures/sim_results_80Hz_10kHz_1');
+% movefile('inverter_output_current.eps', 'figures/sim_results_50Hz_20kHz_1');
 % 
 % %% figure (5)
 % x1 = time_tc_sim(N1s:N2s);
@@ -189,7 +189,7 @@ movefile('grid_quantities.eps', 'figures/sim_results_80Hz_10kHz_1');
 % set(h,'PaperUnits','normalized');
 % set(h,'PaperPosition', [0 0 1 1]);
 % print('inverter_output_voltage','-depsc');
-% movefile('inverter_output_voltage.eps', 'figures/sim_results_80Hz_10kHz_1');
+% movefile('inverter_output_voltage.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% figure (4)
 figure(4);
@@ -232,7 +232,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('inverter_output_current','-depsc');
-movefile('inverter_output_current.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('inverter_output_current.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 
 
@@ -264,7 +264,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('inverter_Q1_power_losses','-depsc');
-movefile('inverter_Q1_power_losses.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('inverter_Q1_power_losses.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% figure (7)
 figure(7);
@@ -294,7 +294,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('inverter_Q2_power_losses','-depsc');
-movefile('inverter_Q2_power_losses.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('inverter_Q2_power_losses.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 
 %% figure (8)
@@ -320,7 +320,7 @@ movefile('inverter_Q2_power_losses.eps', 'figures/sim_results_80Hz_10kHz_1');
 % set(h,'PaperUnits','normalized');
 % set(h,'PaperPosition', [0 0 1 1]);
 % print('inverter_mosfet_Q1_current','-depsc');
-% movefile('inverter_mosfet_Q1_current.eps', 'figures/sim_results_80Hz_10kHz_1');
+% movefile('inverter_mosfet_Q1_current.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% figure (9)
 % x1 = time_tc_sim(N1s:N2s);
@@ -345,7 +345,7 @@ movefile('inverter_Q2_power_losses.eps', 'figures/sim_results_80Hz_10kHz_1');
 % set(h,'PaperUnits','normalized');
 % set(h,'PaperPosition', [0 0 1 1]);
 % print('inverter_mosfet_Q1_voltage','-depsc');
-% movefile('inverter_mosfet_Q1_voltage.eps', 'figures/sim_results_80Hz_10kHz_1');
+% movefile('inverter_mosfet_Q1_voltage.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 
 %% figure (10)
@@ -389,7 +389,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('inverter_mosfet_Q1_iu','-depsc');
-movefile('inverter_mosfet_Q1_iu.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('inverter_mosfet_Q1_iu.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% figure (11)
 x1 = time_tc_sim(N1s:N2s);
@@ -432,7 +432,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('dclink_ui','-depsc');
-movefile('dclink_ui.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('dclink_ui.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 
 %% figure (12)
@@ -469,7 +469,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('diode_rectifier','-depsc');
-movefile('diode_rectifier.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('diode_rectifier.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% figure (13)
 figure(13);
@@ -496,7 +496,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('grid_power','-depsc');
-movefile('grid_power.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('grid_power.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% figure (14)
 figure(14);
@@ -515,6 +515,7 @@ legend('$i_{d}^{ref}$','$i_{d}$','$u_{d}^{ctrl}$','Location','northwestoutside',
     'Interpreter','latex','FontSize',fontsize_plotting);
 xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
 set(gca,'xlim',[time_ts_inv_sim(1) time_ts_inv_sim(end)]);
+set(gca,'ylim',[-0.25 1.25]);
 grid on
 chH = get(gca,'Children');
 set(gca,'Children',[chH(3); chH(2); chH(1)])
@@ -536,6 +537,7 @@ legend('$i_{q}^{ref}$','$i_{q}$','$u_{q}^{ctrl}$','Location','northwestoutside',
     'Interpreter','latex','FontSize',fontsize_plotting);
 xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
 set(gca,'xlim',[time_ts_inv_sim(1) time_ts_inv_sim(end)]);
+set(gca,'ylim',[-0.25 1.25]);
 grid on
 chH = get(gca,'Children');
 set(gca,'Children',[chH(3); chH(2); chH(1)])
@@ -548,7 +550,7 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('inverter_current_control_1','-depsc');
-movefile('inverter_current_control_1.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('inverter_current_control_1.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% figure (15)
 figure(15);
@@ -577,17 +579,17 @@ set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
 print('inverter_current_control_2','-depsc');
-movefile('inverter_current_control_2.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('inverter_current_control_2.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% spectrum phase grid R
-N1=Nc-floor(200e-3/tc);
+N1=Nc-floor(200e-3/(tc*decimation_tc));
 N2=Nc;
 signal = ig_abc_sim(N1:N2,1);
 time = time_tc_sim(N1:N2);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*tc*decimation_tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -613,14 +615,14 @@ legend('$F(i_{r}^{g})$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 title('Grid Phase R Current Spectrum')
 print('spectrum_grid_current_r','-depsc');
-movefile('spectrum_grid_current_r.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('spectrum_grid_current_r.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% spectrum phase grid S
 signal = ig_abc_sim(N1:N2,2);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*tc*decimation_tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -646,14 +648,14 @@ legend('$F(i_{s}^{g})$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 title('Grid Phase S Current Spectrum')
 print('spectrum_grid_current_s','-depsc');
-movefile('spectrum_grid_current_s.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('spectrum_grid_current_s.eps', 'figures/sim_results_50Hz_20kHz_1');
 
 %% spectrum phase grid T
 signal = ig_abc_sim(N1:N2,3);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*tc*decimation_tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -679,4 +681,4 @@ legend('$F(i_{s}^{g})$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 title('Grid Phase T Current Spectrum')
 print('spectrum_grid_current_t','-depsc');
-movefile('spectrum_grid_current_t.eps', 'figures/sim_results_80Hz_10kHz_1');
+movefile('spectrum_grid_current_t.eps', 'figures/sim_results_50Hz_20kHz_1');

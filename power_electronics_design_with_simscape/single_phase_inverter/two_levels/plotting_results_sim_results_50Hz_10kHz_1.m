@@ -2,7 +2,7 @@ close all
 clc
 
 clear all
-load sim_results_50Hz_10kHz_1;
+load sim_results_50Hz_10kHz_2;
 
 tratto1=1;
 tratto2=2;
