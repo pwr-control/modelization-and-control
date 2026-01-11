@@ -7,7 +7,7 @@ beep off
 pm_addunit('percent', 0.01, '1');
 options = bodeoptions;
 options.FreqUnits = 'Hz';
-simlength = 2;
+simlength = 10;
 transmission_delay = 125e-6*2;
 s=tf('s');
 
@@ -49,7 +49,8 @@ z_dab = tf('z',ts_dab);
 z_afe = tf('z',ts_afe);
 z_inv = tf('z',ts_inv);
 
-t_misura = simlength;
+% t_misura = simlength;
+t_misura = 2;
 Nc = ceil(t_misura/tc)/decimation_tc;
 Ns_battery = ceil(t_misura/ts_battery);
 Ns_dab = ceil(t_misura/ts_dab);
@@ -89,9 +90,12 @@ RCFi_dc1 = 1e-3;
 if system_identification_enable
     frequency_set = 300;
 else
-    frequency_set = 750;
+    frequency_set = 50;
 end
 omega_set = 2*pi*frequency_set;
+
+% gain for active sogi
+kepsilon = 2;
 
 a = 1 + 2*pi*frequency_set*ts_inv;
 b = 1 - 2*pi*frequency_set*ts_inv;
@@ -167,7 +171,7 @@ I2rms_load_trafo = I1rms_load_trafo*m12_load_trafo %[output:97537b90]
 lm_load_trafo = V1rms_load_trafo/I0rms_load_trafo/2/pi/ftr_nom_load_trafo;
 rfe_load_trafo = 2e3;
 rd1_load_trafo = 1e-3;
-if frequency_set < 100
+if frequency_set < 160
     ld1_load_trafo = 400e-6; % for f <= 80Hz output
 else
     ld1_load_trafo = 100e-6; % for f > 400Hz 
@@ -521,7 +525,7 @@ Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":5.1}
+%   data: {"layout":"onright","rightPanelPercent":31.9}
 %---
 %[output:41f06e93]
 %   data: {"dataType":"textualVariable","outputData":{"name":"V2rms_load_trafo","value":"   6.600000000000000"}}
@@ -536,10 +540,10 @@ Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_
 %   data: {"dataType":"textualVariable","outputData":{"name":"Iac_FS","value":"     8.485281374238571e+02"}}
 %---
 %[output:2c389496]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"6","name":"Ares_nom","rows":2,"type":"double","value":[["0","0.000001000000000"],["-6.316546816697190","-0.000251327412287"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Ares_nom","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.003141592653590"]]}}
 %---
 %[output:75942329]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"2","name":"Aresd_nom","rows":2,"type":"double","value":[["0.010000000000000","0.000000500000000"],["-3.158273408348595","0.009874336293856"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Aresd_nom","rows":2,"type":"double","value":[["1.000000000000000","0.000050000000000"],["-4.934802200544680","0.998429203673205"]]}}
 %---
 %[output:80bbc6d8]
 %   data: {"dataType":"textualVariable","outputData":{"name":"a11d","value":"     1"}}
@@ -548,10 +552,10 @@ Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_
 %   data: {"dataType":"textualVariable","outputData":{"name":"a12d","value":"     5.000000000000000e-05"}}
 %---
 %[output:68004a6c]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":"    -3.158273408348595e+02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a21d","value":"  -4.934802200544680"}}
 %---
 %[output:485bb164]
-%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.987433629385641"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"a22d","value":"   0.998429203673205"}}
 %---
 %[output:3027a533]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso_pll","rows":2,"type":"double","value":[["0.076483869223994"],["18.982392004991411"]]}}
@@ -569,16 +573,16 @@ Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht0","rows":1,"type":"double","value":[["0.075698471060596","12.858521001586354"]]}}
 %---
 %[output:90915606]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"6","name":"Afht1","rows":2,"type":"double","value":[["0","0.000001000000000"],["-6.316546816697190","-0.000125663706144"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht1","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
 %[output:9bcab8c7]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"7","name":"Lfht1","rows":2,"type":"double","value":[["0.001244070690822"],["1.738629511295901"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht1","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
 %[output:3f5be8e1]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"2","name":"Ad_fht1","rows":2,"type":"double","value":[["0.010000000000000","0.000000500000000"],["-3.158273408348595","0.009937168146928"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht1","rows":2,"type":"double","value":[["1.000000000000000","0.000050000000000"],["-4.934802200544680","0.999214601836603"]]}}
 %---
 %[output:6d193532]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"2","name":"Ld_fht1","rows":1,"type":"double","value":[["0.005068828736304","5.535588792571522"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht1","rows":1,"type":"double","value":[["0.075698471060596","12.858521001586354"]]}}
 %---
 %[output:18dd13c2]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.018721899663332"],["0.977712707506129"]]}}
