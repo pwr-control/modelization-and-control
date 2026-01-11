@@ -210,7 +210,7 @@ sys_dclink = minreal(ZCFi/(ZCFi+Z_Lstray_dclink));
 %[text] ### INV current control parameters
 %[text] #### DQ PI
 kp_inv = 0.25;
-ki_inv = 45;
+ki_inv = 18;
 pi_ctrl = kp_inv + ki_inv/s;
 pid_ctrl = c2d(pi_ctrl, ts_inv);
 plant = 1/(s*ld1_load_trafo + 0.25);
