@@ -53,13 +53,13 @@ use_advanced_pll = 0; % advanced pll should compensate second harmonic
 use_dq_pll_ccaller_mod1 = 1; % only module 1
 use_dq_pll_ccaller_mod2 = 0; % only module 1
 %[text] ### Settings for CCcaller versus Simulink
-use_observer_from_simulink_module_1 = 0;
-use_observer_from_ccaller_module_1 = 1;
+use_observer_from_simulink_module_1 = 1;
+use_observer_from_ccaller_module_1 = 0;
 use_observer_from_simulink_module_2 = 1;
 use_observer_from_ccaller_module_2 = 0;
 
-use_current_controller_from_simulink_module_1 = 0;
-use_current_controller_from_ccaller_module_1 = 1;
+use_current_controller_from_simulink_module_1 = 1;
+use_current_controller_from_ccaller_module_1 = 0;
 use_current_controller_from_simulink_module_2 = 1;
 use_current_controller_from_ccaller_module_2 = 0;
 
@@ -417,12 +417,12 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %%
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] ### HeatSink settings
-heatsink_liquid_2kW; %[output:843555a4] %[output:90a5b190] %[output:9195034a]
+heatsink_liquid_2kW;
 %[text] ### DEVICES settings (IGBT)
 % infineon_FF650R17IE4D_B2;
-% infineon_FF1200R17IP5;
+infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
-infineon_FF1200XTR17T2P5;
+% infineon_FF1200XTR17T2P5;
 
 igbt.inv.Vth = Vth;                                  % [V]
 igbt.inv.Vce_sat = Vce_sat;                          % [V]
@@ -439,17 +439,21 @@ igbt.inv.Rtim = Rtim;                                % [K/W]
 igbt.inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
 igbt.inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
 igbt.inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-igbt.inv.Lstray_module = Lstray_module;              % [H]
-igbt.inv.Irr = Irr;                                  % [A]
-igbt.inv.Csnubber = Csnubber;                        % [F]
-igbt.inv.Rsnubber = Rsnubber;                        % [Ohm]
+igbt.inv.Rth_diode_JC = Rth_diode_JC;              % [K/W]
+igbt.inv.Rth_diode_CH = Rth_diode_CH;              % [K/W]
+igbt.inv.Rth_diode_JH = Rth_diode_JH;              % [K/W]
+igbt.inv.Lstray_module = Lstray_module;            % [H]
+igbt.inv.Irr = Irr;                                % [A]
+igbt.inv.Cies = Cies;                              % [F]
+igbt.inv.Csnubber = Csnubber;                      % [F]
+igbt.inv.Rsnubber = Rsnubber;                      % [Ohm]
 % inv.Csnubber = (inv.Irr)^2*Lstray_module/Vdc_bez^2
 % inv.Rsnubber = 1/(inv.Csnubber*fPWM_INV)/5
 
 % infineon_FF650R17IE4;
-% infineon_FF1200R17IP5;
+infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
-infineon_FF1200XTR17T2P5;
+% infineon_FF1200XTR17T2P5;
 
 igbt.afe.Vth = Vth;                                  % [V]
 igbt.afe.Vce_sat = Vce_sat;                          % [V]
@@ -468,6 +472,7 @@ igbt.afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
 igbt.afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
 igbt.afe.Lstray_module = Lstray_module;              % [H]
 igbt.afe.Irr = Irr;                                  % [A]
+igbt.afe.Cies = Cies;                                % [F]
 igbt.afe.Csnubber = Csnubber;                        % [F]
 igbt.afe.Rsnubber = Rsnubber;                        % [Ohm]
 % afe.Csnubber = (afe.Irr)^2*Lstray_module/Vdc_bez^2
@@ -529,6 +534,54 @@ ideal_switch.Rsnubber = Rsnubber;                        % [Ohm]
 ideal_switch.Irr = Irr;                                  % [A]
 % ideal_switch.Csnubber = (ideal_switch.Irr)^2*Lstray_module/Vdab2_dc_nom^2
 % ideal_switch.Rsnubber = 1/(ideal_switch.Csnubber*fPWM_DAB)/5
+%[text] ### Lithium Ion Battery
+ubattery = Vdc_nom;
+Pnom = 250e3;
+
+typical_cell_voltage = 3.6;
+number_of_cells = floor(ubattery/typical_cell_voltage)-1; % nominal is 100
+
+% stato of charge init
+soc_init = 0.85; 
+
+R = 8.3143;
+F = 96487;
+T = 273.15+40;
+Q = 50; %Hr*A
+
+Vbattery_nom = ubattery;
+Pbattery_nom = Pnom;
+Ibattery_nom = Pbattery_nom/Vbattery_nom;
+Rmax = Vbattery_nom^2/(Pbattery_nom*0.1);
+Rmin = Vbattery_nom^2/(Pbattery_nom);
+
+E_1 = -1.031;
+E0 = 3.485;
+E1 = 0.2156;
+E2 = 0;
+E3 = 0;
+Elog = -0.05;
+alpha = 35;
+
+R0 = 0.035;
+R1 = 0.035;
+C1 = 0.5;
+M = 125;
+
+q1Kalman = ts_inv^2;
+q2Kalman = ts_inv^1;
+q3Kalman = 0;
+rKalman = 1;
+
+Zmodel = (0:1e-3:1);
+ocv_model = E_1*exp(-Zmodel*alpha) + E0 + E1*Zmodel + E2*Zmodel.^2 +...
+    E3*Zmodel.^3 + Elog*log(1-Zmodel+ts_inv);
+figure;  %[output:29a5e80b]
+plot(Zmodel,ocv_model,'LineWidth',2); %[output:29a5e80b]
+xlabel('state of charge [p.u.]'); %[output:29a5e80b]
+ylabel('open circuit voltage [V]'); %[output:29a5e80b]
+title('open circuit voltage(state of charge)'); %[output:29a5e80b]
+grid on %[output:29a5e80b]
 %[text] ## C-Caller Settings
 open_system(model);
 Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
@@ -546,9 +599,9 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 
 %[text] ## Remove Scopes Opening Automatically
 open_scopes = find_system(model, 'BlockType', 'Scope');
-for i = 1:length(open_scopes)
+for i = 1:length(open_scopes) %[output:group:0a38cd65] %[output:37440596]
     set_param(open_scopes{i}, 'Open', 'off');
-end
+end %[output:group:0a38cd65]
 
 % shh = get(0,'ShowHiddenHandles');
 % set(0,'ShowHiddenHandles','On');
@@ -557,21 +610,21 @@ end
 % set(0,'ShowHiddenHandles',shh);
 
 %[text] ## Enable/Disable Subsystems
-if use_mosfet_thermal_model
-    set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'off');
-    set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
-    set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
-else
-    if use_thermal_model
-        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
-        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
-        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
-    else
-        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
-        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
-        set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
-    end
-end
+% if use_mosfet_thermal_model
+%     set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'off');
+%     set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
+%     set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
+% else
+%     if use_thermal_model
+%         set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
+%         set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
+%         set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
+%     else
+%         set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
+%         set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
+%         set_param('inv_psm/inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
+%     end
+% end
 
 %[appendix]{"version":"1.0"}
 %---
@@ -629,12 +682,9 @@ end
 %[output:8886a72c]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
 %---
-%[output:843555a4]
-%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
+%[output:29a5e80b]
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAN4AAACGCAYAAACyujQtAAAAAXNSR0IArs4c6QAAGJlJREFUeF7tXX2QltV1PybUYTE4soBSxHUx7hozsQRsG7tlIsQo\/gM2tJ11mREKDCUU2DqyheXDotOyLAybzADphDqbLczUxaK27k47gw4tlGS1rYLbaTEBxYXgFoMLVGfFTNJs5zzreT3vfe993vs8z73P+3WemQzx3ft1fvf87jn33K\/rRkZGRi5fvgzLly+H\/v5+yPfNmDEDOjs7obq6Ol9S+bsgIAgYELiOiPf000\/D1q1bQwmFBLVJJ2gLAoJAOAIB8QQkQUAQSBeBjMVDVxO\/UnYjX3vtNVi0aBE8++yzcN999zlFUi372rVrsHv3blixYoUztxvLbG1tDdrd3t4OVVVVgPWeO3cOGhsbncqjFvbcc89BX19fpt6wyvbu3Qvz5s2Durq6vG2KkjZvYZ8mIJx6e3th6tSp0NXVZdUWHb62dbpMh55jxuJxYbCSKAK5bFSplLVjx46AFC4HKlUxLly4AEuXLoW1a9d6JR7N8R999NG89SBB9+zZY6XsUdJG6fczZ84EuMyfPx82bNhgnbVYiIcNNrqaCNrGjRszQm3fvj3oFBJ6cHAw+BtZFxLqww8\/DH4\/duxYDnnJauDfeZCGfn\/yyScDRcayqT4dqqY2cKuE5aP1oPZgHhwZp02bFvyOoyV+K1euDDqPyiQlVy0c\/2+0QISNOkDpOlclaT4MsV3r16+HNWvWZAJe1E7eL2rdWM++ffsC3OfMmQNHjx7NEEQdWDm+KkHUYBul5f1HfV9fX58VmKN26tKiF8Lbj8Qhy672s6kN6u+6MlRZqU06HVWDhYShSUexLMSYygzDXG0r98Ss5ngUVHnsscfg8ccfz4zAvMNIod94442gsydOnBh0SE1NTQAuH70XLFiQ5VJhNBVdRC6MyZqoozNX6tOnT2dcTSIetYfcIkyPxMY2Ub0ICLaXW5cw4qEChVk8xOXgwYPBIIIf4oB5dATXYUiupmrxkLBtbW3Q0dGRKZfwJVmQJIQvl92EE8lCmKB7y9O+8sorWRZOJSmmra2tDQZlIhUpmJqWY0qEJVw48aiP6W9qX+SzeKY+VnUC61T7vLu7O0tfyapSG0hHMS\/9psOc+EB92dPTk4WjlngqU2lkPXHiRFZmDlBzc3PO\/IQDr+blykmEoZE1zEVBYVtaWrSujs7ikeCoUGEuVRSLl494VNauXbsCfeLzTpN1wTJVDE2ups5q4HwTrTjNd3g9NAiSInMc1EGQiIejum7pSNc3ppFdR1I+oHKCYL306ebTfO5LuOhczbA+Jot3\/vx57aBI9XOrp1pwbrUwnQlzldRcJ7AfsoIrtI5nmt+po3wU4r344ouBieYf1TM0NBSqnDxPPlKSktPoxomnkouX65J41MEoH42MNBeMgqFKPFJIVDhc+sGlHZIPiceVmuNESkDTA5IblQqDQ9wzQQKorjAnoM5Co\/KhQoYNMqqLT22wIbdp7qsjXlgfq+Xgf3NvhAY0jovJ6mL71b7k2JBOqy40GZeAeNgA\/F++RfEoozV2YJjF4w1SRzhbcqmRS1uLp3NvXBIPZSMZJk+enHEz+e9kmcIGL5V4vKMRX24Folg8jn1YwIHPlfgck4IrOlctzLrbBqRcWDxdH4cRT\/U2VFLqIuZRLJ5KwEgL6K+\/\/josXrw4cPWWLVuWRSw+ouHoRz58lDmeaW7AG636\/7pRBsvRWTx1lMJRiXz8Bx98MGv0I3eD2qQCn0+JuNXg7olK8ChzPJ2sFFzgczyS5dKlSxnXM98cj6ylSmiV\/CYXlhSXrB8FUngENM05HsnD+1h1q1VyqXNbDKCFuZp8jqdibjXHi7JlDAmFkcKLFy9mRS35aDJ+\/PjA9VDdiHxRTRviIXmiRDW5q4n\/3xTxImtE0UqKXpmIx2XRrRuq8wnuTfD2c7deHZGxTRSBRYLxSCfmQ2uKH3djfUQ1eeSQtx3dJvwIM+xvJDtFhtW0PACD+aJENXWDl2k5IV9Uk3RCJZ7aL4ivGrxS+9prVFM1k7r\/RiFWr14NJ0+ehAMHDsA999yTlUwFQ\/Z82qBqnyaqRdZ5ERh1db3xwF6C0kuZBHOr5QQbSNBqoinHf9EdUYmHv69btw42bdpktcvApk5J8xkC6sCGf4mygwf7zHbniuA+ikBczLN2riQFEzsO3QxcO9KRi69B5QviJG2L5BcEih0BJxYPSbV\/\/35YtWoVbNmyRUs8vvaEoITtTCl20KR9gkBSBBITD83ttm3bYMmSJcHuDxt3koI5MqdI2n2Sv1QRSEw8NcKIQOTbYE2+cUNDQ9am3DvuuKNUcZR2lykCR44cgenTpzuXLod4fMJIIWyT+6i2JiyAgq4mfrTRGkPjO3fuzAq0IPHOnj3rXMhKK1BwdNfjvrDMIh7f6rRw4cJg3rZ582bADZ42ES+VeJxsYbvjCSZfQrrrhtIo6d133\/UySpeG9G5b6Usns4jHr3bAFX8iHpImjSsffAnptiuKvzQhnrs+8qWTOa4m7RjHLWGHDh0KIpV4Lky3982deKMl+RLSdTuLvTwhnrse8qWT2uCKeogxrdC\/LyHddUNplCTEc9dPvnQycVTTnYhi8VxhKcRzhaQ\/nRTiueujoilJiOeuK1KxePlOKeRbn0sqri8hk7ar1PIL8dz1mC+dzLF4uAQwMDCQdXsT\/Xb\/\/fcD3UnBj+q7EtOXkK7aVyrlCPHc9ZQvnTQuJ\/CNzLTMgIcd8aRzvhun44rtS8i47SnVfEI8dz3nSye1C+j8diraEnbvvffCI488Ai+99JLVpadxRPclZJy2lHIeIZ673vOlk1bLCXSVg80G6CQi+xIySZtKMa8Qz12v+dJJiWq666OiKUmI564rhHjusCz7koR47ro4NeKpB1ZJhDTuSPElpLtuKI2ShHhu+qn7Py7C6u634PJ35ropkJWSE9WkeRxeQIvLB3RrMl3T7bwFrEAhnht0hXhucEyVeHQKAe\/Mp\/U81w9S4kZs\/NSXXoR4bhRGiOcGx9SIx0+Gz5o1K7jHEQ+r4rsH9AhH0ouKdI8\/EExCPDcKI8Rzg+OOwwOw4\/C7\/l1NbC63bmj16LLSKFfFmcSmsvHlnuHhYbF4bvQjpxQhnhtgU7N4bpprLgVdTJw34vty6rY0zCUWz00PCPHc4IiBFSRfKsEV3UlzF3M8dDHxsUqc1+n2gxLx8HIZ+ZIhgO8d4N398iVD4GtbD8MvJ93lj3j5TiVg88PuubcRj785Run5I39i8WxQtEsjFs8Op7BU5y9\/Al\/9y1eDJAWzeMnFyC4hzOLJLWPJ0RbiJcfw+NtX4ZG\/OpkO8ZI3164EIZ4dTnFTCfHiIjea74dvX4UFn5Lucx9\/AB98\/w+TFajJrX0RVleL7Fxxjr23AoV48aHde\/Sn8Oc9b2cKuOkflnu561U2Scfvo6LNKcSL3jVPHPoJ\/M2rg5mMNdVjYe+jd8Pih2YJ8aLDWZk5hHj5+x2DJ\/tfHYTvHjmXkxhJ1\/MnMwH\/9bXEFXqFO7UoaUQzPwyjKXwJaVt\/uaQT4uX2JBKt5z8vwcv\/\/QH88J2r2q7mhKMEvnTSeIU730dJl9y2t7eDj7tWfAtZLoSylUOIB7D24I\/h3NA1I8kISyTbs8vvgS\/\/+he08KZCPNNCuYsFdBul8SWkTd3llKYSiIcWbPB\/fw5t\/zT6yI3Jiqn9ikSbU18NT3zz9sCVzPf50kntFe69vb3Q1dUVvORDd66YHnrP1\/Aof\/clZJQ2lEPaciAeEmsEAHb\/83k48\/4wnL\/yCeBvUT4k1uwv3gR7m+4O8toQTS3fl05qo5qFer3Vl5BROqsc0pYC8UZGAHa9MgDHz1yJZLF0Fgx\/m33nBPjTb9RA3c3jnHahL52U5QSn3VQchRWCeNwa9b1zNXD9zg9di2WpTOT6xl3VsGZuDdwxqSo1oIV4qUFd+hW5JB4R6srHv4ADrw3Cmfc\/TmShTKSqmTAWZtdNgPUP1RZVB6RCPNosXVNT4+3uzDBUfQlZVD2ZQmNsiIeu3t\/++\/\/Aq2evwk8vf+LEMulIhYS6rXosfGvmLfDNL1WnIL3bKnzppNU6nnqKwK1on5XmS0hf7S2Gcski\/WpkBI78+DL0X\/gI3rpwBS5dg8jBCBt5KECBhKqdVAWNvzkFbpswGh2ME7ywqbOQaXzppNUcD8\/S4VpeZ2cnJL36QSyeGQE+Txq8+nN4\/uT7cPricJAhTlTPVmFVMi373VuhetyvlS2ZbHHBdKkRT32rHCvP90oQf8jStMtFLVe36dqXkFGA9pH2X89cgb8\/+TN459Lo\/MgniYL+unEMjBkzBtAq1d0yDuZ9eRJ8acoNGdHK0TL56LfUiEdzPKzQ1rphHroSEE89t7a2QkNDAzQ2NmZhwdPh+qDuK0bicSv0i\/\/7Fbx8agjeujgMAx9cS4VE3BphhbNuvxG+\/fXbYMqN1xt1zWaO50tRy61cXzpp5WragklWrampKbiPk3+4EN\/W1gYdHR1Gd9WXkGr7iUz47\/Mn3oezKVkilUR33jwOvvXVm+H2iZ+Fx11YIyGercbmT+dLJ50Rj9xNk6tpsyjvUkgk1RfGfh7+qOu\/vLh26rzozsno0k2Equs\/X3CXToiXn1C2KVzqJK\/TGfGoUCRYX19f6HIEubS4EZtbxqRCouV6\/O9+Yr1vj9rMSYTW5+v1E+D3Z94Cn7vOtnuKK50Qz11\/JNVJU0ucE88mAsovzuVzQRQyzi1jf\/ziRXjjPf0+Pgw04HdfTRU8NvNGGPMpm+h3d11UPCXJLWNu+uKBBx4ICvJxD1CkF2F1L8GqJxdM17OjJcQPiYbzPbqlmgdaoo4ueIjxL\/5xdHc6t17zf2MyrJg9rSzXlWxUSiyeDUp2aaLqpF2pANZ3roQdhjUtJ3CyqcsJ27dvz4l82gqJ8ze8jIZHHHWHGG1BKLd0Qjx3PWqrk1FrtLJ4UQuNm95GSH7fIdYjhMtFW4gXVwNz89noZJzanM\/x4jSC8tgIiZeMkqVbO7cGnp7\/xSRVlmVeIZ67brXRyTi1ZVxNvLq9ubkZWlpaoL+\/P6esQl\/vh2Rb0\/1WJmKJu9hbH54eR+ayzyPEc9fFXonnrpnJSgoTkruY6F6+ueV3klVWxrmFeO46t+KJV\/3EvwRoCunyK5UQLz9GtilSIV7Y4yWFdDU7f\/Qe\/NkLpwOsvtd0NzT91hRb3CoynRDPXbenQjxTc+ldO3X\/pTvxRksyCSnWLhrSQrxoeIWlLijxCnm935mffQxfa\/+3ABu83Xf2nTe5Q7VMSxLiuevYghLPZhuYC1F1Qoq1i46sEC86ZqYcqRAvbI7n4g30fHCoQvLnkl5YOQPm3lV6d3bkk9nH34V47lBNhXjumhuvJFXIBd87mVm3w+UDF2fV4rWstHIJ8dz1V2rEUzcw437LgwcPWp9ITyKyKqS4mfHQFOLFw02XKxXimU6Q25yxcyEqF5IvmMsSQjR0hXjR8Cp4VLOYHi35Qd970PL86NqduJnRFEmIFw2vghMPG4DWbc+ePZlHSyjggmt4\/OmuqKKpx4J0wRpu8Wh+JztVoiINIMSLjllBo5pUOb0QNDg4+jSt7uxcVNGQ0AMDAwF5TcsTRDzuZs6tr4YXvj0janUVnV6I5677U5njuWtueElIvO7u7px7WUhIvowgi+bRe0WIFx2zglo83ztUuLsZ5mrihUX4QIbM7+IpkBAvHm4Fi2pixbgvs7a2NudaBneiAITdMoaXHdHlRXghUe+SaS6rroiy5LIjN92c6mVHy5cv934QNuyWsaOvnwI8ZY4fvubZs3qmGxQrqBSxeO46u+TneLa3jHHiyfwungIJ8eLhVlBX012Ts0uyXU448PKJ4AYxmd\/F7wkhXnzs1JxeLR4FVYrhzpWvrHshsz\/z8nfmukOwgkoS4rnrbK\/Ec9fMZCWhkEQ8WTiPj6UQLz52qVo8XlkhN0nXfuW34cOHdkhgJaHeCPESAsiyp2LxCr1JmhNvw7zpsGFecT1E7647\/ZYkxHOHbyrEK\/QmaU48OZEQX3mEePGxK5ir6WuTtA0UOLpc\/b3OIKksJdggpk8jxIuPXcGIhxX72CRtA8XNi78Pv5x0V5BUIpo2iAnx4qNklzMVV9OuKf5SEfEkopkMY7F4yfDjuSuCeHTVg2wVS6Y4Qrxk+FUs8ZY23Aodf1DvDr0KK0mI567DK8riSWAlmeII8ZLhV7EWT4iXTHGEeMnwKwjx+LPKvAFpPFpCczwhXjLFEeIlwy914pkOqOYTA9f+Nm7cGCQzEVQ9naBLR8STW8XyIR7+dyFeMvwKQjx8GXbr1q1QXW13XTqu+bW1tUFHR0eQB0+w4yVJ7e3tUFVVlZEBSb1u3TrYtGkT1NXVaZFB4slSQnKlEeIlx5BKSC24wm8Di9N800VGKkF1ZQvx4iCem0eI5wZHLCUV4rl4mNJ0Zwt3R1Eg3ZWBSDxZw0uuNEK85BimbvGSNNnWWprmkkg8fO0VN0jLFx8BIV587NScqVi8JM2NcjuZ6bIjJN5fL5wC9946NklTKj6v3DLmRgVSu2UMm8ujj\/Pnz4f169fDli1bQoMiNk8121x2hMQbd+IHcP35H7lBTkoRBBwgcPbsWQelZBdx3cjIyAj9RKSbOnUqLFy4EPbv3w+bN2+Gnp4e6Ovry4lUYj7duh8SFqOamA+\/xsbGLEKb5njOpZMCBYEiRSCLePwg7NDQUIZ4SMioywxFKq80SxAoCgSyiIctonW4ZcuWwaFDh2DVqlWwZs0aSPpaUFFIK40QBIoEgRzi6dxHF68FFYm80gxBoCgQ0BIv7ZbxNT7dYyZpt6dU6uPza9PgqN4msHLlykTvHJYKNq7aabPjKk5dBSce39Fy+vRp7fNdcQQr9zxcIVBWvm2Py27aSVTu+LiQjwYtLKurq8u41TFOXTnEUzczY6EUpeR7L+NUpsvD31fHuvPt53RVb6mXwx\/3xH5pbW2FpqamYC7OP9tNDaWOh+v248D2zDPPwMMPPwxPPfUU7Ny50x\/x+HICPbtMv6Fg6sZnF8JyxYh7OsJFO0qtDG7JsO1IvIaGhqzn1dRBFJeJXI\/cpYZb1PaqFzxHzW9Kb1xO4KcTfD5YKcSL15U2xFNLNj2BHa8FlZErFeIhlLo5QZTtYFG7Q1zNqIiNprd1NXnpvpQongSlkcsXZjkWz\/QwJcHk+iS6BFfiKaBNcAVdzW3btsGSJUuC+Qkf5HzM1+NJUty5UiFeoSCg5QSZg0TrAb6cwJdh1H2xS5cuDQ4nC77R8MXUZU286HBIDkGgtBEo+HJCacMnrRcE4iFgPJ1AywlYrOkelXhVSi5BQBAo+HKCdIEgUIkIaE8n9Pb2ZhZaadsM7l7hVrASwRKZBQFXCGj3atpcTOSqAcVWju0WK5tb06LKxjc0224WL6a9mBRldb3kRDhS+T63MEbts7jpC75JOm7DfeUrJPFQsY4dOxbJsyg24nV3d3vZWkj9jYMT3YxQymuRFUs8vgZGIzSejli0aFHQx3R8Rr3aAi1RfX090EYDyksbldFNxy\/MYvEyafTu7+\/P1G0a0bknQseAiHjjx48P6lStDc\/D1\/EwYHbq1Ck4fvx45qpFvp46Z84cwDJpeqFrs6r46iCAddxwww1w5MgRQPlMR5JU7yFsMBHi+TI5KZSrnrHiC87c4qmLp3znB97kpd6gjU1HRUXFaWlp0W5IJndy165dAUlwczMSgvKZLAZXRn6KA6\/owMGCSKeWh8rf2dmZueWb2qhGqrmsEydODAYWunWA\/23atGlZbebdpSMexQuoTJRTPUEhxEtB6YuhirDDjWGuJlcsTjyUCRWVlIpOBeiO6ajKyfdchp1HNO2XVTc+h7Wf\/w3LIxLiv2o+\/t\/qVjOTRdIRL6wO7j7yQUwsXjGwxFMbeCCDu3aqAqKC7tu3L9MKSqsjHrpT\/NOdCleV2GavqukeUqxLVVLeft3ZSnL3VCKHEVENtmG9ugCKjni1tbWZo0qmQUEsniclL\/Zi1dF9YGAg4\/pxVy3M4tke4PVh8bh7GmapVIsXRgoTJmF9mc\/iqeQ2Wbywzdwyxyt2NoW0Tx1hTXM83dEbLBYPBIfN8fg8TjefwU3LUed46vEpcm2xPTbEQ+vH522qxbOd4+EpB9NOJh3x8DecY6ruOO8e3byXcFYDOEK8EiYezWnoTT\/ualL0Dl2y5ubmIJCAAQIMgOATY3jlIT5JRoqE\/6JiqVHNsJvZTBHCfEsD3O1Vo5p0O4DuYDG6wOgarlixAg4fPhwMHLt37wZu8TgmmBavLx8eHtZGNU3rdDriffTRR3D06NHgdATHRDenxP5AnHGAePPNN7UDnBCvxIknzTcjEDanjOpqquROirsQLymCkr+oEFDXK+NcA0hlkEXEy4JcEo\/Kl50rRaU60hhBoHQQ+H+uY7NrDZFCKQAAAABJRU5ErkJggg==","height":134,"width":222}}
 %---
-%[output:90a5b190]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
-%---
-%[output:9195034a]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
+%[output:37440596]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: Block diagram '<a href=\"matlab:open_system ('inv_psm')\">inv_psm<\/a>' contains one or more parameterized library links. To find the parameterized links use the Model Advisor.  The diagram has been saved but may not behave as you intended. Support for parameterized links will be removed in a future release. "}}
 %---

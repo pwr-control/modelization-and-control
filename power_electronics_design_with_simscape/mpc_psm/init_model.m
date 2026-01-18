@@ -422,9 +422,9 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 heatsink_liquid_2kW; %[output:7700a89a] %[output:36462aac] %[output:57299408]
 %[text] ### DEVICES settings (IGBT)
 % infineon_FF650R17IE4D_B2;
-% infineon_FF1200R17IP5;
+infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
-infineon_FF1200XTR17T2P5;
+% infineon_FF1200XTR17T2P5;
 
 igbt.inv.Vth = Vth;                                  % [V]
 igbt.inv.Vce_sat = Vce_sat;                          % [V]
@@ -449,9 +449,9 @@ igbt.inv.Rsnubber = Rsnubber;                        % [Ohm]
 % inv.Rsnubber = 1/(inv.Csnubber*fPWM_INV)/5
 
 % infineon_FF650R17IE4;
-% infineon_FF1200R17IP5;
+infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
-infineon_FF1200XTR17T2P5;
+% infineon_FF1200XTR17T2P5;
 
 igbt.afe.Vth = Vth;                                  % [V]
 igbt.afe.Vce_sat = Vce_sat;                          % [V]
