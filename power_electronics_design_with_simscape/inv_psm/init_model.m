@@ -12,8 +12,8 @@ transmission_delay = 125e-6*2;
 model = 'inv_psm';
 
 use_mosfet_thermal_model = 0;
-use_thermal_model = 0;
-load_step_time = 1.25;
+use_thermal_model = 1;
+load_step_time = 0;
 %[text] #### local time allignment to master time
 kp_align = 0.6;
 ki_align = 0.1;
@@ -22,6 +22,25 @@ lim_down_align = -0.2;
 %[text] ### Enable one/two modules
 number_of_modules = 1;
 enable_two_modules = number_of_modules;
+%[text] ### MOTOR Selection from Library
+n_sys = 6;
+run('n_sys_generic_1M5W_pmsm'); %[output:0db165d8] %[output:255f588d]
+run('n_sys_generic_1M5W_torque_curve');
+
+% n_sys = 1;
+% run('testroom_eq_psm_690V');
+% run('testroom_torque_curve_690V');
+
+b = tau_bez/omega_m_bez;
+
+
+%% inverter filter
+% LFi = 40e-6;
+% RLFi = 5e-3
+%% inverter filter
+LFi = 230e-6;
+LFi_0 = 20e-6;
+RLFi = 5e-3;
 %[text] ### Settings for speed control or wind application
 use_torque_curve = 0; % for wind application
 use_speed_control = 1-use_torque_curve; %
@@ -64,13 +83,13 @@ delayAFE_modA=0;
 delayAFE_modC=0;
 
 ts_afe = 1/fPWM_AFE/2; % Sampling time of the control AFE as well as INVERTER
-tc = ts_afe/125;
+tc = ts_afe/300;
 
 s=tf('s');
 z_afe=tf('z',ts_afe);
 
 % t_misura = simlength - 0.025;
-t_misura = 0.25;
+t_misura = 1/omega_bez*2*pi*5;
 Nc = ceil(t_misura/tc);
 Ns_afe = ceil(t_misura/ts_afe);
 
@@ -100,9 +119,9 @@ enable_frt_1 = 0;
 enable_frt_2 = 1-enable_frt_1;
 
 % deep data for frt type 2
-deepPOSxi = 0.5 %[output:0db165d8]
-deepNEGxi = 0 %[output:255f588d]
-deepNEGeta = 0.5 %[output:57086c1f]
+deepPOSxi = 0.5 %[output:57086c1f]
+deepNEGxi = 0 %[output:08bc4522]
+deepNEGeta = 0.5 %[output:858ca950]
 %[text] #### 
 %[text] #### FRT, and other fault timing settings
 test_index    = 25;
@@ -142,8 +161,8 @@ omega_rso = 2*pi*50;
 p2place = [-1 -4]*omega_rso;
 p2placed = exp(p2place*ts_afe);
 Kd = (acker(Asod',Cso',p2placed))';
-l1 = Kd(2) %[output:08bc4522]
-l2 = Kd(1) %[output:858ca950]
+l1 = Kd(2) %[output:55bd5b41]
+l2 = Kd(1) %[output:079a03a1]
 
 %[text] #### Grid fault generator 
 grid_fault_generator;
@@ -162,7 +181,6 @@ Rprecharge = 1; % Resistance of the DClink pre-charge circuit
 Pload = 250e3;
 Rbrake = 4;
 CFi = 900e-6*8;
-
 %[text] #### 
 %[text] #### DClink Lstray model
 Lstray_dclink = 100e-9;
@@ -333,26 +351,6 @@ Ns_inv = floor(t_measure/ts_inv);
 s=tf('s');
 z=tf('z',ts_inv);
 
-%[text] ### MOTOR Selection from Library
-n_sys = 6;
-run('n_sys_generic_1M5W_pmsm'); %[output:6685555d] %[output:0345a522]
-run('n_sys_generic_1M5W_torque_curve');
-
-% n_sys = 1;
-% run('testroom_eq_psm_690V');
-% run('testroom_torque_curve_690V');
-
-b = tau_bez/omega_m_bez;
-
-
-%% inverter filter
-% LFi = 40e-6;
-% RLFi = 5e-3
-%% inverter filter
-LFi = 230e-6;
-LFi_0 = 20e-6;
-RLFi = 5e-3;
-
 %[text] ### Simulation parameters: speed reference, load torque in motor mode
 % rpm_sim = 3000;
 rpm_sim = 17.8;
@@ -421,57 +419,57 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %[text] ### HeatSink settings
 heatsink_liquid_2kW; %[output:843555a4] %[output:90a5b190] %[output:9195034a]
 %[text] ### DEVICES settings (IGBT)
-infineon_FF650R17IE4D_B2;
+% infineon_FF650R17IE4D_B2;
 % infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
-% infineon_FF1200XTR17T2P5;
+infineon_FF1200XTR17T2P5;
 
-inv.Vth = Vth;                                  % [V]
-inv.Vce_sat = Vce_sat;                          % [V]
-inv.Rce_on = Rce_on;                            % [Ohm]
-inv.Vdon_diode = Vdon_diode;                    % [V]
-inv.Rdon_diode = Rdon_diode;                    % [Ohm]
-inv.Eon = Eon;                                  % [J] @ Tj = 125°C
-inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
-inv.Erec = Erec;                                % [J] @ Tj = 125°C
-inv.Voff_sw_losses = Voff_sw_losses;            % [V]
-inv.Ion_sw_losses = Ion_sw_losses;              % [A]
-inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-inv.Rtim = Rtim;                                % [K/W]
-inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-inv.Lstray_module = Lstray_module;              % [H]
-inv.Irr = Irr;                                  % [A]
-inv.Csnubber = Csnubber;                        % [F]
-inv.Rsnubber = Rsnubber;                        % [Ohm]
+igbt.inv.Vth = Vth;                                  % [V]
+igbt.inv.Vce_sat = Vce_sat;                          % [V]
+igbt.inv.Rce_on = Rce_on;                            % [Ohm]
+igbt.inv.Vdon_diode = Vdon_diode;                    % [V]
+igbt.inv.Rdon_diode = Rdon_diode;                    % [Ohm]
+igbt.inv.Eon = Eon;                                  % [J] @ Tj = 125°C
+igbt.inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
+igbt.inv.Erec = Erec;                                % [J] @ Tj = 125°C
+igbt.inv.Voff_sw_losses = Voff_sw_losses;            % [V]
+igbt.inv.Ion_sw_losses = Ion_sw_losses;              % [A]
+igbt.inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+igbt.inv.Rtim = Rtim;                                % [K/W]
+igbt.inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
+igbt.inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
+igbt.inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
+igbt.inv.Lstray_module = Lstray_module;              % [H]
+igbt.inv.Irr = Irr;                                  % [A]
+igbt.inv.Csnubber = Csnubber;                        % [F]
+igbt.inv.Rsnubber = Rsnubber;                        % [Ohm]
 % inv.Csnubber = (inv.Irr)^2*Lstray_module/Vdc_bez^2
 % inv.Rsnubber = 1/(inv.Csnubber*fPWM_INV)/5
 
-infineon_FF650R17IE4;
+% infineon_FF650R17IE4;
 % infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
-% infineon_FF1200XTR17T2P5;
+infineon_FF1200XTR17T2P5;
 
-afe.Vth = Vth;                                  % [V]
-afe.Vce_sat = Vce_sat;                          % [V]
-afe.Rce_on = Rce_on;                            % [Ohm]
-afe.Vdon_diode = Vdon_diode;                    % [V]
-afe.Rdon_diode = Rdon_diode;                    % [Ohm]
-afe.Eon = Eon;                                  % [J] @ Tj = 125°C
-afe.Eoff = Eoff;                                % [J] @ Tj = 125°C
-afe.Erec = Erec;                                % [J] @ Tj = 125°C
-afe.Voff_sw_losses = Voff_sw_losses;            % [V]
-afe.Ion_sw_losses = Ion_sw_losses;              % [A]
-afe.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-afe.Rtim = Rtim;                                % [K/W]
-afe.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-afe.Lstray_module = Lstray_module;              % [H]
-afe.Irr = Irr;                                  % [A]
-afe.Csnubber = Csnubber;                        % [F]
-afe.Rsnubber = Rsnubber;                        % [Ohm]
+igbt.afe.Vth = Vth;                                  % [V]
+igbt.afe.Vce_sat = Vce_sat;                          % [V]
+igbt.afe.Rce_on = Rce_on;                            % [Ohm]
+igbt.afe.Vdon_diode = Vdon_diode;                    % [V]
+igbt.afe.Rdon_diode = Rdon_diode;                    % [Ohm]
+igbt.afe.Eon = Eon;                                  % [J] @ Tj = 125°C
+igbt.afe.Eoff = Eoff;                                % [J] @ Tj = 125°C
+igbt.afe.Erec = Erec;                                % [J] @ Tj = 125°C
+igbt.afe.Voff_sw_losses = Voff_sw_losses;            % [V]
+igbt.afe.Ion_sw_losses = Ion_sw_losses;              % [A]
+igbt.afe.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+igbt.afe.Rtim = Rtim;                                % [K/W]
+igbt.afe.Rth_switch_JC = Rth_switch_JC;              % [K/W]
+igbt.afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
+igbt.afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
+igbt.afe.Lstray_module = Lstray_module;              % [H]
+igbt.afe.Irr = Irr;                                  % [A]
+igbt.afe.Csnubber = Csnubber;                        % [F]
+igbt.afe.Rsnubber = Rsnubber;                        % [Ohm]
 % afe.Csnubber = (afe.Irr)^2*Lstray_module/Vdc_bez^2
 % afe.Rsnubber = 1/(afe.Csnubber*fPWM_AFE)/5
 
@@ -581,18 +579,24 @@ end
 %   data: {"layout":"onright","rightPanelPercent":26.9}
 %---
 %[output:0db165d8]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
 %---
 %[output:255f588d]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
 %---
 %[output:57086c1f]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
 %---
 %[output:08bc4522]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
 %---
 %[output:858ca950]
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
+%---
+%[output:55bd5b41]
+%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
+%---
+%[output:079a03a1]
 %   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.183872841045359"}}
 %---
 %[output:72559c6d]
@@ -609,12 +613,6 @@ end
 %---
 %[output:85f7f9dd]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.194386045440868"],["33.957607642498068"]]}}
-%---
-%[output:6685555d]
-%   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
-%---
-%[output:0345a522]
-%   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
 %---
 %[output:7c2251f1]
 %   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.036997274900261"}}
