@@ -419,8 +419,8 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %[text] ### HeatSink settings
 heatsink_liquid_2kW;
 %[text] ### DEVICES settings (IGBT)
-% igbt.data = 'infineon_FF1200R17IP5';
-igbt.data = 'infineon_FF650R17IE4';
+igbt.data = 'infineon_FF1200R17IP5';
+% igbt.data = 'infineon_FF650R17IE4';
 run(igbt.data);
 
 igbt.inv.Vth = Vth;                                  % [V]
@@ -473,7 +473,7 @@ igbt.afe.Rsnubber = Rsnubber;                        % [Ohm]
 % afe.Rsnubber = 1/(afe.Csnubber*fPWM_AFE)/5
 
 %[text] ### DEVICES settings (MOSFET)
-mosfet.data = 'danfoss_SKM1700MB20R4S2I4' %[output:03d0d520]
+mosfet.data = 'danfoss_SKM1700MB20R4S2I4'; %[output:03d0d520]
 run(mosfet.data);
 
 mosfet.inv.Vth = Vth;                                  % [V]

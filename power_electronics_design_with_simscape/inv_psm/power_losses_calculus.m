@@ -12,3 +12,5 @@ rippleJH_diodeQ1 = max(diode_JH_temp_invQ1_sim) - mean(diode_JH_temp_invQ1_sim)
 
 TjMAX_igbt = 65 + rippleJH_igbtQ1 + deltaJH_igbtQ1
 TjMAX_diode = 65 + rippleJH_diodeQ1 + deltaJH_diodeQ1
+
+Tj_igbt_design = 65 + deltaJH_igbtQ1
