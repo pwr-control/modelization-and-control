@@ -37,7 +37,7 @@ grid on;
 xlabel('Posizione x [m]');
 ylabel('Temperatura [°C]');
 title('Sistema Accoppiato: ODE (x=0) + PDE (x>0)');
-legend('Dist. Temp. Sbarra', 'Location', 'NorthEast');
+legend('Dist.    Temp. Sbarra', 'Location', 'NorthEast');
 
 %% 4. Loop Temporale (Solver)
 disp('Avvio simulazione...');
