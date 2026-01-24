@@ -2,9 +2,9 @@
 clear; clc; close all;
 
 %% 1. Parametri Fisici
-L = 3.0;            % Lunghezza sbarra [m]
+L = 2.0;            % Lunghezza sbarra [m]
 alpha = 1e-4;       % Diffusività termica sbarra [m^2/s]
-k = 500;            % Conducibilità termica [W/(m*K)]
+k = 200;            % Conducibilità termica [W/(m*K)]
 A = 0.01;           % Area sezione sbarra [m^2]
 
 % Parametri Riscaldatore (ODE)
@@ -18,7 +18,7 @@ x = linspace(0, L, Nx);
 
 % Calcolo passo temporale per stabilità (CFL condition)
 % Per il metodo esplicito serve: alpha * dt / dx^2 < 0.5
-dt = 0.4 * (dx^2) / alpha; 
+dt = 0.1 * (dx^2) / alpha; 
 T_final = 6000;      % Durata simulazione [s]
 Nt = ceil(T_final / dt);
 
@@ -37,7 +37,7 @@ grid on;
 xlabel('Posizione x [m]');
 ylabel('Temperatura [°C]');
 title('Sistema Accoppiato: ODE (x=0) + PDE (x>0)');
-legend('Temperatura Sbarra', 'Location', 'NorthEast');
+legend('Dist. Temp. Sbarra', 'Location', 'NorthEast');
 
 %% 4. Loop Temporale (Solver)
 disp('Avvio simulazione...');
@@ -77,7 +77,7 @@ for n = 1:Nt
         title(sprintf('Tempo: %.2f s | Temp. Riscaldatore: %.1f °C', n*dt, u(1)));
         set(gca, 'ylim', [0 1000]);
         drawnow;
-        pause(0.1)
+        pause(0.01)
     end
 end
 
