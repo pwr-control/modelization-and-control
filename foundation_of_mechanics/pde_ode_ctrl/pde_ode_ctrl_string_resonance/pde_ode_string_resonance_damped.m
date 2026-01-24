@@ -3,7 +3,7 @@ clear; close all; clc;
 %% 1. Parametri Fisici
 L = 1.0;              
 c = 40;               
-T_sim = 2.0;          % Simulazione più lunga per vedere lo stato stazionario
+T_sim = 2.0;
 
 % --- Parametri di Smorzamento ---
 % gamma = 0   -> Nessun attrito (crescita infinita in risonanza)
