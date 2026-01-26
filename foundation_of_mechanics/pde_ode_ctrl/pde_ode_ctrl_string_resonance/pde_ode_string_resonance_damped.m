@@ -9,9 +9,9 @@ T_sim = 2.0;
 % gamma = 0   -> Nessun attrito (crescita infinita in risonanza)
 % gamma = 1.0 -> Smorzamento leggero (aria)
 % gamma = 5.0 -> Smorzamento forte (olio/miele)
-gamma = 2; 
+gamma = 1.25; 
 
-modo = 4;
+modo = 8;
 
 % Calcolo Frequenza Propria
 f1 = modo * c / (2*L);       
@@ -86,6 +86,7 @@ for n = 1:Nt
     u_prev = u;
     u = u_next;
     
+    Amax = 6;
     % --- C. Visualizzazione ---
     if mod(n, 10) == 0 % Disegno meno frequente per velocità
         subplot(3,1, [1 2]); 
@@ -95,13 +96,13 @@ for n = 1:Nt
         hold off;
         
         % Fisso i limiti per vedere se l'ampiezza si stabilizza
-        ylim([-4 4]); 
+        ylim([-Amax/modo Amax/modo]); 
         title(sprintf('Corda Smorzata (gamma=%.1f) - t=%.2fs', gamma, n*dt));
         grid on; ylabel('u(x)');
         
         subplot(3,1,3);
         plot(n*dt, u(idx_source), 'm.'); hold on; % Traccio l'ampiezza del centro
-        xlim([0 T_sim]); ylim([-4 4]);
+        xlim([0 T_sim]); ylim([-Amax/modo Amax/modo]);
         xlabel('Tempo (s)'); ylabel('Ampiezza al Centro');
         grid on;
         
