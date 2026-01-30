@@ -242,14 +242,26 @@ ddsrf_f = omega_f/(s+omega_f);
 ddsrf_fd = c2d(ddsrf_f,ts_afe);
 %%
 %[text] ### First Harmonic Tracker for Ugrid cleaning
-omega0 = 2*pi*50;
-Afht = [0 1; -omega0^2 -0.05*omega0] % impianto nel continuo %[output:8c11ae60]
-Cfht = [1 0];
-poles_fht = [-1 -4]*omega0;
-Lfht = acker(Afht',Cfht',poles_fht)' % guadagni osservatore nel continuo %[output:95cb5289]
-Ad_fht = eye(2) + Afht*ts_afe % impianto nel discreto %[output:42d1bda9]
-polesd_fht = exp(ts_afe*poles_fht);
-Ld_fht = Lfht*ts_afe % guadagni osservatore nel discreto %[output:85f7f9dd]
+omega_fht0 = 2*pi*f_grid;
+delta_fht0 = 0.05;
+Afht0 = [0 1; -omega_fht0^2 -delta_fht0*omega_fht0] % impianto nel continuo %[output:8c11ae60]
+Cfht0 = [1 0];
+poles_fht0 = [-1 -4]*omega_fht0;
+Lfht0 = acker(Afht0',Cfht0', poles_fht0)' % guadagni osservatore nel continuo %[output:95cb5289]
+Ad_fht0 = eye(2) + Afht0*ts_afe % impianto nel discreto %[output:42d1bda9]
+polesd_fht0 = exp(ts_afe*poles_fht0);
+Ld_fht0 = acker(Ad_fht0',Cfht0', polesd_fht0) %[output:85f7f9dd]
+
+%[text] ### First Harmonic Tracker for Load
+omega_fht1 = 2*pi*f_grid;
+delta_fht1 = 0.05;
+Afht1 = [0 1; -omega_fht1^2 -delta_fht1*omega_fht1] % impianto nel continuo %[output:30fb82f9]
+Cfht1 = [1 0];
+poles_fht1 = [-1 -4]*omega_fht1;
+Lfht1 = acker(Afht1', Cfht1', poles_fht1)' % guadagni osservatore nel continuo %[output:1e4794e1]
+Ad_fht1 = eye(2) + Afht1*ts_afe % impianto nel discreto %[output:060cbe2b]
+polesd_fht1 = exp(ts_afe*poles_fht1);
+Ld_fht1 = acker(Ad_fht1',Cfht1', polesd_fht1) %[output:4eb32b7c]
 %[text] ### Reactive current control gains
 kp_rc_grid = 0.35;
 ki_rc_grid = 35;
@@ -429,7 +441,7 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %%
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] ### HeatSink settings
-heatsink_liquid_2kW; %[output:843555a4] %[output:90a5b190] %[output:9195034a]
+heatsink_liquid_2kW;
 %[text] ### DEVICES settings (IGBT)
 infineon_FF650R17IE4D_B2;
 % infineon_FF1200R17IP5;
@@ -619,16 +631,28 @@ end
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.183872841045359"],["44.782392633890389"]]}}
 %---
 %[output:8c11ae60]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht0","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
 %[output:95cb5289]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht0","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
 %[output:42d1bda9]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht0","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
 %---
 %[output:85f7f9dd]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.194386045440868"],["33.957607642498068"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht0","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
+%---
+%[output:30fb82f9]
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht1","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
+%---
+%[output:1e4794e1]
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht1","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
+%---
+%[output:060cbe2b]
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht1","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
+%---
+%[output:4eb32b7c]
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht1","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
 %---
 %[output:6685555d]
 %   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
@@ -650,13 +674,4 @@ end
 %---
 %[output:8886a72c]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
-%---
-%[output:843555a4]
-%   data: {"dataType":"textualVariable","outputData":{"name":"heat_capacity","value":"  13.199999999999999"}}
-%---
-%[output:90a5b190]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_switch_HA","value":"   0.007500000000000"}}
-%---
-%[output:9195034a]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rth_mosfet_HA","value":"   0.007500000000000"}}
 %---
