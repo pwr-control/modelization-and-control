@@ -228,14 +228,26 @@ ddsrf_f = omega_f/(s+omega_f);
 ddsrf_fd = c2d(ddsrf_f,ts_afe);
 %%
 %[text] ### First Harmonic Tracker for Ugrid cleaning
-omega0 = 2*pi*50;
-Afht = [0 1; -omega0^2 -0.05*omega0] % impianto nel continuo %[output:83b297af]
-Cfht = [1 0];
-poles_fht = [-1 -4]*omega0;
-Lfht = acker(Afht',Cfht',poles_fht)' % guadagni osservatore nel continuo %[output:8fe1a3ae]
-Ad_fht = eye(2) + Afht*ts_afe % impianto nel discreto %[output:6ebfb55e]
-polesd_fht = exp(ts_afe*poles_fht);
-Ld_fht = Lfht*ts_afe % guadagni osservatore nel discreto %[output:36166f87]
+omega_fht0 = 2*pi*f_grid;
+delta_fht0 = 0.05;
+Afht0 = [0 1; -omega_fht0^2 -delta_fht0*omega_fht0] % impianto nel continuo %[output:83b297af]
+Cfht0 = [1 0];
+poles_fht0 = [-1 -4]*omega_fht0;
+Lfht0 = acker(Afht0',Cfht0', poles_fht0)' % guadagni osservatore nel continuo %[output:8fe1a3ae]
+Ad_fht0 = eye(2) + Afht0*ts_afe % impianto nel discreto %[output:6ebfb55e]
+polesd_fht0 = exp(ts_afe*poles_fht0);
+Ld_fht0 = acker(Ad_fht0',Cfht0', polesd_fht0) %[output:36166f87]
+
+%[text] ### First Harmonic Tracker for Load
+omega_fht1 = 2*pi*f_grid;
+delta_fht1 = 0.05;
+Afht1 = [0 1; -omega_fht1^2 -delta_fht1*omega_fht1] % impianto nel continuo %[output:5884f183]
+Cfht1 = [1 0];
+poles_fht1 = [-1 -4]*omega_fht1;
+Lfht1 = acker(Afht1', Cfht1', poles_fht1)' % guadagni osservatore nel continuo %[output:38f3794c]
+Ad_fht1 = eye(2) + Afht1*ts_afe % impianto nel discreto %[output:0abfa4b8]
+polesd_fht1 = exp(ts_afe*poles_fht1);
+Ld_fht1 = acker(Ad_fht1',Cfht1', polesd_fht1) %[output:617e9d41]
 %[text] ### IGBT and snubber data
 Ron = 3.5e-3;
 Irr = 750;
@@ -466,40 +478,52 @@ end
 %   data: {"layout":"onright","rightPanelPercent":41.3}
 %---
 %[output:65aea0a9]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"     5.000000000000000e-01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
 %---
 %[output:0853a9fc]
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
 %---
 %[output:9fc20da5]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"     5.000000000000000e-01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
 %---
 %[output:54bcb499]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"     4.478239263389039e+01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
 %---
 %[output:2d7b31d9]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"     1.838728410453592e-01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.183872841045359"}}
 %---
 %[output:9546200a]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["1.838728410453592e-01"],["4.478239263389039e+01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.183872841045359"],["44.782392633890389"]]}}
 %---
 %[output:83b297af]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Afht","rows":2,"type":"double","value":[["0","1.000000000000000e+00"],["-9.869604401089359e+04","-1.570796326794897e+01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht0","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
 %[output:8fe1a3ae]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Lfht","rows":2,"type":"double","value":[["1.555088363526948e+03"],["2.716608611399846e+05"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht0","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
 %[output:6ebfb55e]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000e+00","1.250000000000000e-04"],["-1.233700550136170e+01","9.980365045915064e-01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht0","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
 %---
 %[output:36166f87]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["1.943860454408685e-01"],["3.395760764249807e+01"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht0","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
+%---
+%[output:5884f183]
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht1","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
+%---
+%[output:38f3794c]
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht1","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
+%---
+%[output:0abfa4b8]
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht1","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
+%---
+%[output:617e9d41]
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht1","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
 %---
 %[output:3a686f16]
 %   data: {"dataType":"textualVariable","outputData":{"name":"Csnubber","value":"     4.913092846536815e-08"}}
 %---
 %[output:152b21ae]
-%   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"     5.088444444444445e+01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"Rsnubber","value":"  50.884444444444455"}}
 %---
 %[output:683290bb]
 %   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
@@ -508,13 +532,13 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
 %---
 %[output:79e2ff1c]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"     3.699727490026117e-02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.036997274900261"}}
 %---
 %[output:487a1b6b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"     1.533540968663871e+00"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   1.533540968663871"}}
 %---
 %[output:95c36cd7]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"     4.140209036166578e-01"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.414020903616658"}}
 %---
 %[output:849978af]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     2.438383113714302e+02"}}
