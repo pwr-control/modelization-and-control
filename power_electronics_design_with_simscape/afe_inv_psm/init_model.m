@@ -75,7 +75,7 @@ s=tf('s');
 z_afe=tf('z',ts_afe);
 
 % t_misura = simlength - 0.025;
-t_misura = 0.25;
+t_misura = 0.648228176318064;
 Nc = ceil(t_misura/tc);
 Ns_afe = ceil(t_misura/ts_afe);
 
@@ -102,7 +102,7 @@ inv_pwm_phase_shift_mod2 = 0;
 white_noise_power_inv_pwm_phase_shift_mod2 = 0.0;
 %[text] ### FRT Settings
 enable_frt_1 = 0;
-enable_frt_2 = 1-enable_frt_1;
+enable_frt_2 = 0;
 
 % deep data for frt type 2
 deepPOSxi = 0.5 %[output:0db165d8]
