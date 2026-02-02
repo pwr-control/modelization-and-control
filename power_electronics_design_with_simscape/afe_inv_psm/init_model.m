@@ -12,7 +12,12 @@ transmission_delay = 125e-6*2;
 model = 'afe_abc_inv_psm';
 
 use_mosfet_thermal_model = 0;
-use_thermal_model = 0;
+use_thermal_model = 1;
+if (use_mosfet_thermal_model || use_thermal_model)
+    nonlinear_iteration = 5;
+else
+    nonlinear_iteration = 3;
+end
 load_step_time = 1.25;
 %[text] #### local time allignment to master time
 kp_align = 0.6;
@@ -443,63 +448,74 @@ motorc_m_scale = 2/3*Vdc_bez/ubez;
 %[text] ### HeatSink settings
 heatsink_liquid_2kW;
 %[text] ### DEVICES settings (IGBT)
-infineon_FF650R17IE4D_B2;
-% infineon_FF1200R17IP5;
+% infineon_FF650R17IE4D_B2;
+infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
 % infineon_FF1200XTR17T2P5;
 
-inv.Vth = Vth;                                  % [V]
-inv.Vce_sat = Vce_sat;                          % [V]
-inv.Rce_on = Rce_on;                            % [Ohm]
-inv.Vdon_diode = Vdon_diode;                    % [V]
-inv.Rdon_diode = Rdon_diode;                    % [Ohm]
-inv.Eon = Eon;                                  % [J] @ Tj = 125°C
-inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
-inv.Erec = Erec;                                % [J] @ Tj = 125°C
-inv.Voff_sw_losses = Voff_sw_losses;            % [V]
-inv.Ion_sw_losses = Ion_sw_losses;              % [A]
-inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-inv.Rtim = Rtim;                                % [K/W]
-inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-inv.Lstray_module = Lstray_module;              % [H]
-inv.Irr = Irr;                                  % [A]
-inv.Csnubber = Csnubber;                        % [F]
-inv.Rsnubber = Rsnubber;                        % [Ohm]
+igbt.inv.data = 'infineon_FF1200R17IP5';
+igbt.inv.Vth = Vth;                                  % [V]
+igbt.inv.Vce_sat = Vce_sat;                          % [V]
+igbt.inv.Rce_on = Rce_on;                            % [Ohm]
+igbt.inv.Vdon_diode = Vdon_diode;                    % [V]
+igbt.inv.Rdon_diode = Rdon_diode;                    % [Ohm]
+igbt.inv.Eon = Eon;                                  % [J] @ Tj = 125°C
+igbt.inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
+igbt.inv.Erec = Erec;                                % [J] @ Tj = 125°C
+igbt.inv.Voff_sw_losses = Voff_sw_losses;            % [V]
+igbt.inv.Ion_sw_losses = Ion_sw_losses;              % [A]
+igbt.inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+igbt.inv.Rtim = Rtim;                                % [K/W]
+igbt.inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
+igbt.inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
+igbt.inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
+igbt.inv.Rth_diode_JC = Rth_switch_JC;               % [K/W]
+igbt.inv.Rth_diode_CH = Rth_switch_CH;               % [K/W]
+igbt.inv.Rth_diode_JH = Rth_switch_JH;               % [K/W]
+igbt.inv.Lstray_module = Lstray_module;              % [H]
+igbt.inv.Irr = Irr;                                  % [A]
+igbt.inv.Csnubber = Csnubber;                        % [F]
+igbt.inv.Rsnubber = Rsnubber;                        % [Ohm]
+igbt.inv.Cies = Cies;                                % [F]
 % inv.Csnubber = (inv.Irr)^2*Lstray_module/Vdc_bez^2
 % inv.Rsnubber = 1/(inv.Csnubber*fPWM_INV)/5
 
-infineon_FF650R17IE4;
-% infineon_FF1200R17IP5;
+% infineon_FF650R17IE4;
+infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
 % infineon_FF1200XTR17T2P5;
 
-afe.Vth = Vth;                                  % [V]
-afe.Vce_sat = Vce_sat;                          % [V]
-afe.Rce_on = Rce_on;                            % [Ohm]
-afe.Vdon_diode = Vdon_diode;                    % [V]
-afe.Rdon_diode = Rdon_diode;                    % [Ohm]
-afe.Eon = Eon;                                  % [J] @ Tj = 125°C
-afe.Eoff = Eoff;                                % [J] @ Tj = 125°C
-afe.Erec = Erec;                                % [J] @ Tj = 125°C
-afe.Voff_sw_losses = Voff_sw_losses;            % [V]
-afe.Ion_sw_losses = Ion_sw_losses;              % [A]
-afe.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-afe.Rtim = Rtim;                                % [K/W]
-afe.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-afe.Lstray_module = Lstray_module;              % [H]
-afe.Irr = Irr;                                  % [A]
-afe.Csnubber = Csnubber;                        % [F]
-afe.Rsnubber = Rsnubber;                        % [Ohm]
+igbt.afe.data = 'infineon_FF1200R17IP5';
+igbt.afe.Vth = Vth;                                  % [V]
+igbt.afe.Vce_sat = Vce_sat;                          % [V]
+igbt.afe.Rce_on = Rce_on;                            % [Ohm]
+igbt.afe.Vdon_diode = Vdon_diode;                    % [V]
+igbt.afe.Rdon_diode = Rdon_diode;                    % [Ohm]
+igbt.afe.Eon = Eon;                                  % [J] @ Tj = 125°C
+igbt.afe.Eoff = Eoff;                                % [J] @ Tj = 125°C
+igbt.afe.Erec = Erec;                                % [J] @ Tj = 125°C
+igbt.afe.Voff_sw_losses = Voff_sw_losses;            % [V]
+igbt.afe.Ion_sw_losses = Ion_sw_losses;              % [A]
+igbt.afe.JunctionTermalMass = JunctionTermalMass;    % [J/K]
+igbt.afe.Rtim = Rtim;                                % [K/W]
+igbt.afe.Rth_switch_JC = Rth_switch_JC;              % [K/W]
+igbt.afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
+igbt.afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
+igbt.afe.Rth_diode_JC = Rth_switch_JC;               % [K/W]
+igbt.afe.Rth_diode_CH = Rth_switch_CH;               % [K/W]
+igbt.afe.Rth_diode_JH = Rth_switch_JH;               % [K/W]
+igbt.afe.Lstray_module = Lstray_module;              % [H]
+igbt.afe.Irr = Irr;                                  % [A]
+igbt.afe.Csnubber = Csnubber;                        % [F]
+igbt.afe.Rsnubber = Rsnubber;                        % [Ohm]
+igbt.afe.Cies = Cies;                                % [F]
 % afe.Csnubber = (afe.Irr)^2*Lstray_module/Vdc_bez^2
 % afe.Rsnubber = 1/(afe.Csnubber*fPWM_AFE)/5
 
 %[text] ### DEVICES settings (MOSFET)
 infineon_FF1000UXTR23T2M1;
 
+mosfet.inv.data = 'infineon_FF1000UXTR23T2M1';
 mosfet.inv.Vth = Vth;                                  % [V]
 mosfet.inv.Rds_on = Rds_on;                            % [V]
 mosfet.inv.Vdon_diode = Vdon_diode;                    % [V]
@@ -521,6 +537,7 @@ mosfet.inv.Rsnubber = Rsnubber;                        % [Ohm]
 % inv.Csnubber = (mosfet.inv.Irr)^2*Lstray_module/Vdc_bez^2
 % inv.Rsnubber = 1/(mosfet.inv.Csnubber*fPWM_INV)/5
 
+mosfet.afe.data = 'infineon_FF1000UXTR23T2M1';
 mosfet.afe.Vth = Vth;                                  % [V]
 mosfet.afe.Rds_on = Rds_on;                            % [V]
 mosfet.afe.Vdon_diode = Vdon_diode;                    % [V]
