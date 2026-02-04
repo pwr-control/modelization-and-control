@@ -12,7 +12,7 @@ transmission_delay = 125e-6*2;
 model = 'afe_abc_inv_psm';
 
 use_mosfet_thermal_model = 0;
-use_thermal_model = 1;
+use_thermal_model = 0;
 if (use_mosfet_thermal_model || use_thermal_model)
     nonlinear_iteration = 5;
 else
@@ -102,7 +102,7 @@ inv_pwm_phase_shift_mod2 = 0;
 white_noise_power_inv_pwm_phase_shift_mod2 = 0.0;
 %[text] ### FRT Settings
 enable_frt_1 = 0;
-enable_frt_2 = 0;
+enable_frt_2 = 1;
 
 % deep data for frt type 2
 deepPOSxi = 0.5 %[output:0db165d8]
@@ -630,65 +630,65 @@ end
 %   data: {"layout":"onright","rightPanelPercent":26.9}
 %---
 %[output:0db165d8]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"0.5000"}}
 %---
 %[output:255f588d]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"0"}}
 %---
 %[output:57086c1f]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"0.5000"}}
 %---
 %[output:08bc4522]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"44.7824"}}
 %---
 %[output:858ca950]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.183872841045359"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"0.1839"}}
 %---
 %[output:72559c6d]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.183872841045359"],["44.782392633890389"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.1839"],["44.7824"]]}}
 %---
 %[output:8c11ae60]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht0","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht0","rows":2,"type":"double","value":[["0","0.0001"],["-9.8696","-0.0016"]]}}
 %---
 %[output:95cb5289]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht0","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht0","rows":2,"type":"double","value":[["0.0156"],["2.7166"]]}}
 %---
 %[output:42d1bda9]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht0","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht0","rows":2,"type":"double","value":[["1.0000","0.0001"],["-12.3370","0.9980"]]}}
 %---
 %[output:85f7f9dd]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht0","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht0","rows":1,"type":"double","value":[["0.1819","29.5880"]]}}
 %---
 %[output:30fb82f9]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht1","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht1","rows":2,"type":"double","value":[["0","0.0001"],["-9.8696","-0.0016"]]}}
 %---
 %[output:1e4794e1]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht1","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht1","rows":2,"type":"double","value":[["0.0156"],["2.7166"]]}}
 %---
 %[output:060cbe2b]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht1","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht1","rows":2,"type":"double","value":[["1.0000","0.0001"],["-12.3370","0.9980"]]}}
 %---
 %[output:4eb32b7c]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht1","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht1","rows":1,"type":"double","value":[["0.1819","29.5880"]]}}
 %---
 %[output:6685555d]
-%   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"1.4559e+05"}}
 %---
 %[output:0345a522]
-%   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"789.7124"}}
 %---
 %[output:7c2251f1]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.036997274900261"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"0.0370"}}
 %---
 %[output:76a3d4ad]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   1.533540968663871"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"1.5335"}}
 %---
 %[output:5713da6e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.414020903616658"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"0.4140"}}
 %---
 %[output:7c389dc3]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     2.438383113714302e+02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"243.8383"}}
 %---
 %[output:8886a72c]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"-299.4503"}}
 %---
