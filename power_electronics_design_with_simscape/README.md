@@ -3,6 +3,9 @@
 This subfolder contains a collection of models and control applications concerning power electronics. Most of the projects use the library which must added to the path of matlab to be able to use these models.
 Each folder contains a power electronics project, in the following a description of each project;
 
+**mpc ttype psm**:
+- model predicitive control of three phase ttype inverter (three levels leg based); very useful model for model predictive analysis and investigation on convex optimization;
+ 
 **single phase inverter**:
 - single phase inverter application with resonant pi, SOGI, active SOGI, and system identification;
   
