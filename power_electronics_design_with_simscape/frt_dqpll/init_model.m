@@ -9,7 +9,7 @@ options.FreqUnits = 'Hz';
 simlength = 3.75;
 % simlength = 2;
 transmission_delay = 125e-6*2;
-model = 'afe_abc_inv_psm';
+model = 'frt_dqpll';
 
 use_mosfet_thermal_model = 0;
 use_thermal_model = 0;
@@ -35,14 +35,9 @@ use_psm_encoder = 0; %
 use_load_estimator = 0; %
 use_estimator_from_mb = 0; %mb model based
 use_motor_speed_control_mode = 0; 
-use_advanced_pll = 1; % advanced pll should compensate second harmonic
-use_dq_pll_mod1 = 0; % only module 1
-use_dq_pll_ccaller_mod1 = 0; % only module 1
+use_advanced_pll = 0; % advanced pll should compensate second harmonic
+use_dq_pll_ccaller_mod1 = 1; % only module 1
 use_dq_pll_ccaller_mod2 = 0; % only module 1
-
-use_dq_pll_mode1 = use_advanced_pll;
-use_dq_pll_mode2 = use_dq_pll_mod1;
-use_dq_pll_mode3 = use_dq_pll_ccaller_mod1;
 %[text] ### Settings for CCcaller versus Simulink
 use_observer_from_simulink_module_1 = 0;
 use_observer_from_ccaller_module_1 = 1;
@@ -110,9 +105,9 @@ enable_frt_1 = 0;
 enable_frt_2 = 1;
 
 % deep data for frt type 2
-deepPOSxi = 0.5 %[output:0db165d8]
-deepNEGxi = 0 %[output:255f588d]
-deepNEGeta = 0.5 %[output:57086c1f]
+deepPOSxi = 0.5 %[output:7afa80e7]
+deepNEGxi = 0 %[output:3f4a2f2d]
+deepNEGeta = 0.5 %[output:6aa82381]
 %[text] #### 
 %[text] #### FRT, and other fault timing settings
 test_index    = 25;
@@ -152,8 +147,8 @@ omega_rso = 2*pi*50;
 p2place = [-1 -4]*omega_rso;
 p2placed = exp(p2place*ts_afe);
 Kd = (acker(Asod',Cso',p2placed))';
-l1 = Kd(2) %[output:08bc4522]
-l2 = Kd(1) %[output:858ca950]
+l1 = Kd(2) %[output:23ed8f59]
+l2 = Kd(1) %[output:674c9ecc]
 
 %[text] #### Linear double integrator observer
 Aso = [0 1; 0 0];
@@ -211,7 +206,7 @@ ki_vs = 35;
 %%
 %[text] ### AFE current control parameters
 %[text] #### Resonant PI
-kp_afe = 0.2;
+kp_afe = 0.6;
 ki_afe = 45;
 delta = 0.015;
 res = s/(s^2 + 2*delta*omega_grid_nom*s + (omega_grid_nom)^2);
@@ -242,36 +237,38 @@ polesrso = [-1 -4]*omega_rso;
 Lrso = acker(Arso',Crso',polesrso)';
 Adrso = eye(2) + Arso*ts_afe;
 polesdrso = exp(ts_afe*polesrso);
-Ldrso = acker(Adrso',Crso',polesdrso)' %[output:72559c6d]
+Ldrso = acker(Adrso',Crso',polesdrso)' %[output:93da07ea]
 
 %[text] ### PLL DDSRF
-pll_i1_ddsrt = pll_i1;
-pll_p_ddsrt = pll_p;
+pll_i1_ddsrt = pll_i1/2;
+pll_p_ddsrt = pll_p/2;
 omega_f = 2*pi*50;
 ddsrf_f = omega_f/(s+omega_f);
 ddsrf_fd = c2d(ddsrf_f,ts_afe);
+tau_ddsrf = 1/omega_f;
+
 %%
 %[text] ### First Harmonic Tracker for Ugrid cleaning
 omega_fht0 = 2*pi*f_grid;
 delta_fht0 = 0.05;
-Afht0 = [0 1; -omega_fht0^2 -delta_fht0*omega_fht0] % impianto nel continuo %[output:8c11ae60]
+Afht0 = [0 1; -omega_fht0^2 -delta_fht0*omega_fht0] % impianto nel continuo %[output:584a885c]
 Cfht0 = [1 0];
 poles_fht0 = [-1 -4]*omega_fht0;
-Lfht0 = acker(Afht0',Cfht0', poles_fht0)' % guadagni osservatore nel continuo %[output:95cb5289]
-Ad_fht0 = eye(2) + Afht0*ts_afe % impianto nel discreto %[output:42d1bda9]
+Lfht0 = acker(Afht0',Cfht0', poles_fht0)' % guadagni osservatore nel continuo %[output:70bbf7a1]
+Ad_fht0 = eye(2) + Afht0*ts_afe % impianto nel discreto %[output:5c7f1102]
 polesd_fht0 = exp(ts_afe*poles_fht0);
-Ld_fht0 = acker(Ad_fht0',Cfht0', polesd_fht0) %[output:85f7f9dd]
+Ld_fht0 = acker(Ad_fht0',Cfht0', polesd_fht0) %[output:01d6f629]
 
 %[text] ### First Harmonic Tracker for Load
 omega_fht1 = 2*pi*f_grid;
 delta_fht1 = 0.05;
-Afht1 = [0 1; -omega_fht1^2 -delta_fht1*omega_fht1] % impianto nel continuo %[output:30fb82f9]
+Afht1 = [0 1; -omega_fht1^2 -delta_fht1*omega_fht1] % impianto nel continuo %[output:30f7320a]
 Cfht1 = [1 0];
 poles_fht1 = [-1 -4]*omega_fht1;
-Lfht1 = acker(Afht1', Cfht1', poles_fht1)' % guadagni osservatore nel continuo %[output:1e4794e1]
-Ad_fht1 = eye(2) + Afht1*ts_afe % impianto nel discreto %[output:060cbe2b]
+Lfht1 = acker(Afht1', Cfht1', poles_fht1)' % guadagni osservatore nel continuo %[output:8936e732]
+Ad_fht1 = eye(2) + Afht1*ts_afe % impianto nel discreto %[output:89e29d56]
 polesd_fht1 = exp(ts_afe*poles_fht1);
-Ld_fht1 = acker(Ad_fht1',Cfht1', polesd_fht1) %[output:4eb32b7c]
+Ld_fht1 = acker(Ad_fht1',Cfht1', polesd_fht1) %[output:3c7aea8e]
 %[text] ### Reactive current control gains
 kp_rc_grid = 0.35;
 ki_rc_grid = 35;
@@ -367,7 +364,7 @@ z=tf('z',ts_inv);
 
 %[text] ### MOTOR Selection from Library
 n_sys = 6;
-run('n_sys_generic_1M5W_pmsm'); %[output:6685555d] %[output:0345a522]
+run('n_sys_generic_1M5W_pmsm'); %[output:2cbf2efd] %[output:58ee8ae3]
 run('n_sys_generic_1M5W_torque_curve');
 
 % n_sys = 1;
@@ -400,8 +397,8 @@ Cso = [1 0];
 % p2place = exp([-10 -50]*ts_inv);
 p2place = exp([-50 -250]*ts_inv);
 Kobs = (acker(Aso',Cso',p2place))';
-kg = Kobs(1) %[output:7c2251f1]
-kw = Kobs(2) %[output:76a3d4ad]
+kg = Kobs(1) %[output:4860d73a]
+kw = Kobs(2) %[output:16302e31]
 
 %[text] ### Rotor speed observer with load estimator
 A = [0 1 0; 0 0 -1/Jm_norm; 0 0 0];
@@ -410,9 +407,9 @@ Blo = [0; ts_inv/Jm_norm; 0];
 Clo = [1 0 0];
 p3place = exp([-1 -5 -25]*125*ts_inv);
 Klo = (acker(Alo',Clo',p3place))';
-luenberger_l1 = Klo(1) %[output:5713da6e]
-luenberger_l2 = Klo(2) %[output:7c389dc3]
-luenberger_l3 = Klo(3) %[output:8886a72c]
+luenberger_l1 = Klo(1) %[output:64aa32ea]
+luenberger_l2 = Klo(2) %[output:5277e683]
+luenberger_l3 = Klo(3) %[output:51860a65]
 omega_flt_fcut = 10;
 % phase_compensation_omega = -pi/2-pi/12; % for motor mode
 phase_compensation_omega = 0; % for generator mode
@@ -592,10 +589,10 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_output_t'});
 
 %[text] ## Remove Scopes Opening Automatically
-open_scopes = find_system(model, 'BlockType', 'Scope');
-for i = 1:length(open_scopes)
-    set_param(open_scopes{i}, 'Open', 'off');
-end
+% open_scopes = find_system(model, 'BlockType', 'Scope');
+% for i = 1:length(open_scopes)
+%     set_param(open_scopes{i}, 'Open', 'off');
+% end
 
 % shh = get(0,'ShowHiddenHandles');
 % set(0,'ShowHiddenHandles','On');
@@ -603,97 +600,73 @@ end
 % close(hscope);
 % set(0,'ShowHiddenHandles',shh);
 
-%[text] ## Enable/Disable Subsystems
-if use_mosfet_thermal_model
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'off');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'off');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
-else
-    if use_thermal_model
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'off');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
-    else
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'off');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
-    end
-end
+%[text] ## 
 
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":26.9}
+%   data: {"layout":"onright","rightPanelPercent":11}
 %---
-%[output:0db165d8]
+%[output:7afa80e7]
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
 %---
-%[output:255f588d]
+%[output:3f4a2f2d]
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
 %---
-%[output:57086c1f]
+%[output:6aa82381]
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
 %---
-%[output:08bc4522]
+%[output:23ed8f59]
 %   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
 %---
-%[output:858ca950]
+%[output:674c9ecc]
 %   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.183872841045359"}}
 %---
-%[output:72559c6d]
+%[output:93da07ea]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.183872841045359"],["44.782392633890389"]]}}
 %---
-%[output:8c11ae60]
+%[output:584a885c]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht0","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
-%[output:95cb5289]
+%[output:70bbf7a1]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht0","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
-%[output:42d1bda9]
+%[output:5c7f1102]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht0","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
 %---
-%[output:85f7f9dd]
+%[output:01d6f629]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht0","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
 %---
-%[output:30fb82f9]
+%[output:30f7320a]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht1","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
-%[output:1e4794e1]
+%[output:8936e732]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht1","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
-%[output:060cbe2b]
+%[output:89e29d56]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht1","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
 %---
-%[output:4eb32b7c]
+%[output:3c7aea8e]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht1","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
 %---
-%[output:6685555d]
+%[output:2cbf2efd]
 %   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
 %---
-%[output:0345a522]
+%[output:58ee8ae3]
 %   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
 %---
-%[output:7c2251f1]
+%[output:4860d73a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.036997274900261"}}
 %---
-%[output:76a3d4ad]
+%[output:16302e31]
 %   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   1.533540968663871"}}
 %---
-%[output:5713da6e]
+%[output:64aa32ea]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.414020903616658"}}
 %---
-%[output:7c389dc3]
+%[output:5277e683]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     2.438383113714302e+02"}}
 %---
-%[output:8886a72c]
+%[output:51860a65]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
 %---
