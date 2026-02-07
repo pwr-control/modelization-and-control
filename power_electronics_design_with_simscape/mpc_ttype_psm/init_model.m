@@ -1,4 +1,4 @@
-%[text] ## Settings for simulink model initialization and data analysis
+%[text] ##  Settings for simulink model initialization and data analysis
 close all
 clear all
 clc
