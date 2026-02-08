@@ -35,9 +35,18 @@ use_psm_encoder = 0; %
 use_load_estimator = 0; %
 use_estimator_from_mb = 0; %mb model based
 use_motor_speed_control_mode = 0; 
-use_advanced_pll = 0; % advanced pll should compensate second harmonic
-use_dq_pll_ccaller_mod1 = 1; % only module 1
-use_dq_pll_ccaller_mod2 = 0; % only module 1
+
+use_dq_pll_fht_pll = 1; % 
+use_dq_pll_ddsfr_pll = 0; % 
+use_dq_pll_mod1 = 0; % 
+use_dq_pll_ccaller_mod1 = 0; % 
+use_dq_pll_ccaller_mod2 = 0; % 
+
+use_dq_pll_mode1 = use_dq_pll_mod1;
+use_dq_pll_mode2 = use_dq_pll_ccaller_mod1;
+use_dq_pll_mode3 = use_dq_pll_ddsfr_pll;
+use_dq_pll_mode4 = use_dq_pll_fht_pll;
+
 %[text] ### Settings for CCcaller versus Simulink
 use_observer_from_simulink_module_1 = 0;
 use_observer_from_ccaller_module_1 = 1;
@@ -246,6 +255,11 @@ omega_f = 2*pi*50;
 ddsrf_f = omega_f/(s+omega_f);
 ddsrf_fd = c2d(ddsrf_f,ts_afe);
 tau_ddsrf = 1/omega_f;
+
+
+%[text] ### PLL FHT
+pll_i1_fht = pll_i1;
+pll_p_fht = pll_p;
 
 %%
 %[text] ### First Harmonic Tracker for Ugrid cleaning
