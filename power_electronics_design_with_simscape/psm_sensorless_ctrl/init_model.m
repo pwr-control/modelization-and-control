@@ -9,9 +9,11 @@ options.FreqUnits = 'Hz';
 % simlength = 3.75;
 simlength = 2;
 transmission_delay = 125e-6*2;
+
 % model = 'psm_sv_bemf_ctrl';
-model = 'psm_sv_ekf_bemf_ctrl';
+% model = 'psm_sv_ekf_bemf_ctrl';
 % model = 'psm_mpc_bemf_ctrl';
+model = 'psm_mpc_ekf_bemf_ctrl';
 
 load_step_time = 0;
 %[text] #### local time allignment to master time
@@ -46,7 +48,7 @@ RLFi = 5e-3;
 use_torque_curve = 0; % for wind application
 use_speed_control = 1-use_torque_curve; %
 use_mtpa = 1; %
-use_psm_encoder = 1; % 
+use_psm_encoder = 0; % 
 use_load_estimator = 0; %
 use_estimator_from_mb = 0; %mb model based
 use_motor_speed_control_mode = 0; 
@@ -74,9 +76,9 @@ grid_emulator;
 %%
 %[text] ## AFE Settings and Initialization
 %[text] ### Switching frequencies, sampling time and deadtime
-% fPWM_AFE = 6*2.5e3; % in case of mpc controller run 6 times the maximum pwm
+fPWM_AFE = 6*2.5e3; % in case of mpc controller run 6 times the maximum pwm
 % fPWM_AFE = 2*2.5e3; % in case of sv controller run 2 times the maximum pwm
-fPWM_AFE = 2*4e3; % in case of sv controller run 2 times the maximum pwm
+% fPWM_AFE = 2*4e3; % in case of sv controller run 2 times the maximum pwm
 tPWM_AFE = 1/fPWM_AFE;
 
 dead_time_AFE = 3e-6;
@@ -416,8 +418,8 @@ emf_p_ccaller_1 = emf_fb_p_ccaller_1*4/10;
 emf_fb_p_ccaller_2 = emf_fb_p;
 emf_p_ccaller_2 = emf_fb_p_ccaller_2*4/10;
 
-% omega_th = 0.25;
-omega_th = 0;
+omega_th = 0.25;
+% omega_th = 0;
 %[text] #### EKF BEMF observer
 kalman_psm;
 %[text] #### Speed obserfer filter LPF 10Hz
@@ -608,7 +610,7 @@ Simulink.importExternalCTypes(model,'Names',{'global_state_machine_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'first_harmonic_tracker_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dqpll_thyr_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dqpll_grid_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'}); %[output:9cc397ed] %[output:83372afc] %[output:64c5e08a] %[output:3126479a] %[output:9ce7f36e] %[output:2b34f888] %[output:6bc6fb7d] %[output:70835ac9] %[output:4e57b61a] %[output:1215c3af] %[output:4d3b326d] %[output:409577df] %[output:9eae4a14] %[output:5a3488f1] %[output:88b1d66d] %[output:9f6e1464] %[output:43aa5a4b] %[output:91a31f95] %[output:36ba6040]
+Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 
 %[text] ## Remove Scopes Opening Automatically
 % open_scopes = find_system(model, 'BlockType', 'Scope');
@@ -645,13 +647,13 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'}); %[output:9cc397ed
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
 %---
 %[output:8bf67124]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  24.984105426951174"}}
 %---
 %[output:45e82fc7]
-%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.183872841045359"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.101088737746315"}}
 %---
 %[output:3873a036]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.183872841045359"],["44.782392633890389"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.101088737746315"],["24.984105426951174"]]}}
 %---
 %[output:2f8df18e]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
@@ -660,86 +662,29 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'}); %[output:9cc397ed
 %   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
 %[output:20f05bf9]
-%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht","rows":2,"type":"double","value":[["1.000000000000000","0.000066666666667"],["-6.579736267392907","0.998952802448803"]]}}
 %---
 %[output:0445503e]
-%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.194386045440868"],["33.957607642498068"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ld_fht","rows":2,"type":"double","value":[["0.103672557568463"],["18.110724075998974"]]}}
 %---
 %[output:04a70309]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.024788847500562"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.013273093780640"}}
 %---
 %[output:69e958f5]
-%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   0.790076231160342"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   0.423833817530528"}}
 %---
 %[output:8e3d2c7e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.414020903616658"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.237172904101351"}}
 %---
 %[output:95bd65ef]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     2.438383113714302e+02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     1.436150968933706e+02"}}
 %---
 %[output:7d37a44a]
-%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -1.779725838133451e+02"}}
 %---
 %[output:9ef89060]
 %   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"mosfet","value":"    data: 'danfoss_SKM1700MB20R4S2I4'"}}
 %---
 %[output:339abfd4]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:,","height":0,"width":0}}
-%---
-%[output:9cc397ed]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Error resolving Custom Code."}}
-%---
-%[output:83372afc]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: C:\\Git\\GitHub\\modelization-and-control\\power_electronics_design_with_simscape\\psm_sensorless_ctrl\\include specified in custom include directory paths string does not exist in any of the following search directories:\n\""}}
-%---
-%[output:64c5e08a]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: C:\\Git\\GitHub\\modelization-and-control\\power_electronics_design_with_simscape\\psm_sensorless_ctrl\\src specified in custom include directory paths string does not exist in any of the following search directories:\n\""}}
-%---
-%[output:3126479a]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"Goto\" for \"From\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/global timing\/From9','error')\">psm_sv_ekf_bemf_ctrl\/global timing\/From9<\/a>' not found"}}
-%---
-%[output:9ce7f36e]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"Goto\" for \"From\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/measurements\/From13','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/measurements\/From13<\/a>' not found"}}
-%---
-%[output:2b34f888]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"Goto\" for \"From\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/measurements\/From14','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/measurements\/From14<\/a>' not found"}}
-%---
-%[output:6bc6fb7d]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"Goto\" for \"From\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/measurements\/From15','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/measurements\/From15<\/a>' not found"}}
-%---
-%[output:70835ac9]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"Goto\" for \"From\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/measurements\/From16','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/measurements\/From16<\/a>' not found"}}
-%---
-%[output:4e57b61a]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"From\" for \"Goto\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/global timing\/Goto3','error')\">psm_sv_ekf_bemf_ctrl\/global timing\/Goto3<\/a>' not found"}}
-%---
-%[output:1215c3af]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"From\" for \"Goto\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/Goto1','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/Goto1<\/a>' not found"}}
-%---
-%[output:4d3b326d]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"From\" for \"Goto\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/Goto1','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/Goto1<\/a>' not found"}}
-%---
-%[output:409577df]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"From\" for \"Goto\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/Goto2','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/Goto2<\/a>' not found"}}
-%---
-%[output:9eae4a14]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"From\" for \"Goto\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/extended kalman observer\/Goto1','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/extended kalman observer\/Goto1<\/a>' not found"}}
-%---
-%[output:5a3488f1]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"From\" for \"Goto\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/extended kalman observer\/Goto3','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/extended kalman observer\/Goto3<\/a>' not found"}}
-%---
-%[output:88b1d66d]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: Matching \"From\" for \"Goto\" '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/speed_reference_generator\/Goto','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/speed_reference_generator\/Goto<\/a>' not found"}}
-%---
-%[output:9f6e1464]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: '<a href=\"matlab:slprivate('open_and_hilite_port_hyperlink', 'hilite', ['psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/extended kalman observer\/double_integrator_observer\/Dead Zone'], 'Inport', 1);\">Input Port 1<\/a>' of block '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/extended kalman observer\/double_integrator_observer\/Dead Zone','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/extended kalman observer\/double_integrator_observer\/Dead Zone<\/a>' is not connected."}}
-%---
-%[output:43aa5a4b]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: '<a href=\"matlab:slprivate('open_and_hilite_port_hyperlink', 'hilite', ['psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/extended kalman observer\/double_integrator_observer\/Dead Zone'], 'Outport', 1);\">Output Port 1<\/a>' of block '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/extended kalman observer\/double_integrator_observer\/Dead Zone','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/current_ctrl\/bemf_observer\/extended kalman observer\/double_integrator_observer\/Dead Zone<\/a>' is not connected."}}
-%---
-%[output:91a31f95]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: '<a href=\"matlab:slprivate('open_and_hilite_port_hyperlink', 'hilite', ['psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/encoder-sensorless-switch\/double_integrator_observer\/Dead Zone'], 'Inport', 1);\">Input Port 1<\/a>' of block '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/encoder-sensorless-switch\/double_integrator_observer\/Dead Zone','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/encoder-sensorless-switch\/double_integrator_observer\/Dead Zone<\/a>' is not connected."}}
-%---
-%[output:36ba6040]
-%   data: {"dataType":"warning","outputData":{"text":"Warning: '<a href=\"matlab:slprivate('open_and_hilite_port_hyperlink', 'hilite', ['psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/encoder-sensorless-switch\/double_integrator_observer\/Dead Zone'], 'Outport', 1);\">Output Port 1<\/a>' of block '<a href=\"matlab:open_and_hilite_hyperlink ('psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/encoder-sensorless-switch\/double_integrator_observer\/Dead Zone','error')\">psm_sv_ekf_bemf_ctrl\/inv_psm_mod1\/inverter_ctrl\/inverter_control\/encoder-sensorless-switch\/double_integrator_observer\/Dead Zone<\/a>' is not connected."}}
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAARUAAACnCAYAAAA\/m8goAAAAAXNSR0IArs4c6QAAH7FJREFUeF7tXQ+QVtV1P1rTuhqMLqAJbnDR7EZjKwbTDKJTSChiOgVTOi1\/nJYCpZSKm6lQYBccpBNgoawzBc1IHWRIO7vrkDIjOGkpQ4SCaGNBmKQmglkWuiJWQYpSsFFpz4PzefZ+971333v3vvcunDfjqPvdd9+5v3vO755z7r\/Lzp07dw7kEQQEAUHAEgKXCalYQlKqEQQEgQABIRVRBEFAELCKgJBKCjhffvllmDRpErS3t8PQoUNT1BD+ilr3mTNnYNWqVTB9+nSora218i2sc\/78+UFdra2tUFNTA\/jdw4cPw\/jx4618I6ySZ599Fnbv3l35btTHnnjiCRg9ejQ0NDTEypSkbGxlFwoQTps3b4YBAwbAunXrjGTR4Wv6TZvlTpw4AdOmTYN58+ZZ19MoOYVUbPaig7qWL18eGPzatWudkUpPTw9MmTIFHn74YaekQko+YcKE2O8g+axevdrIkJOUTdJFBw8eDHAZM2ZMYJimT1lIBeVF\/Tl69KgRiZu2L65caUmFOhQBwYe8AuqwU6dOBX\/fsWNH1ShCoz3+Pnjw4IpB0t8fffTR4G9Y97Jly0IVPEwG7k1g\/Tjqkzz4Do5odXV1wd9xlMNnxowZgWJSnWTAqmfC\/x89h+bm5uB9daTUKa5KQHEYYr1z586FWbNmwf79+3vJiYYa9m38zpo1awKZRowYAdu3b68YPx\/dsUKOr2r8RDL0bSrL+4\/6vrGxMRh1VTl1ZdF75PIjKZBHphpEmAzq33V1qG2lPtbpKNdDMnbEMExHsS78neqMwlyVlXvQLr3qMHIpJamohseVkYx1z549gSL37ds3ULaBAwcGisNH3bFjx\/Zy81EhMWzhHRXmBaijKjfYAwcOVMIfIhWSh1x1PkLQd7GzUV7uFUSRChpHlKeCuHR2dgYEiQ\/igO\/oyEuHIb6jYobhD+K\/dOlSaGtrq9RL+FJbkAAIX972MJyoLXzU5GW3bt3ayzNRCQjL1tfXBwMAEQYZj1qWY0pkRLhwQ6A+pt\/UvojzVML6WNUJ\/Kba5x0dHb2wJ2+IZCAdxXfpbzrMyR6oLzdt2tQLxyTeYZwHYvp7KUklbETDzm9qaqrKB\/Dye\/furVJOMjwiAxoRo9xm7Mg5c+Zo3W+dp0KdivmJqI5M4qnEkQrVtXLlyqC\/eZ4nCYZh4Y9utMf8DnpflF\/g3yGCJyPlOKgEjzjR6KuO4tgWXd+Ejcg6AuKDRVgIoMtf8VwT4aILf6L6mDyVI0eOaAmfjJPazz1ZnWeB5cIwVwmL6wT2g0qcpsSQpVwpSUUdnTkwcaSycePGwG3kD4UOx48fjzQ8\/k4c4ZAB06jESUUlDl6vTVIh5cX20YhGuZckGKqkQoqNxrRo0SJYvHhxUD96NUgq3GA5TqTgFLJSu3HUxUQz9yiRVNTwjJOLzrNCw0LvJIpA1bCTZDAhLjWkjCKVqD5W68H\/514kkTXHJcxbQvnVvuTYkE6rJEADJ9kOeZqIu+unlKSSZJRFkKI8FQ6gOgqYEoc6w2Pqqehcbpukwkf0\/v37V0If3UgfRcwqqXAlRnz56J3EU+HYRyUveW6C3H4dWYXloeI8lTAjsuGp6Po4ilTUQVElnKyeitpW8VQuIGKSU6FRi2LmJDmVsFicd4jaGbrRAevReSrq6IKjCcXUo0aN6jVqkQtMMqlKFTf7w0d7nqAzwZC8D5VUdG2lRCXPqVBb3nnnnUo4FJdTIS9HJasoGXhYRUZJ\/U9JWT5TlGdOhdrD+1gN9VTiUHNJmBAnMtWRCs+pqJhLTiWB38WNhc988FGgT58+gTusurZxsz8mpIKiJpn94eEP\/nfYzAB5ETSzQln+MFLhbdGti1Hjd76WxQRDDGnwoZkqJA8+I4TYoxeEDw+tXMz+8BkWLju68vgQZtjfSGTkuahleTIX30sy+6Mj5rAp5bjZH9IJlVTUfkF81US42teX9OwPAoZKuWLFiqqFQmon6OLcON4p0xqAOFkvxt+TelI67y\/vxVi+90MWzNHrNF1saAsnqzkVMnh1epWExZBi9uzZ0NLSYrQyUddIIRVbXZ+uHnVgwFqSrCwuQsnTtbQ8b6XF\/KJYUYsKg24pkoqOOPj6B1tLzsvT9SKJICAIIALWPBUkjPXr18PMmTNh4cKFWlLh6x7w41GrWaV7BAFBwE8EKqSiLiyKao6aC0H3bMmSJTB58uRgxahJiFOUa+ZnN4nUgoA\/CPQiFVzkhIudokITJAO1nDpLgs2P29VJceKwYcN67b25+eab\/UFPJBUEPEFg27ZtMGjQoFyktRb+mCRjMfzBh\/aX6GaJkFS6urpyaXyWj\/giJ7ZRZM3S0+HvCq56bKrCHyyWZZu9OsPDiSRqByuJ50tH+SKnkIobQhFcw3Ht5amoRh8XwrjoLl+M9dChQ7m5k1lxFlmzIqh\/3ydc87SryPCniNmaPBufRdV8UiiRNUtPh7\/rE6552pVxTkWXoHXRVXk2Pov8PimUyJqlp4VUkqIXSirqFHNeoZCQStIujC8vpBKPUZoSPuGap12FrlPJi0TUzsyz8WkUid7xSaFE1iw9LZ5KUvQqpIJJWvyn6OXzQipJuzC+vJBKPEZpSviEa552ZWXxW5oOCXsnz8ZnkdsnhRJZs\/S0eCpJ0bOyTD\/pR6PKC6nYRPN8XUIq9jH1Ddc87cp49sdNt1TXmmfjs7RJDDULehfH6O+TDuRpV0IqKW3DJ4USWVN2csxrPuEqpOLB3h+fFEpkFVIRUhFSsWoFQipW4axU5hOuQipCKlatwCflF1mtdn2lMiEVIRWrmiWGahVO8VRi4NQmavluZbqyIeyISNvdlSejZpFdDDULejL74wa98FrztKsqUuFXaY4bNy44d3bBggWAFz\/ncdR\/no3P0rFCKlnQE1Jxg154rXUj\/gh6tv99Lp+tIhW+GxlvXSNSQbIxOW4yq9RCKlkRrH5fCNA+plijL7h2vHIMHur4GZx4\/BtugFBq1YY\/eBsaXrI9depU2LBhQ3BC\/qxZs3rd1etKOiEV+8j6ovw+GapPspaCVBAwft0m\/n9e12kIqQip5HVAc1akfSHr0pBKVsDTvi+kkhY5yVPYRy66Rl9IZfmWbli+5VCx4U\/encO\/J6RiH31flN+nkMInWQsnlbhLxWwd3oR5G3zwsm4hFftEwmsUUnGDry+4Fk4qCD8eeN3d3d3L4Olvw4cPh46ODmhtbYWamppUvUX5mhkzZgippEIw2Uu+KL9Po79PshZOKmEHXNPfm5qaYNWqVbE3GYapPdXT0NAAp0+fFlJJxg+pSguppIIt9iVfcG1\/5RjMKnJKmRa\/7dmzB9atWwdo\/HSt6V133QUPPPAAPPfcc6k9FQx70Ns5fPhwlTeEvSg5lVhdTlzAF+X3afT3SVZco4IzQIWuU0HA1Cnl9vZ2aGxsNLp8PUzrsc4dO3YE3okuxBJSScwXRi8IqRjBlLiQL7iOffJV2PWLk8WTSmKEDV5AL2XNmjW9Sqp5FfRU8MELpcv89PT0QF1dXZlFrMgmsrrpJh9wHTlyJJy6bzl8clW\/i5NUeNeKp+JG0XW1+jKi+hRS+CLrkRNn4c7vvhSoRaHhj3rdKSnq4MGDM13eLqSSH5HwLwmpuMHdB1xp5qdQUsHZmdmzZ0NLSwts3LgxSKoOHToUMHSpr6+H8ePHu+mhC7VKotY+vD4oP7VaZLXb\/7WPvBBUePn\/vAvvPvUHdisPqS1yl\/LWrVsrMzRyl3JvBEX53ein4GoHVwx7cBoZE7T4fHbXCjjy43+yU3lMLaHnqQwbNgyGDBkCc+fOhRUrVsDevXuhs7PTWvgTJpd4Kvb7XQzVPqZlz6lgHgWJBZ+BtVfCqWcehK6cTlTUHn3AvRL0VpqbmwPhcFoZQyGXj5CKfXSFVOxjWlZS4YlZIpR9C+\/Odf2X3PuTUt\/EUFMCF\/Oa4JoO10PvnoG7lr7c62X0UJBQ8MlzsI7MqfDL2iWnIjmVdOqe7C0hFXO81LwJvYlk8sSE2+DeL11bqawQUonbnYzS4SHYWTYSmsCVZ+NN5AkrI8qfBb3wdwXXaFxff\/s0\/NUPDlQSsLw0ksmmv\/hqkENRnzztythTcaNC1bXm2fgsbRLlz4KekIoJeuiJ4OxN54\/f0pII5UwGXnclbHroq5FV5mlXklMx6V1NGSGVlMBJTkWLABJI17tn4PGt3aEEwsObe790Hcy9r17rleg+UAipmIQ\/NlfUhulWno3PYhZCKlnQu3Q9FSSP0x9+DPM2HoAj752tTPtGoYnhzD23XAvzRg8yJpFShT9uVMW8ViEVc6xMSwoBmiKVrFwYrrQ+5G9\/dAQOvn061vNQ8yIYzjwy6ia4ud9VqUlESIUhIKSSTLFNSgupmKBkXgZJA72Hp7b8FH74xi+DF2nlqmktlEwdeWstfOebNwWv6RKspvXFlcvTrmKvPSVh85j5wW\/l2fi4joj6XQw1C3rlD3+QONbs7IGf9LxvHKboWoVEgZ7HuCE3wDe\/XOuUOKJ6JE+7irz2lB9KTReMyZTy+a4TUvGTVCg02bDnGOw48F4qL0MNVwIv4wJx\/MndA4I8iUuvIw3yhZJK3Bm1ixYtAr4oLk0Dy8KoWWQXUsmCnn1PhcgCZ1B+sPdtOHL8TCYPgyQkckDSuO8rfWHs4OsroYpPOlAoqSBi6JVs3ry56oxaDIHUKzVsq1aejc8iu08K5ausNOLjv5Eotr9+Iugy01mTuP7lhHFHXR\/46zG3QM\/JD429DJ9wzdOuQtepqAc1ybWnvVXUJ4Uqm6zkVbx96kP4\/stvwWFLXkVYWPKHX\/s8\/FbDdRUPI45sTH8vG65liQBk8ZupBinlfFKoPGQlonip6yT868H34D9PnLXmUahkgaEIPr97R3+4\/\/Z+1snCVCXywNVUlrhypfBU4oR09Xuejc\/SBp8UKqmsRBCIz5lffgxP73oTDhw7bTX0CPMq+v3aR\/Cd+2+F6676TGFkYaoXSXE1rddFuTztSrv3Z9q0aTBw4EDnmwd14OXZ+Cyd55NCvbj\/INwzuCGYlfiPox\/Aj14\/Aa87JAnElecr7vziNTBuyPVQa0AUPuHqk6x52pXxOhXdFaVZjDLs3Twbn0X+IhWKexIvvH4C9h45BXieBj62kpgqNpwkvvj\/u2GHDLwGfvu2vnBT7ZVWp1CLxDWpPvgka552ZZxTwYvAcFZo7dq1MqVseZ0KkcTZjz6Bv9vZ4zTUIMPhJIF\/G3rztTD+azfAZ37l8kLDDp8M1SdZCycVuvoUp5XpGTBgQGWKWcfo\/EbDsNW3ar26DYp5Nj7pyMTLx+37OHX2I\/jhT9+FXQfPL7By5UHoSGJg3xq448bPwujb+8FlAPDxf78FgwYNytLc3N71yVB9kjVPuwrNqaAWmXol\/FoPvLVv\/vz5gAdnq9d58HJ4R7MPORXyIj7+5Bysf+loEGrg0\/XOB3D01EdOjE31In7jxj4w+va+wbQoP8zY9OM+Kb\/IatqrycoVSirJRK0uTd7IxIkTqw7Jxovely5dCm1tbaEhVJ6NDzyICyeOr33xTXj1yCknHgUnCfQivj24PzTecHUFPNdLusVQs2q1\/n2fcM3TroxzKibdQiFQWPhjsqDOdeO7j5+Bps6fJ95VqoYZ\/WsAamrOJyznjx4E\/\/X+\/xaai4jqH5+UX2Q1sbTkZVzbFZfIKqlQxUgeu3fvjpySpkOhcNk\/v\/YDG4+PzQva23aegPZ958OWqGfANVfAF\/pcAfjv8XdcA5+78vLgv3WPD5dzk9wia1zPp\/vdB1zxgnZ6Cr33Jx3En75lMlNEYZKae7HFqLveOAkrthwKPSAYV2Uu+b0G+NyVVxjv9eC4yIiaVUv8Dyl80gFbdmXS68YHX0dd0aH+hlPP+KibD9GDwQcTuJhfodsPedLWRuPHPvlqFZlg3uK5mXfCTX1rTHCJLeOTQomssd2ZqoBPuNqwK1OQKqRickZt1EFNYVPKnEjUKWXdJsUsjdfdzjb6K\/1g+Tj9TJMpSLpyPimUyJqlp8Pf9QnXLHaVFD1jTyVpxWnLp2k8ksnzP3kHFj73RuWz995yLTwx8bZUoY2J7D4plMhq0qPJy\/iEaxq7So7I+TecJGrTCoPvJW08EkrnK8egdcuh4LO629myyBP2rk8KJbK60AC\/Tv9LaldZEOsV\/ixevBiamppgzpw5sH\/\/\/qp6y3hFR8crx+Chjp9VCCXshrYsIEn4Yxu9iyOk8ImsCyGV\/NQm+ktJGo8zPGO\/92ruhIIf9EmhRFY32u0TrknsKitaXoc\/tY+8UAihCKlkVTvxVNwhqK+5UFKJmgUqU\/jDp40x5OE33OfRYT6NUiKrG43wCddCSSUMflx7Mnz48Kr9PLa7y6TxfOoYZ3niLqe2LaN4Ki4QPV+nT4bqk6wmdmWrV43Dn6jFb7aEwXpMGk9eCs705JWYVdvok0KJrDY19NO6fMLVxK5soWRMKiZL720IFdd4Ptuz4vcb4U\/vudHGZxPX4ZNCiayJu9foBZ9wjbMrowYbFgo9T0U3pdze3l54+FMGL0XcdEPtSlHMJ0P1SdZCSSWFHlh9JarxPJcyZ1Q9tHyruNPMfFIokdWqilYq8wnXwklF3eyH+3c6OzuNT4LL0oVRjeczPvsW3u1sCb6J\/D4plMhq0qPJy\/iEa6GkEnZym8kZKcm7pfqNsMaXYcaHS+uTQomsNjSzug6fcC2UVMp6QTtfPVu0lyI5FTdGKri6w7VQUsFmoVeyevXqyun5tCAOT2gr6oJ2nqBFUin68WmUElndaItPuBZOKtgFmFeZMmUKHD16NOiRoi9opyX5Ixqvg41\/fqcbLUlQq08KJbIm6NgERX3CtRSkkgBbq0V1jedrU8oQ+oibbrXLe1Xmk6H6JGuhpJLXytkwtdQ1vmyhj5CKkIpvOlAoqSBYuM+nvr6+6jIwd6r0ac26xlPoU9Q+H127fRqlRFY3musTroWSStl2KfOp5CJ2I4epo08KJbIKqRRKKm7gN69Vbfw\/\/Ntb0PTsz4MKhFTMceQlhVTS4Rb3lk+4XrSkop6mr9tLpDa+jPkU3+Jpn5RfZI2jsnS\/F0IqlKB1eUYtrn\/p7u4O1rqE7XrmjS\/bKloZ\/dMpdJK3hFSSoGVethBSMRfPTkkklY6OjqqrUXnj+SraMoU+4qnY0QFJgLvDUa25cFJxuaGQh0Bx4c\/yLd2w\/MLVG2VZn0KdJSOqG4MQXN3gWiip5LWh0OSC9j\/beAz2vHk2uCR98+Q6N2inrNWHy7mpaSJryk6Oec0HXEtxQXteGwpNLmi\/87svAeZV8NjIMuz3kZyKG+MUXN3jWqings1ztaEwyQXtPEk76ra+8Oz0O9wjn+AL4qYnACtBUcE1AVgJihZOKiiriw2FSaaUy5yklURtAm1OWFRIJSFghsVLQSqGslovRo3nmwjLNvMjpGK92ysVCqm4wVZIpasL+NGRJx7\/hhukM9Qqyp8BvIhXBVc3uAqpMFIpY5JWPBU3ii+4usNVSKWrC8q4M1lmKdwpPdUsnoobjC95Uvn+v+yFsd97NUD3yYm3wcTf\/LwbpDPUKsqfATwJf9yAF1Fr4aSCS+gnTZpUJWJeF7RzUinbSloZUd3ag5C1G3wLJZWwla5umlpdKzb+mX\/+dxj31P7gxzLO\/Ejs704bhFTcYFs4qSxevBgWLVoEtbW1bloY46b9+ux\/hF2\/OBmUKuPMj5CKO7UQUnGDbaGkgk3iRxS4aWJ4rdh4IpWyzvwIqbjTCiEVN9gWSiplOE7y5LfXBsiW6UxatatF+d0ov+DqBtdCScVNk8xrxcYTqcwbPQjmja43fznHkqL8bsAWXN3gekmTysCvfws+uHdugKyQih0FE0O1g6PP3mrhpMI3\/o0ZMwbmzp0LCxcuhJaWFmhoaHDTQxdq5aRS1pkfyam4UwEhQDfYFkoqRCgDBgyAcePGwfr162HBggWwadMm2L17d9Xxj7YhGPA7fwlnbx0bVCukYgddMVQ7OIqnYobjZefOnTvHi\/JDmo4fP14hFSSbPKaar\/\/jp+Cjfl8ORCrrdLJ4KmbKlaaUEGAa1OLfKdRTQfHwhkK8mH3q1KmwYcMGmDlzJsyaNQuGDh0anITv8iFSKfN0spCKOw0QUnGDbeGkgs1Sl+ovW7Ysl2tQy76RkLpclN+N8guubnAtBam4aVp8rUQqD379C7B6wq3xLxRUQpTfDfCCqxtchVRKPp0s4Y8bxRdc3eFaOKmoZ8liU3FqubW1FWpqaty1HKByjkqZZ35E+d2pgHgqbrAtlFT4lDIlZelv2FzXxELhj5CKPeUSQ7WHJa\/JJ1wLJZW09\/7gJsTm5uYA87BzV1QPSFeOSKWs56hIotaNgQqubnEtlFRo5ke95xinmevr67UzQHidx9KlS6GtrS04LoGmpFWvBglr9uzZkStziVTKvEZFwh93BuDT6O+TrIWSStQuZVKluBPgwi5fV8lHp5pIKmVfoyKkIqTimw4USio21CXMq+EhEn5Ht\/ZFSMVGD\/Suw6cRVWS13\/9Yo9ekYnrAU9ixlUgqZT5HRWJ\/N0ovuLrFtXBSSTulHJV3USELu6AdSeVXj7wIL\/3Ng25Rzlh7T08P1NXVZawln9dFVjc4+4DryJEjK43v6upyA4RSa9WGQt2UMr4Tlnyl+vD34cOHB\/uDwh6TC9qRVMp8jgq1LU\/mz6oJImtWBPXvC656XCJ3KfODr8OmmrFa3ZUetFgOj0zAZ\/z48aB6QGE5lav2PhN4K\/IIAoKAPQQK81TIK9m8eTOsW7cuOJQJZ22mTJkSrKp1vUvZHoRSkyAgCBSBQJWnQkKYzNQUIbB8UxAQBMqNQCiplFtskU4QEATKioCQSll7RuQSBDxFoDSkwsOt9vb2yFmkPLHmSeiwg6p4GTzbl3JRecqpJszjDtUq+npbE1wpv7dmzZoAyqL0wkRWvhK9SB0I0zmTLTK29LUUpMKX7x84cADUfUe2Gpu0Ht4R+C7f30R1qZ2F5NjZ2Qlr167N9dpYE1l5+3EJABprEYZqKitfSIk6Qoewuz5+g+NkKiviiQ9OZKDceRwSb6rPNNGC5fMY8EpBKrwTcNo5btOhKZhZy+EIhcqCBIGKPH\/+fJg4cWKkF2WyvymrXLr3k8iKZZ9\/\/nl4\/\/33Y9tTlKyoB0uWLIHJkyc7vxYmqo2muHICNF1V7gJbtU4kxaeffhruv\/9+eOyxx2DFihXO8SwNqXR3dwcsX7RbzjuFb4zEvyOpDBs2LPKs3qIUylRWWm+EdzmhgsWRpAvFN5GVSIXCnqLCHxNZCSMK4eNCTxeYxtWJgx31ueu7u4RUInojiUJhNWG7s+M63MbvprLSymfcaW7iedmQTa3DRFYaXCZMmBCQOPcY+KJMF\/IlHVjULSdlC3+wPZckqVAM6mv4U5SHQgZg4qaHHWuRd17FRFYyVPKk8jQKlVTiQmA1r1aUrFEEm6dMpfBUfE7UYkfyPU2uR86w+k0TivS+arR5ym0qKyfqojwVE1lVT6UoWYVUFAQoHi3bdByfTuQjOhHJkCFDgi0MePkaPXGHWLky4DhZMYwoA6lQqDhp0qRAHB2u6l6xIvXCBNeyTylfcp6KKyOTegUBQSB\/BEoR\/uTfbPmiICAIuEJASMUVslKvIHCJIiCkcol2vDRbEHCFgJCKK2SlXkHgEkVASOUS7XhptiDgCgEhFVfIxtRruljOxV4i2mCG0+CmC9+KXC2sQklTvK6m7qn+vO4PL0gFnX1WSMUZtNEVF0kqaDQ7duxIdDRo2UjF9U72onZFF6SOVj8rpGIVzurK+MIpGlnxeAda+DVjxozAuNXDw9GDaGxshGnTpsH+\/fsr91PTbmk8QxifKE+D10mjLtZF3w4bifnZNrQ5jkilT58+wTdVL4G\/wxeq4RL31157DXbu3Fm5PI4vdBwxYgRgnXT2sU5m9agDleDwG1dffTVs27YtwIowVXtD9fqiiFJIJb1hCKmkxy72Td1ZK\/gSrhZVzwrhO0j5hjS8W0a9pxrrICKaM2eO9owMCnFWrlwZEABuHkRjp\/fCRnpuaHwf1vHjxwMyIkJR66P9MXSXNsmoXu3CV3b27ds3IE281gXl4r\/hnUr8GxxsHanQQe1UJ9anXhcjpBKrslYKCKlYgVFfSdRpW1HhDzcaTir4FTRCMpio\/Tuq4fH9KFEHYYVdCKfuZ4mSn\/\/GDy9C+dX31HNI+OFGYZ6EjlSIxHTfoN4RUnGo7KxqIRXHOPOkKA83VOOik9hIHCqrIxV08fmjO79D3X5vsmkz7NZI\/JZqyFx+3Y2WFIKoJBVFMuoNDvhdXTJWRyr19fWVc27CCE9IxbGyX6heSCUfnIOvhJ0OpnoBUZ6K6al4LjwVHjJFeRiqpxJl8GlOTIvzVFTiCvNUos49kZxKesMQUkmPXeyb6sjIj0gI29ZPiVisvLW1FaJyKjxvossf4O7ppDkVbmjogVC4hfKYkAq9Q3kS1VMxzang6WRhV+3qSAX\/hsd+qiEi7yRdnolwVpPBQiqx6h1aQEglPXZGb3KXnoc\/NMuBYUJTU1OQlMRkIyZTW1paYMOGDdDW1lYxEvwPflYuzf5EHV0YNpMSNz3MQzF19geJDg2QkyLf9o\/hyvTp02HLli0BKa5atQq4p0IeW3NzcxDa4AXip0+f1s7+hK1D0ZEKnre7ffv24AgKjokuh4PfRpyRMPft26clbyEVI\/XWFhJSSY+dvJkRgagcTlTVcTmVjGIFrwuppEdRSCU9dvJmCgTU9Thha0riSAWnt8mTwdPiVW8ohWiVV2RFbRb0AIRUsuEnbwsCgoCCwP8BZXsn+wrltvEAAAAASUVORK5CYII=","height":167,"width":277}}
 %---
