@@ -11,6 +11,13 @@ simlength = 2;
 transmission_delay = 125e-6*2;
 model = 'mpc_psm';
 
+use_mosfet_thermal_model = 0;
+use_thermal_model = 0;
+if (use_mosfet_thermal_model || use_thermal_model)
+    nonlinear_iteration = 5;
+else
+    nonlinear_iteration = 3;
+end
 load_step_time = 0;
 %[text] #### local time allignment to master time
 kp_align = 0.6;
