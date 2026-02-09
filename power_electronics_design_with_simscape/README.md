@@ -102,8 +102,12 @@ In particular:
 - in this folder an implementation of the power measure according to VDE/IEC is analyzed.
 
 **psm-sensorless-ctrl**:
-- this folder contains a simplified model useful for control design for faster simulation: no pwm, but still psm simscape model; one model with current vector control and BEMF sensorless; one model with current vector control and EKF BEMF sensorless.
-
+- this folder contains a simplified model useful for control design for faster simulation: no pwm, but still psm simscape model;
+- **psm_sv_bemf_ctrl** contains a current control based on simple space vector and simple luemberg BEMF observer;
+- **psm_mpc_bemf_ctrl** contains a current control based on model predictive for one step horizon and simple luemberg BEMF observer;
+- **psm_sv_ekf_bemf_ctrl** contains a current control based on simple space vector and BEMF observer based on Extended Kalman Filter;
+- **psm_mpc_ekf_bemf_ctrl** contains a current control based on model predictive for one step horizon and BEMF observer based on Extended Kalman Filter;
+  
 **sic-inverter-for-drone**:
 - design HW/SW of an inverter for drone application (20kW);
 
