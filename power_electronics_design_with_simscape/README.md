@@ -101,6 +101,9 @@ In particular:
 **power_meter**:
 - in this folder an implementation of the power measure according to VDE/IEC is analyzed.
 
+**psm-sensorless-ctrl**:
+- this folder contains a simplified model useful for control design for faster simulation: no pwm, but still psm simscape model; one model with current vector control and BEMF sensorless; one model with current vector control and EKF BEMF sensorless.
+
 **sic-inverter-for-drone**:
 - design HW/SW of an inverter for drone application (20kW);
 
