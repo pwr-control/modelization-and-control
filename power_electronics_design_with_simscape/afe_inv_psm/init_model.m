@@ -1,18 +1,14 @@
+preamble;
 %[text] ## Settings for simulink model initialization and data analysis
-close all
-clear all
-clc
-beep off
-pm_addunit('percent', 0.01, '1');
-options = bodeoptions;
-options.FreqUnits = 'Hz';
 simlength = 3.75;
 % simlength = 2;
 transmission_delay = 125e-6*2;
+
 model = 'afe_abc_inv_psm';
 
 use_mosfet_thermal_model = 0;
 use_thermal_model = 0;
+
 if (use_mosfet_thermal_model || use_thermal_model)
     nonlinear_iteration = 5;
 else
@@ -87,6 +83,7 @@ t_misura = 0.648228176318064;
 Nc = ceil(t_misura/tc);
 Ns_afe = ceil(t_misura/ts_afe);
 
+%[text] ### Behavioural Settings
 time_gain_afe_module_1 = 1.0;
 time_gain_inv_module_1 = 1.0;
 time_gain_afe_module_2 = 1.0;
@@ -113,10 +110,9 @@ enable_frt_1 = 0;
 enable_frt_2 = 1;
 
 % deep data for frt type 2
-deepPOSxi = 0.5 %[output:0db165d8]
-deepNEGxi = 0 %[output:255f588d]
-deepNEGeta = 0.5 %[output:57086c1f]
-%[text] #### 
+deepPOSxi = 0.5 %[output:1f691653]
+deepNEGxi = 0 %[output:637a3b72]
+deepNEGeta = 0.5 %[output:3c82841a]
 %[text] #### FRT, and other fault timing settings
 test_index    = 25;
 test_subindex = 4;
@@ -137,16 +133,13 @@ start_load = 0.25;
 settle_time = 0.175;
 k_frt_ref = 2;
 %[text] #### Reactive current limits for grid support
-
 i_grid_pos_eta_lim = 1;
 i_grid_neg_xi_lim = 0.5;
 i_grid_neg_eta_lim = 0.5;
-
 %[text] #### Reactive current Limits - Red. Dyn. grid support
 i_grid_pos_eta_red_lim = 0.1;
 i_grid_neg_eta_red_lim = 0.1;
 i_grid_neg_xi_red_lim = 0.1;
-
 %[text] #### Grid voltage derivate implemented with double integrator observer
 Aso = [0 1; 0 0];
 Asod = eye(2)+Aso*ts_afe;
@@ -155,9 +148,8 @@ omega_rso = 2*pi*50;
 p2place = [-1 -4]*omega_rso;
 p2placed = exp(p2place*ts_afe);
 Kd = (acker(Asod',Cso',p2placed))';
-l1 = Kd(2) %[output:08bc4522]
-l2 = Kd(1) %[output:858ca950]
-
+l1 = Kd(2) %[output:59afecfa]
+l2 = Kd(1) %[output:6273c9b1]
 %[text] #### Linear double integrator observer
 Aso = [0 1; 0 0];
 Asod = eye(2)+Aso*ts_afe;
@@ -185,7 +177,6 @@ Rprecharge = 1; % Resistance of the DClink pre-charge circuit
 Pload = 250e3;
 Rbrake = 4;
 CFi = 900e-6*8;
-
 %[text] #### 
 %[text] #### DClink Lstray model
 Lstray_dclink = 100e-9;
@@ -245,7 +236,7 @@ polesrso = [-1 -4]*omega_rso;
 Lrso = acker(Arso',Crso',polesrso)';
 Adrso = eye(2) + Arso*ts_afe;
 polesdrso = exp(ts_afe*polesrso);
-Ldrso = acker(Adrso',Crso',polesdrso)' %[output:72559c6d]
+Ldrso = acker(Adrso',Crso',polesdrso)' %[output:82a1ee3d]
 
 %[text] ### PLL DDSRF
 pll_i1_ddsrt = pll_i1;
@@ -261,24 +252,24 @@ pll_p_fht = pll_p;
 %[text] ### First Harmonic Tracker for Ugrid cleaning
 omega_fht0 = 2*pi*f_grid;
 delta_fht0 = 0.05;
-Afht0 = [0 1; -omega_fht0^2 -delta_fht0*omega_fht0] % impianto nel continuo %[output:8c11ae60]
+Afht0 = [0 1; -omega_fht0^2 -delta_fht0*omega_fht0] % impianto nel continuo %[output:8da9fcc7]
 Cfht0 = [1 0];
 poles_fht0 = [-1 -4]*omega_fht0;
-Lfht0 = acker(Afht0',Cfht0', poles_fht0)' % guadagni osservatore nel continuo %[output:95cb5289]
-Ad_fht0 = eye(2) + Afht0*ts_afe % impianto nel discreto %[output:42d1bda9]
+Lfht0 = acker(Afht0',Cfht0', poles_fht0)' % guadagni osservatore nel continuo %[output:9d901226]
+Ad_fht0 = eye(2) + Afht0*ts_afe % impianto nel discreto %[output:2b6324c3]
 polesd_fht0 = exp(ts_afe*poles_fht0);
-Ld_fht0 = acker(Ad_fht0',Cfht0', polesd_fht0) %[output:85f7f9dd]
+Ld_fht0 = acker(Ad_fht0',Cfht0', polesd_fht0) %[output:1d0e7351]
 
 %[text] ### First Harmonic Tracker for Load
 omega_fht1 = 2*pi*f_grid;
 delta_fht1 = 0.05;
-Afht1 = [0 1; -omega_fht1^2 -delta_fht1*omega_fht1] % impianto nel continuo %[output:30fb82f9]
+Afht1 = [0 1; -omega_fht1^2 -delta_fht1*omega_fht1] % impianto nel continuo %[output:5ad4d344]
 Cfht1 = [1 0];
 poles_fht1 = [-1 -4]*omega_fht1;
-Lfht1 = acker(Afht1', Cfht1', poles_fht1)' % guadagni osservatore nel continuo %[output:1e4794e1]
-Ad_fht1 = eye(2) + Afht1*ts_afe % impianto nel discreto %[output:060cbe2b]
+Lfht1 = acker(Afht1', Cfht1', poles_fht1)' % guadagni osservatore nel continuo %[output:6fac1d01]
+Ad_fht1 = eye(2) + Afht1*ts_afe % impianto nel discreto %[output:1ec31383]
 polesd_fht1 = exp(ts_afe*poles_fht1);
-Ld_fht1 = acker(Ad_fht1',Cfht1', polesd_fht1) %[output:4eb32b7c]
+Ld_fht1 = acker(Ad_fht1',Cfht1', polesd_fht1) %[output:8e6905b6]
 %[text] ### Reactive current control gains
 kp_rc_grid = 0.35;
 ki_rc_grid = 35;
@@ -287,56 +278,8 @@ ki_rc_pos_grid = ki_rc_grid;
 kp_rc_neg_grid = kp_rc_grid;
 ki_rc_neg_grid = ki_rc_grid;
 %%
-%[text] ### Settings for First Order Low Pass Filters
-%[text] #### LPF 50Hz in state space (for initialization)
-fcut = 50;
-fof = 1/(s/(2*pi*fcut)+1);
-[nfof, dfof] = tfdata(fof,'v');
-[nfofd, dfofd]=tfdata(c2d(fof,ts_afe),'v');
-fof_z = tf(nfofd,dfofd,ts_afe,'Variable','z');
-[A,B,C,D] = tf2ss(nfofd,dfofd);
-LVRT_flt_ss = ss(A,B,C,D,ts_afe);
-[A,B,C,D] = tf2ss(nfof,dfof);
-LVRT_flt_ss_c = ss(A,B,C,D);
-%[text] #### LPF 161Hz
-fcut_161Hz_flt = 161;
-g0_161Hz = fcut_161Hz_flt * ts_afe * 2*pi;
-g1_161Hz = 1 - g0_161Hz;
-%%
-%[text] #### LPF 500Hz
-fcut_500Hz_flt = 500;
-g0_500Hz = fcut_500Hz_flt * ts_afe * 2*pi;
-g1_500Hz = 1 - g0_500Hz;
-%%
-%[text] #### LPF 75Hz
-fcut_75Hz_flt = 75;
-g0_75Hz = fcut_75Hz_flt * ts_afe * 2*pi;
-g1_75Hz = 1 - g0_75Hz;
-%%
-%[text] #### LPF 50Hz
-fcut_50Hz_flt = 50;
-g0_50Hz = fcut_50Hz_flt * ts_afe * 2*pi;
-g1_50Hz = 1 - g0_50Hz;
-%%
-%[text] #### LPF 10Hz
-fcut_10Hz_flt = 10;
-g0_10Hz = fcut_10Hz_flt * ts_afe * 2*pi;
-g1_10Hz = 1 - g0_10Hz;
-%%
-%[text] #### LPF 4Hz
-fcut_4Hz_flt = 4;
-g0_4Hz = fcut_4Hz_flt * ts_afe * 2*pi;
-g1_4Hz = 1 - g0_4Hz;
-%%
-%[text] #### LPF 1Hz
-fcut_1Hz_flt = 1;
-g0_1Hz = fcut_1Hz_flt * ts_afe * 2*pi;
-g1_1Hz = 1 - g0_1Hz;
-%%
-%[text] #### LPF 0.2Hz
-fcut_0Hz2_flt = 0.2;
-g0_0Hz2 = fcut_0Hz2_flt * ts_afe * 2*pi;
-g1_0Hz2 = 1 - g0_0Hz2;
+%[text] ### Settings Global Filters
+setup_global_filters;
 %%
 %[text] ### Settings for RMS calculus
 rms_perios = 1;
@@ -374,7 +317,7 @@ z=tf('z',ts_inv);
 
 %[text] ### MOTOR Selection from Library
 n_sys = 6;
-run('n_sys_generic_1M5W_pmsm'); %[output:6685555d] %[output:0345a522]
+run('n_sys_generic_1M5W_pmsm'); %[output:9c7a78ea] %[output:5a72b05f]
 run('n_sys_generic_1M5W_torque_curve');
 
 % n_sys = 1;
@@ -407,8 +350,8 @@ Cso = [1 0];
 % p2place = exp([-10 -50]*ts_inv);
 p2place = exp([-50 -250]*ts_inv);
 Kobs = (acker(Aso',Cso',p2place))';
-kg = Kobs(1) %[output:7c2251f1]
-kw = Kobs(2) %[output:76a3d4ad]
+kg = Kobs(1) %[output:95e6c43e]
+kw = Kobs(2) %[output:90d1bdd0]
 
 %[text] ### Rotor speed observer with load estimator
 A = [0 1 0; 0 0 -1/Jm_norm; 0 0 0];
@@ -417,9 +360,9 @@ Blo = [0; ts_inv/Jm_norm; 0];
 Clo = [1 0 0];
 p3place = exp([-1 -5 -25]*125*ts_inv);
 Klo = (acker(Alo',Clo',p3place))';
-luenberger_l1 = Klo(1) %[output:5713da6e]
-luenberger_l2 = Klo(2) %[output:7c389dc3]
-luenberger_l3 = Klo(3) %[output:8886a72c]
+luenberger_l1 = Klo(1) %[output:2147e793]
+luenberger_l2 = Klo(2) %[output:02242693]
+luenberger_l3 = Klo(3) %[output:130b859c]
 omega_flt_fcut = 10;
 % phase_compensation_omega = -pi/2-pi/12; % for motor mode
 phase_compensation_omega = 0; % for generator mode
@@ -464,124 +407,27 @@ heatsink_liquid_2kW;
 infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
 % infineon_FF1200XTR17T2P5;
-
 igbt.inv.data = 'infineon_FF1200R17IP5';
-igbt.inv.Vth = Vth;                                  % [V]
-igbt.inv.Vce_sat = Vce_sat;                          % [V]
-igbt.inv.Rce_on = Rce_on;                            % [Ohm]
-igbt.inv.Vdon_diode = Vdon_diode;                    % [V]
-igbt.inv.Rdon_diode = Rdon_diode;                    % [Ohm]
-igbt.inv.Eon = Eon;                                  % [J] @ Tj = 125°C
-igbt.inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
-igbt.inv.Erec = Erec;                                % [J] @ Tj = 125°C
-igbt.inv.Voff_sw_losses = Voff_sw_losses;            % [V]
-igbt.inv.Ion_sw_losses = Ion_sw_losses;              % [A]
-igbt.inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-igbt.inv.Rtim = Rtim;                                % [K/W]
-igbt.inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-igbt.inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-igbt.inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-igbt.inv.Rth_diode_JC = Rth_switch_JC;               % [K/W]
-igbt.inv.Rth_diode_CH = Rth_switch_CH;               % [K/W]
-igbt.inv.Rth_diode_JH = Rth_switch_JH;               % [K/W]
-igbt.inv.Lstray_module = Lstray_module;              % [H]
-igbt.inv.Irr = Irr;                                  % [A]
-igbt.inv.Csnubber = Csnubber;                        % [F]
-igbt.inv.Rsnubber = Rsnubber;                        % [Ohm]
-igbt.inv.Cies = Cies;                                % [F]
-% inv.Csnubber = (inv.Irr)^2*Lstray_module/Vdc_bez^2
-% inv.Rsnubber = 1/(inv.Csnubber*fPWM_INV)/5
+igbt.inv = device_igbt_setting_inv(fPWM_INV);
 
 % infineon_FF650R17IE4;
 infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
 % infineon_FF1200XTR17T2P5;
-
 igbt.afe.data = 'infineon_FF1200R17IP5';
-igbt.afe.Vth = Vth;                                  % [V]
-igbt.afe.Vce_sat = Vce_sat;                          % [V]
-igbt.afe.Rce_on = Rce_on;                            % [Ohm]
-igbt.afe.Vdon_diode = Vdon_diode;                    % [V]
-igbt.afe.Rdon_diode = Rdon_diode;                    % [Ohm]
-igbt.afe.Eon = Eon;                                  % [J] @ Tj = 125°C
-igbt.afe.Eoff = Eoff;                                % [J] @ Tj = 125°C
-igbt.afe.Erec = Erec;                                % [J] @ Tj = 125°C
-igbt.afe.Voff_sw_losses = Voff_sw_losses;            % [V]
-igbt.afe.Ion_sw_losses = Ion_sw_losses;              % [A]
-igbt.afe.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-igbt.afe.Rtim = Rtim;                                % [K/W]
-igbt.afe.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-igbt.afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-igbt.afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-igbt.afe.Rth_diode_JC = Rth_switch_JC;               % [K/W]
-igbt.afe.Rth_diode_CH = Rth_switch_CH;               % [K/W]
-igbt.afe.Rth_diode_JH = Rth_switch_JH;               % [K/W]
-igbt.afe.Lstray_module = Lstray_module;              % [H]
-igbt.afe.Irr = Irr;                                  % [A]
-igbt.afe.Csnubber = Csnubber;                        % [F]
-igbt.afe.Rsnubber = Rsnubber;                        % [Ohm]
-igbt.afe.Cies = Cies;                                % [F]
-% afe.Csnubber = (afe.Irr)^2*Lstray_module/Vdc_bez^2
-% afe.Rsnubber = 1/(afe.Csnubber*fPWM_AFE)/5
-
+igbt.afe = device_igbt_setting_afe(fPWM_AFE);
 %[text] ### DEVICES settings (MOSFET)
 infineon_FF1000UXTR23T2M1;
-
 mosfet.inv.data = 'infineon_FF1000UXTR23T2M1';
-mosfet.inv.Vth = Vth;                                  % [V]
-mosfet.inv.Rds_on = Rds_on;                            % [V]
-mosfet.inv.Vdon_diode = Vdon_diode;                    % [V]
-mosfet.inv.Rdon_diode = Rdon_diode;                    % [Ohm]
-mosfet.inv.Eon = Eon;                                  % [J] @ Tj = 125°C
-mosfet.inv.Eoff = Eoff;                                % [J] @ Tj = 125°C
-mosfet.inv.Erec = Erec;                                % [J] @ Tj = 125°C
-mosfet.inv.Voff_sw_losses = Voff_sw_losses;            % [V]
-mosfet.inv.Ion_sw_losses = Ion_sw_losses;              % [A]
-mosfet.inv.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-mosfet.inv.Rtim = Rtim;                                % [K/W]
-mosfet.inv.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-mosfet.inv.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-mosfet.inv.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-mosfet.inv.Lstray_module = Lstray_module;              % [H]
-mosfet.inv.Irr = Irr;                                  % [A]
-mosfet.inv.Csnubber = Csnubber;                        % [F]
-mosfet.inv.Rsnubber = Rsnubber;                        % [Ohm]
-% inv.Csnubber = (mosfet.inv.Irr)^2*Lstray_module/Vdc_bez^2
-% inv.Rsnubber = 1/(mosfet.inv.Csnubber*fPWM_INV)/5
+mosfet.inv = device_mosfet_setting_inv(fPWM_INV);
 
+infineon_FF1000UXTR23T2M1;
 mosfet.afe.data = 'infineon_FF1000UXTR23T2M1';
-mosfet.afe.Vth = Vth;                                  % [V]
-mosfet.afe.Rds_on = Rds_on;                            % [V]
-mosfet.afe.Vdon_diode = Vdon_diode;                    % [V]
-mosfet.afe.Rdon_diode = Rdon_diode;                    % [Ohm]
-mosfet.afe.Eon = Eon;                                  % [J] @ Tj = 125°C
-mosfet.afe.Eoff = Eoff;                                % [J] @ Tj = 125°C
-mosfet.afe.Erec = Erec;                                % [J] @ Tj = 125°C
-mosfet.afe.Voff_sw_losses = Voff_sw_losses;            % [V]
-mosfet.afe.Ion_sw_losses = Ion_sw_losses;              % [A]
-mosfet.afe.JunctionTermalMass = JunctionTermalMass;    % [J/K]
-mosfet.afe.Rtim = Rtim;                                % [K/W]
-mosfet.afe.Rth_switch_JC = Rth_switch_JC;              % [K/W]
-mosfet.afe.Rth_switch_CH = Rth_switch_CH;              % [K/W]
-mosfet.afe.Rth_switch_JH = Rth_switch_JH;              % [K/W]
-mosfet.afe.Lstray_module = Lstray_module;              % [H]
-mosfet.afe.Irr = Irr;                                  % [A]
-mosfet.afe.Csnubber = Csnubber;                        % [F]
-mosfet.afe.Rsnubber = Rsnubber;                        % [Ohm]
-% afe.Csnubber = (mosfet.afe.Irr)^2*Lstray_module/Vdc_bez^2
-% afe.Rsnubber = 1/(mosfet.afe.Csnubber*fPWM_AFE)/5
+mosfet.afe = device_mosfet_setting_afe(fPWM_AFE);
+
 %[text] ### DEVICES settings (Ideal switch)
 silicon_high_power_ideal_switch;
-ideal_switch.Vth = Vth;                                  % [V]
-ideal_switch.Rds_on = Rds_on;                            % [Ohm]
-ideal_switch.Vdon_diode = Vdon_diode;                    % [V]
-ideal_switch.Vgamma = Vgamma;                            % [V]
-ideal_switch.Rdon_diode = Rdon_diode;                    % [Ohm]
-ideal_switch.Csnubber = Csnubber;                        % [F]
-ideal_switch.Rsnubber = Rsnubber;                        % [Ohm]
-ideal_switch.Irr = Irr;                                  % [A]
-% ideal_switch.Csnubber = (ideal_switch.Irr)^2*Lstray_module/Vdab2_dc_nom^2
-% ideal_switch.Rsnubber = 1/(ideal_switch.Csnubber*fPWM_DAB)/5
+ideal_switch = device_ideal_switch_setting(fPWM_AFE);
 %[text] ## C-Caller Settings
 open_system(model);
 Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
@@ -641,66 +487,66 @@ end
 %[metadata:view]
 %   data: {"layout":"onright","rightPanelPercent":26.9}
 %---
-%[output:0db165d8]
+%[output:1f691653]
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
 %---
-%[output:255f588d]
+%[output:637a3b72]
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
 %---
-%[output:57086c1f]
+%[output:3c82841a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
 %---
-%[output:08bc4522]
+%[output:59afecfa]
 %   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
 %---
-%[output:858ca950]
+%[output:6273c9b1]
 %   data: {"dataType":"textualVariable","outputData":{"name":"l2","value":"   0.183872841045359"}}
 %---
-%[output:72559c6d]
+%[output:82a1ee3d]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"name":"Ldrso","rows":2,"type":"double","value":[["0.183872841045359"],["44.782392633890389"]]}}
 %---
-%[output:8c11ae60]
+%[output:8da9fcc7]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht0","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
-%[output:95cb5289]
+%[output:9d901226]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht0","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
-%[output:42d1bda9]
+%[output:2b6324c3]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht0","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
 %---
-%[output:85f7f9dd]
+%[output:1d0e7351]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht0","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
 %---
-%[output:30fb82f9]
+%[output:5ad4d344]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"exponent":"4","name":"Afht1","rows":2,"type":"double","value":[["0","0.000100000000000"],["-9.869604401089358","-0.001570796326795"]]}}
 %---
-%[output:1e4794e1]
+%[output:6fac1d01]
 %   data: {"dataType":"matrix","outputData":{"columns":1,"exponent":"5","name":"Lfht1","rows":2,"type":"double","value":[["0.015550883635269"],["2.716608611399846"]]}}
 %---
-%[output:060cbe2b]
+%[output:1ec31383]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ad_fht1","rows":2,"type":"double","value":[["1.000000000000000","0.000125000000000"],["-12.337005501361698","0.998036504591506"]]}}
 %---
-%[output:4eb32b7c]
+%[output:8e6905b6]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht1","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
 %---
-%[output:6685555d]
+%[output:9c7a78ea]
 %   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
 %---
-%[output:0345a522]
+%[output:5a72b05f]
 %   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
 %---
-%[output:7c2251f1]
+%[output:95e6c43e]
 %   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.036997274900261"}}
 %---
-%[output:76a3d4ad]
+%[output:90d1bdd0]
 %   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   1.533540968663871"}}
 %---
-%[output:5713da6e]
+%[output:2147e793]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.414020903616658"}}
 %---
-%[output:7c389dc3]
+%[output:02242693]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     2.438383113714302e+02"}}
 %---
-%[output:8886a72c]
+%[output:130b859c]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
 %---
