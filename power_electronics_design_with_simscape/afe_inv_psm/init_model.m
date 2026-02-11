@@ -201,7 +201,7 @@ pll_p = 1;
 pll_p_frt = 0.2;
 Vmax_ff = 1.1;
 Igrid_phase_normalization_factor = 250e3/Vphase2/3/0.9*sqrt(2);
-ixi_pos_ref_lim = 1.25;
+ixi_pos_ref_lim = 1.65;
 ieta_pos_ref_lim = 1.0;
 ieta_neg_ref_lim = 0.5;
 %%
