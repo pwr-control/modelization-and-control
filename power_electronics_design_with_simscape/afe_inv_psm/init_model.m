@@ -1,5 +1,5 @@
 preamble;
-%[text] ## Settings for simulink model initialization and data analysis
+%[text] ### Settings for simulink model initialization and data analysis
 simlength = 3.75;
 % simlength = 2;
 transmission_delay = 125e-6*2;
@@ -15,7 +15,7 @@ else
     nonlinear_iteration = 3;
 end
 load_step_time = 1.25;
-%[text] #### local time allignment to master time
+%[text] ### Local time allignment to master time
 kp_align = 0.6;
 ki_align = 0.1;
 lim_up_align = 0.2;
@@ -24,7 +24,7 @@ lim_down_align = -0.2;
 number_of_modules = 1;
 enable_two_modules = number_of_modules;
 %[text] ### Settings for speed control or wind application
-use_torque_curve = 1; % for wind application
+use_torque_curve = 0; % for wind application
 use_speed_control = 1-use_torque_curve; %
 use_mtpa = 1; %
 use_psm_encoder = 0; % 
@@ -43,22 +43,24 @@ use_dq_pll_mode2 = use_dq_pll_ccaller_mod1;
 use_dq_pll_mode3 = use_dq_pll_ddsfr_pll;
 use_dq_pll_mode4 = use_dq_pll_fht_pll;
 %[text] ### Settings for CCcaller versus Simulink
+use_ekf_bemf_module_1 = 1;
 use_observer_from_simulink_module_1 = 0;
-use_observer_from_ccaller_module_1 = 1;
-use_observer_from_simulink_module_2 = 1;
+use_observer_from_ccaller_module_1 = 0;
+use_observer_from_simulink_module_2 = 0;
 use_observer_from_ccaller_module_2 = 0;
 
 use_current_controller_from_simulink_module_1 = 0;
 use_current_controller_from_ccaller_module_1 = 1;
-use_current_controller_from_simulink_module_2 = 1;
+use_current_controller_from_simulink_module_2 = 0;
 use_current_controller_from_ccaller_module_2 = 0;
 
 use_moving_average_from_ccaller_mod1 = 0;
 use_moving_average_from_ccaller_mod2 = 0;
+%[text] ### Settings average filters
 mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
 dmavg_filter_enable_time = 0.025;
 %%
-%[text] ## Grid Emulator Settings
+%[text] ### Grid Emulator Settings
 grid_emulator;
 %%
 %[text] ## AFE Settings and Initialization
@@ -105,42 +107,18 @@ afe_pwm_phase_shift_mod2 = 0;
 white_noise_power_afe_pwm_phase_shift_mod2 = 0.0;
 inv_pwm_phase_shift_mod2 = 0;
 white_noise_power_inv_pwm_phase_shift_mod2 = 0.0;
+
 %[text] ### FRT Settings
-enable_frt_1 = 0;
-enable_frt_2 = 1;
-
-% deep data for frt type 2
-deepPOSxi = 0.5 %[output:1f691653]
-deepNEGxi = 0 %[output:637a3b72]
-deepNEGeta = 0.5 %[output:3c82841a]
-%[text] #### FRT, and other fault timing settings
-test_index    = 25;
-test_subindex = 4;
-
-asymmetric_error_type = 0;  
-% 0 -> Variant C, two phase, 
-% 1 -> Variant D, single phase
-
-start_time_grid_switch_open = 1e3;
-start_time_LVRT = 2.0;
-time_start_motor_control = 0.035;
-
-time_aux_power_supply_fault = 1e3;
-time_phase_fault = 1e3;
-start_load = 0.25;
-
-%[text] #### FRT gain factor for grid support
-settle_time = 0.175;
-k_frt_ref = 2;
-%[text] #### Reactive current limits for grid support
+frt_settings;
+%[text] ### Reactive current limits for grid support
 i_grid_pos_eta_lim = 1;
 i_grid_neg_xi_lim = 0.5;
 i_grid_neg_eta_lim = 0.5;
-%[text] #### Reactive current Limits - Red. Dyn. grid support
+%[text] ### Reactive current Limits - Red. Dyn. grid support
 i_grid_pos_eta_red_lim = 0.1;
 i_grid_neg_eta_red_lim = 0.1;
 i_grid_neg_xi_red_lim = 0.1;
-%[text] #### Grid voltage derivate implemented with double integrator observer
+%[text] ### Grid voltage derivate implemented with double integrator observer
 Aso = [0 1; 0 0];
 Asod = eye(2)+Aso*ts_afe;
 Cso = [1 0];
@@ -150,7 +128,7 @@ p2placed = exp(p2place*ts_afe);
 Kd = (acker(Asod',Cso',p2placed))';
 l1 = Kd(2) %[output:59afecfa]
 l2 = Kd(1) %[output:6273c9b1]
-%[text] #### Linear double integrator observer
+%[text] ### Linear double integrator observer
 Aso = [0 1; 0 0];
 Asod = eye(2)+Aso*ts_afe;
 Cso = [1 0];
@@ -160,7 +138,7 @@ p2placed = exp(p2place*ts_afe);
 Kd = (acker(Asod',Cso',p2placed))';
 kv = Kd(2)/ts_afe;
 kx = Kd(1)/ts_afe;
-%[text] #### Grid fault generator 
+%[text] ### Grid fault generator 
 grid_fault_generator;
 %[text] ### Current sensor endscale, and quantization
 adc_quantization = 1/2^11;
@@ -177,8 +155,7 @@ Rprecharge = 1; % Resistance of the DClink pre-charge circuit
 Pload = 250e3;
 Rbrake = 4;
 CFi = 900e-6*8;
-%[text] #### 
-%[text] #### DClink Lstray model
+%[text] ### DClink Lstray model
 Lstray_dclink = 100e-9;
 RLstray_dclink = 10e-3;
 C_HF_Lstray_dclink = 15e-6;
@@ -204,7 +181,7 @@ kp_vs = 0.85;
 ki_vs = 35;
 %%
 %[text] ### AFE current control parameters
-%[text] #### Resonant PI
+%[text] ### Resonant PI
 kp_afe = 0.2;
 ki_afe = 45;
 delta = 0.015;
@@ -277,10 +254,6 @@ kp_rc_pos_grid = kp_rc_grid;
 ki_rc_pos_grid = ki_rc_grid;
 kp_rc_neg_grid = kp_rc_grid;
 ki_rc_neg_grid = ki_rc_grid;
-%%
-%[text] ### Settings Global Filters
-setup_global_filters;
-%%
 %[text] ### Settings for RMS calculus
 rms_perios = 1;
 n1 = rms_perios/f_grid/ts_afe;
@@ -298,10 +271,9 @@ ap_flt_ss = ss(A,B,C,D,ts_afe);
 % bode(ap_flt_ss,options);
 % grid on
 %%
-%[text] ## INVERTER Settings and Initialization
+%[text] ### INVERTER Settings and Initialization
 %[text] ### Mode of operation
 motor_torque_mode = 1 - use_motor_speed_control_mode; % system uses torque curve for wind application
-
 %[text] ### Switching frequencies, sampling time and deadtime
 fPWM_INV = fPWM_AFE;
 % fPWM_INV = 2500;
@@ -317,7 +289,7 @@ z=tf('z',ts_inv);
 
 %[text] ### MOTOR Selection from Library
 n_sys = 6;
-run('n_sys_generic_1M5W_pmsm'); %[output:9c7a78ea] %[output:5a72b05f]
+run('n_sys_generic_1M5W_pmsm'); %[output:9565d738] %[output:2efd1d55]
 run('n_sys_generic_1M5W_torque_curve');
 
 % n_sys = 1;
@@ -325,7 +297,8 @@ run('n_sys_generic_1M5W_torque_curve');
 % run('testroom_torque_curve_690V');
 
 b = tau_bez/omega_m_bez;
-
+external_motor_inertia = 5*Jm;
+% external_motor_inertia = 1;
 
 %% inverter filter
 % LFi = 40e-6;
@@ -350,8 +323,8 @@ Cso = [1 0];
 % p2place = exp([-10 -50]*ts_inv);
 p2place = exp([-50 -250]*ts_inv);
 Kobs = (acker(Aso',Cso',p2place))';
-kg = Kobs(1) %[output:95e6c43e]
-kw = Kobs(2) %[output:90d1bdd0]
+kg = Kobs(1) %[output:2e86d8c0]
+kw = Kobs(2) %[output:8374d010]
 
 %[text] ### Rotor speed observer with load estimator
 A = [0 1 0; 0 0 -1/Jm_norm; 0 0 0];
@@ -360,19 +333,19 @@ Blo = [0; ts_inv/Jm_norm; 0];
 Clo = [1 0 0];
 p3place = exp([-1 -5 -25]*125*ts_inv);
 Klo = (acker(Alo',Clo',p3place))';
-luenberger_l1 = Klo(1) %[output:2147e793]
-luenberger_l2 = Klo(2) %[output:02242693]
-luenberger_l3 = Klo(3) %[output:130b859c]
+luenberger_l1 = Klo(1) %[output:5e758c7f]
+luenberger_l2 = Klo(2) %[output:154790c7]
+luenberger_l3 = Klo(3) %[output:0ed06d2a]
 omega_flt_fcut = 10;
 % phase_compensation_omega = -pi/2-pi/12; % for motor mode
 phase_compensation_omega = 0; % for generator mode
 %[text] ### Control settings
 id_lim = 0.35;
-%[text] #### rotor speed control
+%[text] ### Rotor speed control
 kp_w = 2.5;
 ki_w = 18;
 iq_lim = 1.4;
-%[text] #### current control
+%[text] ### Current control
 kp_i = 0.25;
 ki_i = 18;
 kp_id = kp_i;
@@ -380,10 +353,10 @@ ki_id = ki_i;
 kp_iq = kp_i;
 ki_iq = ki_i;
 CTRPIFF_CLIP_RELEASE = 0.001;
-%[text] #### Field Weakening Control 
+%[text] ### Field Weakening Control 
 kp_fw = 0.05;
 ki_fw = 1.8;
-%[text] #### BEMF observer
+%[text] ### BEMF observer
 emf_fb_p = 0.2;
 emf_p = emf_fb_p*4/10;
 
@@ -392,14 +365,17 @@ emf_p_ccaller_1 = emf_fb_p_ccaller_1*4/10;
 
 emf_fb_p_ccaller_2 = emf_fb_p;
 emf_p_ccaller_2 = emf_fb_p_ccaller_2*4/10;
-%[text] #### Speed obserfer filter LPF 10Hz
-fcut_10Hz_flt = 10;
-omega_flt_g0 = fcut_10Hz_flt * ts_inv * 2*pi;
-omega_flt_g1 = 1 - omega_flt_g0;
-%[text] #### Motor Voltage to Udc Scaling
+% omega_th = 0.25;
+omega_th = 0;
+%[text] ### EKF BEMF observer
+kalman_psm;
+%[text] ### Motor Voltage to Udc Scaling
 motorc_m_scale = 2/3*Vdc_bez/ubez;
+inv_m_scale = motorc_m_scale;
 %%
-%[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
+%[text] ### Settings Global Filters
+setup_global_filters;
+%[text] ### Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] ### HeatSink settings
 heatsink_liquid_2kW;
 %[text] ### DEVICES settings (IGBT)
@@ -428,7 +404,7 @@ mosfet.afe = device_mosfet_setting_afe(fPWM_AFE);
 %[text] ### DEVICES settings (Ideal switch)
 silicon_high_power_ideal_switch;
 ideal_switch = device_ideal_switch_setting(fPWM_AFE);
-%[text] ## C-Caller Settings
+%[text] ### C-Caller Settings
 open_system(model);
 Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dsmavgflt_output_t'});
@@ -444,7 +420,7 @@ Simulink.importExternalCTypes(model,'Names',{'dqpll_grid_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_output_t'});
 
-%[text] ## Remove Scopes Opening Automatically
+%[text] ### Remove Scopes Opening Automatically
 open_scopes = find_system(model, 'BlockType', 'Scope');
 for i = 1:length(open_scopes)
     set_param(open_scopes{i}, 'Open', 'off');
@@ -456,7 +432,7 @@ end
 % close(hscope);
 % set(0,'ShowHiddenHandles',shh);
 
-%[text] ## Enable/Disable Subsystems
+%[text] ### Enable/Disable Subsystems
 if use_mosfet_thermal_model
     set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'off');
     set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
@@ -485,16 +461,7 @@ end
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":26.9}
-%---
-%[output:1f691653]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepPOSxi","value":"   0.500000000000000"}}
-%---
-%[output:637a3b72]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGxi","value":"     0"}}
-%---
-%[output:3c82841a]
-%   data: {"dataType":"textualVariable","outputData":{"name":"deepNEGeta","value":"   0.500000000000000"}}
+%   data: {"layout":"onright","rightPanelPercent":36.3}
 %---
 %[output:59afecfa]
 %   data: {"dataType":"textualVariable","outputData":{"name":"l1","value":"  44.782392633890389"}}
@@ -529,24 +496,24 @@ end
 %[output:8e6905b6]
 %   data: {"dataType":"matrix","outputData":{"columns":2,"name":"Ld_fht1","rows":1,"type":"double","value":[["0.181909345636866","29.587961813168029"]]}}
 %---
-%[output:9c7a78ea]
+%[output:9565d738]
 %   data: {"dataType":"textualVariable","outputData":{"name":"tau_bez","value":"     1.455919822690013e+05"}}
 %---
-%[output:5a72b05f]
+%[output:2efd1d55]
 %   data: {"dataType":"textualVariable","outputData":{"name":"vg_dclink","value":"     7.897123558639406e+02"}}
 %---
-%[output:95e6c43e]
+%[output:2e86d8c0]
 %   data: {"dataType":"textualVariable","outputData":{"name":"kg","value":"   0.036997274900261"}}
 %---
-%[output:90d1bdd0]
+%[output:8374d010]
 %   data: {"dataType":"textualVariable","outputData":{"name":"kw","value":"   1.533540968663871"}}
 %---
-%[output:2147e793]
+%[output:5e758c7f]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l1","value":"   0.414020903616658"}}
 %---
-%[output:02242693]
+%[output:154790c7]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l2","value":"     2.438383113714302e+02"}}
 %---
-%[output:130b859c]
+%[output:0ed06d2a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"luenberger_l3","value":"    -2.994503273143434e+02"}}
 %---
