@@ -1,8 +1,8 @@
-clear
+% clear
 close all
 clc
 
-load sim_results_370A_4kHz_FF1200R17_newRthHA;
+% load sim_results_370A_4kHz_FF1200R17_newRthHA;
 
 ploss_igbtQ1 = mean(igbt_ploss_invQ1_sim);
 ploss_diodeQ1 = mean(diode_ploss_invQ1_sim);
