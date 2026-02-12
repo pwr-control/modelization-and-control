@@ -1,11 +1,11 @@
 preamble;
 
 
-tc = 1e-7;
+tc = 1e-8;
 
-Ton_base = 0.333e-6;
-dT_base = 0.4e-3;
-N = 40;
+Ton_base = 1e-6;
+dT_base = 0.1e-3;
+N = 20;
 
 vin_cmd = 15;
 vout_cmd = 15;
