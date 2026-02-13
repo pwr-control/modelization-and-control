@@ -21,6 +21,9 @@ Each folder contains a power electronics project, in the following a description
   - sequence calculation without buffering (very efficient);
   - model can run as driver or as gerator e.g. wind turbine applications;
   - new dqPLL based on FHT;
+  - available variants for:
+      - AFE with traditional SVPWM, resonant PI (positive and negative sequence control);
+      - INVERTER with MPC and EKF BEMF;
 
 **afe-inv-psm-cascade**:
 - this folder contains the most advanced concept in modelization of the whole repo. n-time domains are implemented, each time domain generates a trigger (TRGO) for sampling, control and pwm generation. In this modelization, effects of sliding pwm as well as clocks deviation can be fully analyzed. The model contains up to three systems in parallel, where each system is composed by a three phase active rectifier, an inverter and a permanent magnet synchronous generator. All physical blocks are developed with open source custom simscape code;
