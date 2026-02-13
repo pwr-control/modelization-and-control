@@ -69,6 +69,7 @@ In particular:
 
 **frt-dqpll**:
 - investigation of different DQ-PLL implementations;
+- FHT_dqPLL brand new PLL architecture;
 - really good behavior about FHT_dqPLL which is a variation of the SOGI_dqPLL;
 
 **grid-emulator**:
@@ -86,7 +87,9 @@ In particular:
 **inv-psm**:
 - inverter with psm;
 - this model is basically used for control system and power losses evaluation;
-- model is made by a battery plusc an inverter plus an psm;
+- model is made by a battery followed by an inverter and permanent magnet synchronous motor;
+- motor observer is based on EKF BEMF model;
+- space vector pwm based (for model predictive see mpc_psm, but maybe will be globally integrated in future);
 
 **modular-multiphase**:
 - investigation on multiphase machine;
