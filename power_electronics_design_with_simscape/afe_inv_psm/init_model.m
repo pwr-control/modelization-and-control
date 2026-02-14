@@ -116,7 +116,7 @@ use_current_controller_from_ccaller_module_1 = 1;
 use_current_controller_from_simulink_module_2 = 0;
 use_current_controller_from_ccaller_module_2 = 0;
 
-use_moving_average_from_ccaller_mod1 = 0;
+use_moving_average_from_ccaller_mod1 = 1;
 use_moving_average_from_ccaller_mod2 = 0;
 %[text] ### Settings average filters
 mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
