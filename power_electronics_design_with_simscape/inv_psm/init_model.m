@@ -1,5 +1,4 @@
 preamble;
-%[text] ### 
 %[text] ### Simlength, model name, thermal model enabling
 simlength = 2;
 transmission_delay = 125e-6*2;
@@ -14,17 +13,14 @@ else
     nonlinear_iterations = 3;
 end
 load_step_time = 0;
-%[text] ### 
 %[text] ### Local time allignment to master time
 kp_align = 0.6;
 ki_align = 0.1;
 lim_up_align = 0.2;
 lim_down_align = -0.2;
-%[text] ### 
 %[text] ### Number of modules
 number_of_modules = 1;
 enable_two_modules = number_of_modules;
-%[text] ### 
 %[text] ### MOTOR Selection from Library
 n_sys = 6;
 run('n_sys_generic_1M5W_pmsm'); %[output:0db165d8] %[output:255f588d]
@@ -45,7 +41,6 @@ external_motor_inertia = 5*Jm;
 LFi = 230e-6;
 LFi_0 = 20e-6;
 RLFi = 5e-3;
-%[text] ### 
 %[text] ### Settings for speed control or wind application
 use_torque_curve = 1; % for wind application
 use_speed_control = 1-use_torque_curve; %
@@ -57,7 +52,6 @@ use_motor_speed_control_mode = 0;
 use_advanced_pll = 0; % advanced pll should compensate second harmonic
 use_dq_pll_ccaller_mod1 = 1; % only module 1
 use_dq_pll_ccaller_mod2 = 0; % only module 1
-%[text] ### 
 %[text] ### Settings for CCcaller versus Simulink
 use_ekf_bemf_module_1 = 1;
 use_observer_from_simulink_module_1 = 0;
@@ -75,12 +69,13 @@ use_moving_average_from_ccaller_mod2 = 0;
 %[text] ### Settings average filters
 mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
 dmavg_filter_enable_time = 0.025;
-%%
-%[text] ### 
 %[text] ### Grid Emulator Settings
-grid_emulator;
-%%
-%[text] ## 
+nominal_power = 1600e3;
+application_voltage = 690;
+vp_xi_pu = 1;
+vn_xi_pu = 0;
+vn_eta_pu = 0;
+grid_emu_data = grid_emulator(nominal_power, application_voltage, vp_xi_pu, vn_xi_pu, vn_eta_pu);
 %[text] ## AFE Settings and Initialization
 %[text] ### Switching frequencies, sampling time and deadtime
 fPWM_AFE = 4e3;
@@ -102,7 +97,6 @@ z_afe=tf('z',ts_afe);
 t_misura = 10/omega_bez*2*pi;
 Nc = ceil(t_misura/tc);
 Ns_afe = ceil(t_misura/ts_afe);
-%[text] ### 
 %[text] ### Behavioural Settings
 time_gain_afe_module_1 = 1.0;
 time_gain_inv_module_1 = 1.0;
@@ -125,36 +119,15 @@ afe_pwm_phase_shift_mod2 = 0;
 white_noise_power_afe_pwm_phase_shift_mod2 = 0.0;
 inv_pwm_phase_shift_mod2 = 0;
 white_noise_power_inv_pwm_phase_shift_mod2 = 0.0;
-%[text] ### 
 %[text] ### FRT Settings
-enable_frt_1 = 0;
-enable_frt_2 = 1-enable_frt_1;
-
-% deep data for frt type 2
-deepPOSxi = 0.5 %[output:57086c1f]
-deepNEGxi = 0 %[output:08bc4522]
-deepNEGeta = 0.5 %[output:858ca950]
-%[text] ### 
-%[text] ### FRT, and other fault timing settings
-test_index    = 25;
-test_subindex = 4;
-
-asymmetric_error_type = 0;  
-% 0 -> Variant C, two phase, 
-% 1 -> Variant D, single phase
-
-start_time_grid_switch_open = 1e3;
-start_time_LVRT = 2.0;
-time_start_motor_control = 0.035;
-
-time_aux_power_supply_fault = 1e3;
-time_phase_fault = 1e3;
-start_load = 0.25;
-%[text] #### 
-%[text] ### FRT gain factor for grid support
-settle_time = 0.175;
-k_frt_ref = 2;
-%[text] #### 
+test_index = 25; % type of fault: index
+test_subindex = 4; % type of fault: subindex
+enable_frt_1 = 1; % faults generated from abc
+enable_frt_2 = 0; % faults generated from xi_eta_pos and xi_eta_neg
+start_time_LVRT = 0.75;
+asymmetric_error_type = 1;
+frt_data = frt_settings(test_index, test_subindex, asymmetric_error_type, enable_frt_1, enable_frt_2, start_time_LVRT);
+grid_fault_generator; %[output:57086c1f] %[output:08bc4522] %[output:858ca950]
 %[text] ### Reactive current limits for grid support
 i_grid_pos_eta_lim = 1;
 i_grid_neg_xi_lim = 0.5;
@@ -173,21 +146,13 @@ p2placed = exp(p2place*ts_afe);
 Kd = (acker(Asod',Cso',p2placed))';
 l1 = Kd(2) %[output:55bd5b41]
 l2 = Kd(1) %[output:079a03a1]
-%[text] #### 
-%[text] ### Grid fault generator 
-grid_fault_generator;
-%[text] ### 
 %[text] ### Current sensor endscale, and quantization
 adc_quantization = 1/2^11;
 Imax_adc = 1049.835;
 CurrentQuantization = Imax_adc/2^11;
-%%
-%[text] ### 
 %[text] ### Voltage sensor endscale, and quantization
 Umax_adc = 1500;
 VoltageQuantization = Umax_adc/2^11;
-%%
-%[text] ### 
 %[text] ### DClink, and dclink-brake parameters
 Vdc_ref = 1070; % DClink voltage reference
 Rprecharge = 1; % Resistance of the DClink pre-charge circuit

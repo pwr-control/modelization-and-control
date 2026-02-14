@@ -1,11 +1,71 @@
 preamble;
+model = 'afe_inv_psm';
+%[text] ### Global timing
+% simulation length
+simlength = 1.25;
+
+% switching frequency and tasks timing
+fPWM = 4e3;
+fPWM_AFE = fPWM;
+tPWM_AFE = 1/fPWM_AFE;
+TRGO_AFE_double_update = 1;
+if TRGO_AFE_double_update
+    ts_afe = tPWM_AFE/2;
+else
+    ts_afe = tPWM_AFE;
+end
+
+fPWM_INV = fPWM;
+tPWM_INV = 1/fPWM_INV;
+TRGO_INV_double_update = 1;
+if TRGO_INV_double_update
+    ts_inv = tPWM_INV/2;
+else
+    ts_inv = tPWM_INV;
+end
+
+fPWM_DAB = fPWM;
+tPWM_DAB = 1/fPWM_DAB;
+TRGO_DAB_double_update = 0;
+if TRGO_DAB_double_update
+    ts_dab = tPWM_DAB/2;
+else
+    ts_dab = tPWM_DAB;
+end
+
+s=tf('s');
+z_afe = tf('z',ts_afe);
+z_inv = tf('z',ts_inv);
+z_dab = tf('z',ts_dab);
+
+
+% deadtimes
+dead_time_AFE = 3e-6;
+dead_time_INV = 3e-6;
+dead_time_DAB = 3e-6;
+
+% minimum pulse
+minimum_pulse_time_AFE = 2e-6;
+minimum_pulse_time_INV = 2e-6;
+minimum_pulse_time_DAB = 2e-6;
+
+% delays
+delay_pwm = 0;
+delayAFE_modB=2*pi*fPWM_AFE*delay_pwm; 
+delayINV_modB=0;
+delayDAB_modB=0;
+
+% maximum simulation and simscape step
+tc = min(ts_afe)/400;
+
+% t_misura = simlength - 0.025;
+t_misura = 0.648228176318064;
+Nc = ceil(t_misura/tc);
+Ns_afe = ceil(t_misura/ts_afe);
+Ns_inv = ceil(t_misura/ts_inv);
+Ns_dab = ceil(t_misura/ts_dab);
+
 %[text] ### Settings for simulink model initialization and data analysis
-simlength = 3.75;
-% simlength = 2;
-transmission_delay = 125e-6*2;
-
-model = 'afe_abc_inv_psm';
-
 use_mosfet_thermal_model = 0;
 use_thermal_model = 0;
 
@@ -15,6 +75,8 @@ else
     nonlinear_iteration = 3;
 end
 load_step_time = 1.25;
+transmission_delay = 125e-6*2;
+
 %[text] ### Local time allignment to master time
 kp_align = 0.6;
 ki_align = 0.1;
@@ -24,7 +86,7 @@ lim_down_align = -0.2;
 number_of_modules = 1;
 enable_two_modules = number_of_modules;
 %[text] ### Settings for speed control or wind application
-use_torque_curve = 0; % for wind application
+use_torque_curve = 1; % for wind application
 use_speed_control = 1-use_torque_curve; %
 use_mtpa = 1; %
 use_psm_encoder = 0; % 
@@ -61,30 +123,14 @@ mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
 dmavg_filter_enable_time = 0.025;
 %%
 %[text] ### Grid Emulator Settings
-grid_emulator;
+nominal_power = 1600e3;
+application_voltage = 690;
+vp_xi_pu = 1;
+vn_xi_pu = 0;
+vn_eta_pu = 0;
+grid_emu_data = grid_emulator(nominal_power, application_voltage, vp_xi_pu, vn_xi_pu, vn_eta_pu);
 %%
 %[text] ## AFE Settings and Initialization
-%[text] ### Switching frequencies, sampling time and deadtime
-fPWM_AFE = 4e3;
-tPWM_AFE = 1/fPWM_AFE;
-
-dead_time_AFE = 3e-6;
-delay_pwm = 0;
-delayAFE_modB=2*pi*fPWM_AFE*delay_pwm; 
-delayAFE_modA=0;
-delayAFE_modC=0;
-
-ts_afe = 1/fPWM_AFE/2; % Sampling time of the control AFE as well as INVERTER
-tc = ts_afe/400;
-
-s=tf('s');
-z_afe=tf('z',ts_afe);
-
-% t_misura = simlength - 0.025;
-t_misura = 0.648228176318064;
-Nc = ceil(t_misura/tc);
-Ns_afe = ceil(t_misura/ts_afe);
-
 %[text] ### Behavioural Settings
 time_gain_afe_module_1 = 1.0;
 time_gain_inv_module_1 = 1.0;
@@ -109,7 +155,14 @@ inv_pwm_phase_shift_mod2 = 0;
 white_noise_power_inv_pwm_phase_shift_mod2 = 0.0;
 
 %[text] ### FRT Settings
-frt_settings;
+test_index = 25; % type of fault: index
+test_subindex = 4; % type of fault: subindex
+enable_frt_1 = 1; % faults generated from abc
+enable_frt_2 = 0; % faults generated from xi_eta_pos and xi_eta_neg
+start_time_LVRT = 0.75;
+asymmetric_error_type = 1;
+frt_data = frt_settings(test_index, test_subindex, asymmetric_error_type, enable_frt_1, enable_frt_2, start_time_LVRT);
+grid_fault_generator;
 %[text] ### Reactive current limits for grid support
 i_grid_pos_eta_lim = 1;
 i_grid_neg_xi_lim = 0.5;
@@ -138,8 +191,6 @@ p2placed = exp(p2place*ts_afe);
 Kd = (acker(Asod',Cso',p2placed))';
 kv = Kd(2)/ts_afe;
 kx = Kd(1)/ts_afe;
-%[text] ### Grid fault generator 
-grid_fault_generator;
 %[text] ### Current sensor endscale, and quantization
 adc_quantization = 1/2^11;
 Imax_adc = 1049.835;
@@ -150,7 +201,7 @@ Umax_adc = 1500;
 VoltageQuantization = Umax_adc/2^11;
 %%
 %[text] ### DClink, and dclink-brake parameters
-Vdc_ref = 1070; % DClink voltage reference
+Vdc_ref = grid_emu_data.Vdclink_nom; % DClink voltage reference
 Rprecharge = 1; % Resistance of the DClink pre-charge circuit
 Pload = 250e3;
 Rbrake = 4;
@@ -175,7 +226,7 @@ CFu = (100e-6*2);
 RCFu = (50e-3);
 %%
 %[text] ### DClink voltage control parameters
-Vdc_nom = Vdc_bez;
+Vdc_nom = grid_emu_data.Vdclink_nom;
 Vdc_norm_ref = Vdc_ref/Vdc_nom;
 kp_vs = 0.85;
 ki_vs = 35;
@@ -185,9 +236,9 @@ ki_vs = 35;
 kp_afe = 0.2;
 ki_afe = 45;
 delta = 0.015;
-res = s/(s^2 + 2*delta*omega_grid_nom*s + (omega_grid_nom)^2);
+res = s/(s^2 + 2*delta*grid_emu_data.omega_grid_nom*s + (grid_emu_data.omega_grid_nom)^2);
 
-Ares = [0 1; -omega_grid_nom^2 -2*delta*omega_grid_nom];
+Ares = [0 1; -grid_emu_data.omega_grid_nom^2 -2*delta*grid_emu_data.omega_grid_nom];
 Bres = [0; 1];
 Cres = [0 1];
 Aresd = eye(2) + Ares*ts_afe;
@@ -195,12 +246,10 @@ Bresd = Bres*ts_afe;
 Cresd = Cres;
 %%
 %[text] ### Grid Normalization Factors
-Vgrid_phase_normalization_factor = Vphase2*sqrt(2);
 pll_i1 = 80;
 pll_p = 1;
 pll_p_frt = 0.2;
 Vmax_ff = 1.1;
-Igrid_phase_normalization_factor = 250e3/Vphase2/3/0.9*sqrt(2);
 ixi_pos_ref_lim = 1.65;
 ieta_pos_ref_lim = 1.0;
 ieta_neg_ref_lim = 0.5;
@@ -218,7 +267,7 @@ Ldrso = acker(Adrso',Crso',polesdrso)' %[output:82a1ee3d]
 %[text] ### PLL DDSRF
 pll_i1_ddsrt = pll_i1;
 pll_p_ddsrt = pll_p;
-omega_f = 2*pi*50;
+omega_f = grid_emu_data.w_grid;
 ddsrf_f = omega_f/(s+omega_f);
 ddsrf_fd = c2d(ddsrf_f,ts_afe);
 tau_ddsrf = 1/omega_f;
@@ -227,7 +276,7 @@ tau_ddsrf = 1/omega_f;
 pll_i1_fht = pll_i1;
 pll_p_fht = pll_p;
 %[text] ### First Harmonic Tracker for Ugrid cleaning
-omega_fht0 = 2*pi*f_grid;
+omega_fht0 = grid_emu_data.w_grid;
 delta_fht0 = 0.05;
 Afht0 = [0 1; -omega_fht0^2 -delta_fht0*omega_fht0] % impianto nel continuo %[output:8da9fcc7]
 Cfht0 = [1 0];
@@ -238,7 +287,7 @@ polesd_fht0 = exp(ts_afe*poles_fht0);
 Ld_fht0 = acker(Ad_fht0',Cfht0', polesd_fht0) %[output:1d0e7351]
 
 %[text] ### First Harmonic Tracker for Load
-omega_fht1 = 2*pi*f_grid;
+omega_fht1 = grid_emu_data.w_grid;
 delta_fht1 = 0.05;
 Afht1 = [0 1; -omega_fht1^2 -delta_fht1*omega_fht1] % impianto nel continuo %[output:5ad4d344]
 Cfht1 = [1 0];
@@ -256,12 +305,12 @@ kp_rc_neg_grid = kp_rc_grid;
 ki_rc_neg_grid = ki_rc_grid;
 %[text] ### Settings for RMS calculus
 rms_perios = 1;
-n1 = rms_perios/f_grid/ts_afe;
+n1 = 2*pi*rms_perios/grid_emu_data.w_grid/ts_afe;
 rms_perios = 10;
-n10 = rms_perios/f_grid/ts_afe;
+n10 = 2*pi*rms_perios/grid_emu_data.w_grid/ts_afe;
 %%
 %[text] ### Online time domain sequence calculator
-w_grid = 2*pi*f_grid;
+w_grid = grid_emu_data.w_grid;
 apf = (s/w_grid-1)/(s/w_grid+1);
 [napfd, dapfd]=tfdata(c2d(apf,ts_afe),'v');
 apf_z = tf(napfd,dapfd,ts_afe,'Variable','z');
@@ -274,19 +323,7 @@ ap_flt_ss = ss(A,B,C,D,ts_afe);
 %[text] ### INVERTER Settings and Initialization
 %[text] ### Mode of operation
 motor_torque_mode = 1 - use_motor_speed_control_mode; % system uses torque curve for wind application
-%[text] ### Switching frequencies, sampling time and deadtime
-fPWM_INV = fPWM_AFE;
-% fPWM_INV = 2500;
-dead_time_INV = 3e-6;
-delayINV_modA = 0;
-pwm_out_lim = 1;
-
-ts_inv = 1/fPWM_INV/2;
-t_measure = simlength;
-Ns_inv = floor(t_measure/ts_inv);
-s=tf('s');
-z=tf('z',ts_inv);
-
+time_start_motor_control = 0.25;
 %[text] ### MOTOR Selection from Library
 n_sys = 6;
 run('n_sys_generic_1M5W_pmsm'); %[output:9565d738] %[output:2efd1d55]
@@ -317,7 +354,7 @@ omega_sim = omega_m_sim*number_poles/2;
 tau_load_sim = tau_bez/5; %N*m
 b_square = 0;
 
-%[text] ### Luenberger Observer
+%[text] ### Double Integrator Observer Inverter Side
 Aso = [1 ts_inv; 0 1];
 Cso = [1 0];
 % p2place = exp([-10 -50]*ts_inv);
@@ -325,7 +362,6 @@ p2place = exp([-50 -250]*ts_inv);
 Kobs = (acker(Aso',Cso',p2place))';
 kg = Kobs(1) %[output:2e86d8c0]
 kw = Kobs(2) %[output:8374d010]
-
 %[text] ### Rotor speed observer with load estimator
 A = [0 1 0; 0 0 -1/Jm_norm; 0 0 0];
 Alo = eye(3) + A*ts_inv;
@@ -337,7 +373,6 @@ luenberger_l1 = Klo(1) %[output:5e758c7f]
 luenberger_l2 = Klo(2) %[output:154790c7]
 luenberger_l3 = Klo(3) %[output:0ed06d2a]
 omega_flt_fcut = 10;
-% phase_compensation_omega = -pi/2-pi/12; % for motor mode
 phase_compensation_omega = 0; % for generator mode
 %[text] ### Control settings
 id_lim = 0.35;
@@ -370,11 +405,12 @@ omega_th = 0;
 %[text] ### EKF BEMF observer
 kalman_psm;
 %[text] ### Motor Voltage to Udc Scaling
+Vdc_bez = grid_emu_data.Vdclink_nom;
 motorc_m_scale = 2/3*Vdc_bez/ubez;
 inv_m_scale = motorc_m_scale;
 %%
 %[text] ### Settings Global Filters
-setup_global_filters;
+filters = setup_global_filters(ts_afe, ts_inv, ts_dab, tc);
 %[text] ### Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] ### HeatSink settings
 heatsink_liquid_2kW;
@@ -404,6 +440,8 @@ mosfet.afe = device_mosfet_setting_afe(fPWM_AFE);
 %[text] ### DEVICES settings (Ideal switch)
 silicon_high_power_ideal_switch;
 ideal_switch = device_ideal_switch_setting(fPWM_AFE);
+%[text] ### Setting Global Faults
+time_aux_power_supply_fault = 1e3;
 %[text] ### C-Caller Settings
 open_system(model);
 Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
@@ -426,36 +464,38 @@ for i = 1:length(open_scopes)
     set_param(open_scopes{i}, 'Open', 'off');
 end
 
-% shh = get(0,'ShowHiddenHandles');
-% set(0,'ShowHiddenHandles','On');
-% hscope = findobj(0,'Type','Figure','Tag','SIMULINK_SIMSCOPE_FIGURE');
-% close(hscope);
-% set(0,'ShowHiddenHandles',shh);
-
 %[text] ### Enable/Disable Subsystems
 if use_mosfet_thermal_model
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'off');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'off');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
-    set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
+    set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'off');
+    set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
+    set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
+    set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'off');
+    set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
+    set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
 else
     if use_thermal_model
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'off');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'on');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'off');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'on');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'off');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'on');
     else
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'off');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
-        set_param('afe_abc_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter mosfet based with thermal model', 'Commented', 'on');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter mosfet based with thermal model', 'Commented', 'on');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter igbt based with thermal model', 'Commented', 'on');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three phase inverter ideal switch based model', 'Commented', 'off');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter igbt based with thermal model', 'Commented', 'on');
+        set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three phase inverter ideal switch based model', 'Commented', 'off');
     end
+end
+
+if use_torque_curve
+    set_param('afe_inv_psm/fixed_speed_setting', 'Commented', 'off');
+    set_param('afe_inv_psm/motor_load_setting', 'Commented', 'on');
+else
+    set_param('afe_inv_psm/fixed_speed_setting', 'Commented', 'on');
+    set_param('afe_inv_psm/motor_load_setting', 'Commented', 'off');
 end
 
 %[appendix]{"version":"1.0"}
