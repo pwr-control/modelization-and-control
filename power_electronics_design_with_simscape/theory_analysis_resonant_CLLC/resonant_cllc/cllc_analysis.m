@@ -1,13 +1,14 @@
 
 Rload = 10;
 
-ZLs1 = s*Ls1;
-ZCs1 = 1/s/Cs1;
 
-ZLm = s*lm_trafo;
+ZLs1 = s*hwdata.cllc.Ls1;
+ZCs1 = 1/s/hwdata.cllc.Cs1;
 
-ZLs2 = s*Ls2;
-ZCs2 = 1/s/Cs2;
+ZLm = s*hwdata.cllc.Lm;
+
+ZLs2 = s*hwdata.cllc.Ls2;
+ZCs2 = 1/s/hwdata.cllc.Cs2;
 
 ZLout = ZLs2 + ZCs2 + Rload;
 
