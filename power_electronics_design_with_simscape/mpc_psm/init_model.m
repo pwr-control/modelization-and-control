@@ -328,27 +328,35 @@ ap_flt_ss = ss(A,B,C,D,ts_afe);
 %[text] ### Mode of operation
 motor_torque_mode = 1 - use_motor_speed_control_mode; % system uses torque curve for wind application
 time_start_motor_control = 0.25;
-%[text] ### MOTOR Selection from Library
-n_sys = 6;
-run('n_sys_generic_1M5W_pmsm');
+%[text] ### Machine settings
+psm_sys = 6;
+psm_pwr = 1600e3;
+psm_i = 2062;
+psm_rpm = 17.8;
+psm_np = 104;
+psm_eta = 96;
+psm_Lq = 1.26e-3;
+psm_Ld = 1.04e-3;
+psm_Jm = 900e3/6;
+
+psm = pmsm_setup('WindGen', psm_sys, psm_pwr, psm_i, psm_rpm, psm_np, psm_eta, psm_Lq, psm_Ld, psm_Jm, 0, 0);
+displayInfo(psm);
+
+n_sys = psm.number_of_systems;
 run('n_sys_generic_1M5W_torque_curve');
-
-% n_sys = 1;
-% run('testroom_eq_psm_690V');
-% run('testroom_torque_curve_690V');
-
 torque_overload_factor = 1;
 
-b = tau_bez/omega_m_bez;
-external_motor_inertia = 5*Jm;
-% external_motor_inertia = 1;
+% load
+b = psm.load_friction_m;
+% external_load_inertia = 6*psm.Jm_m;
+external_load_inertia = 1;
 %[text] ### Simulation parameters: speed reference, load torque in motor mode
 % rpm_sim = 3000;
 rpm_sim = 17.8;
 % rpm_sim = 15.2;
-omega_m_sim = omega_m_bez;
-omega_sim = omega_m_sim*number_poles/2;
-tau_load_sim = tau_bez/5; %N*m
+omega_m_sim = psm.omega_m_bez;
+omega_sim = omega_m_sim*psm.number_poles/2;
+tau_load_sim = psm.tau_bez/5; %N*m
 b_square = 0;
 
 %[text] ### Double Integrator Observer Inverter Side
@@ -360,9 +368,9 @@ Kobs = (acker(Aso',Cso',p2place))';
 kg = Kobs(1)
 kw = Kobs(2)
 %[text] ### Rotor speed observer with load estimator
-A = [0 1 0; 0 0 -1/Jm_norm; 0 0 0];
+A = [0 1 0; 0 0 -1/psm.Jm_norm; 0 0 0];
 Alo = eye(3) + A*ts_inv;
-Blo = [0; ts_inv/Jm_norm; 0];
+Blo = [0; ts_inv/psm.Jm_norm; 0];
 Clo = [1 0 0];
 p3place = exp([-1 -5 -25]*125*ts_inv);
 Klo = (acker(Alo',Clo',p3place))';
@@ -406,9 +414,8 @@ emf_p_ccaller_2 = emf_fb_p_ccaller_2*4/10;
 omega_th = 0;
 %[text] ### EKF BEMF observer
 kalman_psm;
-k_kalman = 0;
 %[text] ### Motor Voltage to Udc Scaling
-motorc_m_scale = 2/3*hwdata.inv.udc_nom/ubez;
+motorc_m_scale = 2/3*hwdata.inv.udc_nom/psm.ubez;
 inv_m_scale = motorc_m_scale;
 %%
 %[text] ### Settings Global Filters
@@ -499,4 +506,7 @@ end
 
 
 %[appendix]{"version":"1.0"}
+%---
+%[metadata:view]
+%   data: {"layout":"onright"}
 %---
