@@ -328,7 +328,7 @@ ap_flt_ss = ss(A,B,C,D,ts_afe);
 %[text] ### Mode of operation
 motor_torque_mode = 1 - use_motor_speed_control_mode; % system uses torque curve for wind application
 time_start_motor_control = 0.25;
-%[text] ### Machine settings
+%[text] ### PSM Machine settings
 psm_sys = 6;
 psm_pwr = 1600e3;
 psm_i = 2062;
