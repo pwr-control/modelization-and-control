@@ -1,5 +1,6 @@
 
-Rload = 10;
+close all
+Rload = 1000;
 
 
 ZLs1 = s*hwdata.cllc.Ls1;
@@ -15,8 +16,8 @@ ZLout = ZLs2 + ZCs2 + Rload;
 Zpout = minreal((ZLout + ZLm)/(ZLout * ZLm));
 Ht = minreal(Zpout / (ZCs1 + ZLs1 + Zpout) / ZLout * Rload);
 figure; bode(Ht,options); grid on
-set(gca,'xlim', [fPWM_CLLC/4 fPWM_CLLC*4])
-complex_response = evalfr(Ht, 1i*2*pi*fPWM_CLLC);
+set(gca,'xlim', [glb_time.fPWM_CLLC/4 glb_time.fPWM_CLLC*4])
+complex_response = evalfr(Ht, 1i*2*pi*glb_time.fPWM_CLLC);
 
 % 4. Display the result
 disp('Complex Response H(jw):');

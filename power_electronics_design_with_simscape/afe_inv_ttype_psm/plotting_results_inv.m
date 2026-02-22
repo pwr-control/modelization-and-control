@@ -1,32 +1,33 @@
 close all
 clc
 
-tratto1=2.2;
-tratto2=2.2;
+tratto1=3;
+tratto2=2;
 tratto3=1;
-colore1 = [0.5 0.5 0.5];
-colore2 = [0.8 0.8 0.8];
-t1c = t_tc_sim(end) - Nc*tc;
+colore1 = [0.25 0.25 0.25];
+colore2 = [0.5 0.5 0.5];
+colore3 = [0.75 0.75 0.75];
+t1c = t_tc_sim(end) - glb_time.Nc*glb_time.tc;
 t2c = t_tc_sim(end);
-t1s = t_ts_afe_sim(end) - Ns_afe*ts_afe;
-t2s = t_ts_afe_sim(end);
+t1s = t_ts_afe_sim_mod1(end) - glb_time.Ns_afe*glb_time.ts_afe;
+t2s = t_ts_afe_sim_mod1(end);
 % t1s = 0;
 % t2s = 1.5;
 
 t1c_zoom = t_tc_sim(end) - 5/50;
 t2c_zoom = t_tc_sim(end);
-t3c_zoom = t_tc_sim(end) - 50/fPWM_AFE;
+t3c_zoom = t_tc_sim(end) - 50/glb_time.fPWM_AFE;
 t4c_zoom = t_tc_sim(end);
-t1s_zoom = t_ts_afe_sim(end) - 5/50;
-t2s_zoom = t_ts_afe_sim(end);
+t1s_zoom = t_ts_afe_sim_mod1(end) - 5/50;
+t2s_zoom = t_ts_afe_sim_mod1(end);
 
 fontsize_plotting = 12;
 
 figure;
 subplot 211
-plot(t_ts_inv_sim,iq_ref_pu_sim,'-k','LineWidth',tratto1);
+plot(t_ts_inv_sim_mod1,iq_ref_pu_sim,'-k','LineWidth',tratto1);
 hold on
-plot(t_ts_inv_sim,iq_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
+plot(t_ts_inv_sim_mod1,iq_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
 hold off
 title('Q-Current tracking in p.u.','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$i_q^{ref}$','$i_q$','Location','best',...
@@ -41,11 +42,11 @@ set(gca,'Children',[chH(2); chH(1)])
 subplot 212
 colororder({'k','k'})
 yyaxis left;
-plot(t_ts_inv_sim,omega_pu_sim.*omega_m_bez,'-','LineWidth',tratto2,'Color',colore1);
+plot(t_ts_inv_sim_mod1,omega_pu_sim.*omega_m_bez,'-','LineWidth',tratto2,'Color',colore1);
 ylabel('$\omega /rpm$','Interpreter','latex','FontSize', fontsize_plotting);
 hold on
 yyaxis right;
-plot(t_ts_inv_sim,torque_load_pu_pmsm.*tau_bez*1e-3,'-k','LineWidth',tratto1);
+plot(t_ts_inv_sim_mod1,torque_load_pu_pmsm.*tau_bez*1e-3,'-k','LineWidth',tratto1);
 ylabel('$\tau /kNm$','Interpreter','latex','FontSize', fontsize_plotting);
 hold off
 title('Generator speed and torque in p.u.','Interpreter','latex','FontSize',fontsize_plotting);
@@ -66,9 +67,9 @@ grid on
 
 figure;
 subplot 211
-plot(t_ts_inv_sim,psi_r_alpha_pmsm_sim,'-k','LineWidth',tratto1);
+plot(t_ts_inv_sim_mod1,psi_r_alpha_pmsm_sim,'-k','LineWidth',tratto1);
 hold on
-plot(t_ts_inv_sim,psi_r_alpha_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
+plot(t_ts_inv_sim_mod1,psi_r_alpha_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
 hold off
 title('$\alpha$ permanent magnet flux from observer and machine',...
     'Interpreter','latex','FontSize',fontsize_plotting);
@@ -83,9 +84,9 @@ grid on
 chH = get(gca,'Children');
 set(gca,'Children',[chH(2); chH(1)])
 subplot 212
-plot(t_ts_inv_sim,psi_r_beta_pmsm_sim,'-k','LineWidth',tratto1);
+plot(t_ts_inv_sim_mod1,psi_r_beta_pmsm_sim,'-k','LineWidth',tratto1);
 hold on
-plot(t_ts_inv_sim,psi_r_beta_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
+plot(t_ts_inv_sim_mod1,psi_r_beta_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
 hold off
 title('$\beta$ permanent magnet flux from observer and machine',...
     'Interpreter','latex','FontSize',fontsize_plotting);
@@ -107,9 +108,9 @@ grid on
 
 figure;
 subplot 211
-plot(t_ts_inv_sim,omega_ref_pu_sim,'-k','LineWidth',tratto1);
+plot(t_ts_inv_sim_mod1,omega_ref_pu_sim,'-k','LineWidth',tratto1);
 hold on
-plot(t_ts_inv_sim,omega_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
+plot(t_ts_inv_sim_mod1,omega_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
 hold off
 title('Speed tracking in p.u.','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$\omega_m^{ref}$','$\omega_m$','Location','best',...
@@ -122,7 +123,7 @@ grid on
 chH = get(gca,'Children');
 set(gca,'Children',[chH(2); chH(1)])
 subplot 212
-plot(t_ts_inv_sim,torque_load_pu_pmsm,'-k','LineWidth',tratto1);
+plot(t_ts_inv_sim_mod1,torque_load_pu_pmsm,'-k','LineWidth',tratto1);
 title('Load torque in p.u.',...
     'Interpreter','latex','FontSize',fontsize_plotting);
 legend('$\tau_m$','Location','best',...
@@ -139,9 +140,9 @@ grid on
 
 figure;
 subplot 211
-plot(t_ts_inv_sim,iq_ref_pu_sim,'-k','LineWidth',tratto1);
+plot(t_ts_inv_sim_mod1,iq_ref_pu_sim,'-k','LineWidth',tratto1);
 hold on
-plot(t_ts_inv_sim,iq_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
+plot(t_ts_inv_sim_mod1,iq_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
 hold off
 title('Q-Current tracking in p.u.','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$i_q^{ref}$','$i_q$','Location','best',...
@@ -154,9 +155,9 @@ grid on
 chH = get(gca,'Children');
 set(gca,'Children',[chH(2); chH(1)])
 subplot 212
-plot(t_ts_inv_sim,id_ref_pu_sim,'-k','LineWidth',tratto1);
+plot(t_ts_inv_sim_mod1,id_ref_pu_sim,'-k','LineWidth',tratto1);
 hold on
-plot(t_ts_inv_sim,id_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
+plot(t_ts_inv_sim_mod1,id_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
 hold off
 title('D-Current tracking in p.u.',...
     'Interpreter','latex','FontSize',fontsize_plotting);
@@ -193,9 +194,9 @@ grid on
 
 figure;
 subplot 211
-plot(t_ts_inv_sim,psi_r_alpha_pmsm_sim,'-k','LineWidth',tratto1);
+plot(t_ts_inv_sim_mod1,psi_r_alpha_pmsm_sim,'-k','LineWidth',tratto1);
 hold on
-plot(t_ts_inv_sim,psi_r_alpha_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
+plot(t_ts_inv_sim_mod1,psi_r_alpha_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
 hold off
 title('$\alpha$-Flux Estimation in Vs','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$\psi_{\alpha}^{m}$','$\hat{\psi}_{\alpha}^{m}$','Location','best',...
@@ -208,9 +209,9 @@ grid on
 chH = get(gca,'Children');
 set(gca,'Children',[chH(2); chH(1)])
 subplot 212
-plot(t_ts_inv_sim,psi_r_beta_pmsm_sim,'-k','LineWidth',tratto1);
+plot(t_ts_inv_sim_mod1,psi_r_beta_pmsm_sim,'-k','LineWidth',tratto1);
 hold on
-plot(t_ts_inv_sim,psi_r_beta_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
+plot(t_ts_inv_sim_mod1,psi_r_beta_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
 hold off
 title('$\beta$-Flux Estimation in Vs','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$\psi_{\beta}^{m}$','$\hat{\psi}_{\beta}^{m}$','Location','best',...
