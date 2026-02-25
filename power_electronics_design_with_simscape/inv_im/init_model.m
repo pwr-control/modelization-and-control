@@ -76,7 +76,7 @@ use_im_encoder = 1; %
 use_load_estimator = 0; %
 use_estimator_from_mb = 0; %mb model based
 use_motor_speed_control_mode = 0; 
-use_im_ekf = 1;
+use_im_ekf = 0;
 
 use_dq_pll_fht_pll = 1; % 
 use_dq_pll_ddsfr_pll = 0; % 
@@ -205,7 +205,8 @@ psm_ctrl = ctrl_pmsm_setup(glb_time.ts_inv, psm.omega_bez, u_psm_scale, psm.Jm_n
 psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, glb_time.ts_inv);
 
 im_ctrl = ctrl_im_setup(glb_time.ts_inv, im.omega_bez, u_im_scale, im.Jm_norm);
-im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_norm, im.Lm_norm, glb_time.ts_inv);
+im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_norm, ...
+    im.Lm_norm, glb_time.ts_inv);
 
 afe_ctrl = ctrl_afe_setup(glb_time.ts_afe, grid_emu.omega_grid_nom);
 
@@ -298,10 +299,10 @@ Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_output_t'});
 
 %[text] ### Remove Scopes Opening Automatically
-open_scopes = find_system(model, 'BlockType', 'Scope');
-for i = 1:length(open_scopes)
-    set_param(open_scopes{i}, 'Open', 'off');
-end
+% open_scopes = find_system(model, 'BlockType', 'Scope');
+% for i = 1:length(open_scopes)
+%     set_param(open_scopes{i}, 'Open', 'off');
+% end
 %[text] ### Enable/Disable Subsystems
 if use_mosfet_thermal_model
     set_param('inv_im/inv_im_mod1/inverter/inverter/three_phase_inverter_mosfet_based_with_thermal_model', 'Commented', 'off');
