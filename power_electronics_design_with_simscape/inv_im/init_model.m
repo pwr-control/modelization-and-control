@@ -76,7 +76,7 @@ use_load_estimator = 0; %
 use_estimator_from_mb = 0; %mb model based
 use_motor_speed_control_mode = 0; 
 use_im_ekf = 1; % enable EKF for IM at time time_use_im_ekf
-time_use_im_ekf = 0.2;
+time_use_im_ekf = 0.25;
 
 use_dq_pll_fht_pll = 1; % 
 use_dq_pll_ddsfr_pll = 0; % 
@@ -108,7 +108,9 @@ dmavg_filter_enable_time = 0.025;
 %%
 %[text] ### Grid Emulator Settings
 grid_nominal_power = 1600e3;
-application_voltage = 480;
+% application_voltage = 690;
+% application_voltage = 480;
+application_voltage = 400;
 % trafo data
 us1 = 400; us2 = 400; fgrid = 50;
 eta = 95; ucc = 5.6;
@@ -334,10 +336,10 @@ end
 %   data: {"layout":"onright"}
 %---
 %[output:10bd2431]
-%   data: {"dataType":"text","outputData":{"text":"Device AFE_THREE_PHASE: afe480V_250kW\nNominal Voltage: 480 V | Nominal Current: 360 A\nCurrent Normalization Data: 509.12 A\nVoltage Normalization Data: 391.92 V\n---------------------------\n","truncated":false}}
+%   data: {"dataType":"text","outputData":{"text":"Device AFE_THREE_PHASE: afe400V_250kW\nNominal Voltage: 400 V | Nominal Current: 360 A\nCurrent Normalization Data: 509.12 A\nVoltage Normalization Data: 326.60 V\n---------------------------\n","truncated":false}}
 %---
 %[output:2338b641]
-%   data: {"dataType":"text","outputData":{"text":"Device INVERTER: inv480V_250kW\nNominal Voltage: 400 V | Nominal Current: 470 A\nCurrent Normalization Data: 664.68 A\nVoltage Normalization Data: 326.60 V\n---------------------------\n","truncated":false}}
+%   data: {"dataType":"text","outputData":{"text":"Device INVERTER: inv400V_250kW\nNominal Voltage: 400 V | Nominal Current: 470 A\nCurrent Normalization Data: 664.68 A\nVoltage Normalization Data: 326.60 V\n---------------------------\n","truncated":false}}
 %---
 %[output:98545f62]
 %   data: {"dataType":"text","outputData":{"text":"Single Phase DAB: DAB_800V\nNominal Power: 250000 [W]\nNormalization Voltage DC1: 800 [V] | Normalization Current DC1: 350 [A]\nNormalization Voltage DC2: 800 [V] | Normalization Current DC2: 350 [A]\nInternal Tank Ls: 1.697653e-05 [H] | Internal Tank Cs: 350 [F]\n---------------------------\n","truncated":false}}
