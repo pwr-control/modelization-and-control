@@ -76,7 +76,7 @@ use_load_estimator = 0; %
 use_estimator_from_mb = 0; %mb model based
 use_motor_speed_control_mode = 0; 
 use_im_ekf = 1; % enable EKF for IM at time time_use_im_ekf
-time_use_im_ekf = 0.5;
+time_use_im_ekf = 0.25;
 
 use_dq_pll_fht_pll = 1; % 
 use_dq_pll_ddsfr_pll = 0; % 
