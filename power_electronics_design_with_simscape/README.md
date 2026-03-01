@@ -1,4 +1,4 @@
-# power electronics design with simscape
+# Power Electronics Design with Simscape
 
 This subfolder contains a collection of models and control applications concerning power electronics. Most of the projects use the library which must added to the path of matlab to be able to use these models.
 Each folder contains a power electronics project, in the following a description of each project;
@@ -13,7 +13,7 @@ Each folder contains a power electronics project, in the following a description
 - this repo is an application of **afe-inv-psm**;
 
 **afe-inv-psm**:
-- bidirectional electrical drive for permanent magnet synchrounous machine. The model contains a three phase AFE (active front end) a dclink braking unit, an inverter, and a permanent magnet synchronous motor;
+- bidirectional electrical drive for permanent magnet synchrounous machine. The model contains a three phase AFE (or grid tied follower) a dclink braking unit, an inverter, and a permanent magnet synchronous motor;
 - model contains:
   - current vector control implemented both in simulink as well as in C code using C-caller blocks;
   - psm (permanent magnet synchronous machine) back emf based observer in simulink and C code;
@@ -26,7 +26,8 @@ Each folder contains a power electronics project, in the following a description
       - INVERTER with MPC and EKF BEMF;
 
 **afe-inv-psm-cascade**:
-- this folder contains the most advanced concept in modelization of the whole repo. n-time domains are implemented, each time domain generates a trigger (TRGO) for sampling, control and pwm generation. In this modelization, effects of sliding pwm as well as clocks deviation can be fully analyzed. The model contains up to three systems in parallel, where each system is composed by a three phase active rectifier, an inverter and a permanent magnet synchronous generator. All physical blocks are developed with open source custom simscape code;
+- the model contains a cascade of **afe-inv** connected to a **psm**;
+- concerning time distribution control, this folder contains the most advanced concept in modelization of the whole repo; n-time domains are implemented, each time domain generates a trigger (TRGO) for sampling, control and pwm generation. In this modelization, effects of sliding pwm as well as clocks deviation can be fully analyzed. The model can run easily with a cascade of two, but can run also up to four before achieving a really **too slow** condition. Each system is composed by an  AFE (or grid tied follower) , a dclink brake, an inverter and a permanent magnet synchronous generator. All physical blocks are developed with open source custom simscape code;
 
 **afe-inv-threelevel-psm**:
 - same functionalities of **afe-inv-psm** project but implementing three level t-type inverters (for both afe and inverter);
@@ -61,7 +62,7 @@ In particular:
 - power flow via phase shift between the two primary legs;
 
 **distributed-ctrl**:
-- same functionalities of **afe-inv-psm** but a distributed control is implemented, basically remote sensors with two step sampling time of delay;
+- same functionalities of **afe-inv-psm** but a distributed control is implemented; basically remote sensors with two step sampling time of delay;
 - investigation on distributed control, effects of delayed feedback;
 
 **flyback-250V-500W**:
@@ -69,11 +70,6 @@ In particular:
 
 **flying-capacitor-single-phase-inverter**:
 - study of a flying capacitor single phase inverter from 4000Vdc to 230Vac - 500W; two orders of modelization: one fundamental and one with parassitic effects;
-
-**frt-dqpll**:
-- investigation of different DQ-PLL implementations;
-- FHT_dqPLL brand new PLL architecture;
-- really good behavior about FHT_dqPLL which is a variation of the SOGI_dqPLL;
 
 **grid-emulator**:
 - grid forming and grid emulator at 50Hz;
@@ -117,6 +113,9 @@ In particular:
 **sic-inverter-for-drone**:
 - design HW/SW of an inverter for drone application (20kW);
 
+**single phase dqPlls analysis**:
+- investigation of different single phase DQ-PLL implementations;
+  
 **single phase inverter**:
 - single phase inverter application with resonant pi, SOGI, active SOGI, and system identification;
 
@@ -129,6 +128,11 @@ In particular:
 **theory analysis resonant CLLC**:
 - two batteries connected among them by an CLLC. This model is intended for deep resonant-LLC analysis in term of modulation strategies and efficiency analysis. The model contains a detailed Mosfet model;
 
+**three phase dqPLLs analysis**:
+- investigation of different DQ-PLL implementations;
+- FHT_dqPLL brand new PLL architecture;
+- really good behavior about FHT_dqPLL as variation of the SOGI_dqPLL;
+ 
 **thyristor-based-models**:
 - twelve and six pulse rectifier;
 - bidirectional applications;
