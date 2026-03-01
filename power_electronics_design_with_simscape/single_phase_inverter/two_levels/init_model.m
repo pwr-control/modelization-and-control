@@ -217,14 +217,22 @@ b = psm.load_friction_m;
 % external_load_inertia = 6*psm.Jm_m;
 external_load_inertia = 1;
 
-%[text] ### **Motor Voltage to Udc Scaling**
+%[text] ### Motor Voltage to Udc Scaling
 u_psm_scale = 2/3*hwdata.inv.udc_nom/psm.ubez;
 u_im_scale = 2/3*hwdata.inv.udc_nom/im.ubez;
+
+u_psm_scale_ekf = sqrt(3)/2 * 2/3 * hwdata.inv.udc_nom/psm.ubez;
+u_im_scale_ekf = (2/3)^2 * hwdata.inv.udc_nom/im.ubez;
+%[text] ## 
 %[text] ## **CONTROL Settings and Initialization**
 psm_ctrl = ctrl_pmsm_setup(glb_time.ts_inv, psm.omega_bez, u_psm_scale, psm.Jm_norm);
-psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, glb_time.ts_inv);
+% psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, psm.Jm_norm, glb_time.ts_inv);
+psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, 1e6, glb_time.ts_inv);
 
 im_ctrl = ctrl_im_setup(glb_time.ts_inv, im.omega_bez, u_im_scale, im.Jm_norm);
+im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_norm, ...
+        im.mu_norm, im.Lm_norm, im.Jm_norm, glb_time.ts_inv);
+
 afe_ctrl = ctrl_afe_setup(glb_time.ts_afe, grid_emu.omega_grid_nom);
 
 kp_udc = 0.5;
