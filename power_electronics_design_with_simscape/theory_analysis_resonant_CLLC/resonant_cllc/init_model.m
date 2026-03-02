@@ -87,6 +87,14 @@ use_dq_pll_mode1 = use_dq_pll_mod1;
 use_dq_pll_mode2 = use_dq_pll_ccaller_mod1;
 use_dq_pll_mode3 = use_dq_pll_ddsfr_pll;
 use_dq_pll_mode4 = use_dq_pll_fht_pll;
+
+% single phase inverter
+rpi_enable = 0; % use RPI otherwise DQ PI
+system_identification_enable = 0;
+use_current_controller_from_ccaller_mod1 = 1;
+use_phase_shift_filter_from_ccaller_mod1 = 1;
+use_sogi_from_ccaller_mod1 = 1;
+
 %[text] ### Settings for CCcaller versus Simulink
 use_ekf_bemf_module_1 = 1;
 use_observer_from_simulink_module_1 = 0;
@@ -101,6 +109,19 @@ use_current_controller_from_ccaller_module_2 = 0;
 
 use_moving_average_from_ccaller_mod1 = 1;
 use_moving_average_from_ccaller_mod2 = 0;
+%[text] ### Single phase inverter control
+iph_grid_pu_ref_1 = 1/3;
+iph_grid_pu_ref_2 = 1/3.;
+iph_grid_pu_ref_3 = 1/3;
+time_step_ref_1 = 0.025;
+time_step_ref_2 = 0.5;
+time_step_ref_3 = 1;
+%[text] ### Setting global behavioural (system identification versus normal functioning) and operative frequency
+if system_identification_enable
+    frequency_set = 300;
+else
+    frequency_set = 50;
+end
 %[text] ### Settings average filters
 mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
 dmavg_filter_enable_time = 0.025;
@@ -170,7 +191,7 @@ white_noise_power_inv_pwm_phase_shift_mod2 = 0.0;
 %[text] ### FRT Settings
 test_index = 25; % type of fault: index
 test_subindex = 4; % type of fault: subindex
-enable_frt_1 = 1; % faults generated from abc
+enable_frt_1 = 0; % faults generated from abc
 enable_frt_2 = 0; % faults generated from xi_eta_pos and xi_eta_neg
 start_time_LVRT = 0.75;
 asymmetric_error_type = 1;
@@ -199,11 +220,19 @@ external_load_inertia = 1;
 %[text] ### Motor Voltage to Udc Scaling
 u_psm_scale = 2/3*hwdata.inv.udc_nom/psm.ubez;
 u_im_scale = 2/3*hwdata.inv.udc_nom/im.ubez;
+
+u_psm_scale_ekf = sqrt(3)/2 * 2/3 * hwdata.inv.udc_nom/psm.ubez;
+u_im_scale_ekf = (2/3)^2 * hwdata.inv.udc_nom/im.ubez;
+%[text] ## 
 %[text] ## **CONTROL Settings and Initialization**
 psm_ctrl = ctrl_pmsm_setup(glb_time.ts_inv, psm.omega_bez, u_psm_scale, psm.Jm_norm);
-psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, glb_time.ts_inv);
+% psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, psm.Jm_norm, glb_time.ts_inv);
+psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, 1e6, glb_time.ts_inv);
 
 im_ctrl = ctrl_im_setup(glb_time.ts_inv, im.omega_bez, u_im_scale, im.Jm_norm);
+im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_norm, ...
+        im.mu_norm, im.Lm_norm, im.Jm_norm, glb_time.ts_inv);
+
 afe_ctrl = ctrl_afe_setup(glb_time.ts_afe, grid_emu.omega_grid_nom);
 
 kp_udc = 0.5;
@@ -232,6 +261,42 @@ tau_load_sim = psm.tau_bez/5; %N*m
 b_square = 0;
 %[text] ### Settings Global Filters
 filters = setup_global_filters(glb_time.ts_afe, glb_time.ts_inv, glb_time.ts_dab, glb_time.tc);
+
+%[text] ### Sogi
+sogi_delta = 0.05;
+omega_set = 2*pi*frequency_set;
+sogi = sogi_filter(omega_set, sogi_delta, glb_time.ts_afe);
+
+% gain for active sogi
+kepsilon = 2;
+%[text] #### Resonant PI
+kp_rpi = 0.25;
+ki_rpi = 45;
+delta_rpi = 0.05;
+res_nom = s/(s^2 + 2*delta_rpi*omega_set*s + (omega_set)^2);
+
+Ares_nom = [0 1; -omega_set^2 -2*delta_rpi*omega_set]
+Aresd_nom = eye(2) + Ares_nom*glb_time.ts_inv
+a11d = 1
+a12d = glb_time.ts_inv
+a21d = -omega_set^2*glb_time.ts_inv
+a22d = 1 -2*delta_rpi*omega_set*glb_time.ts_inv
+
+Bres = [0; 1];
+Cres = [0 1];
+Bresd = Bres*glb_time.ts_inv;
+Cresd = Cres;
+%[text] ### Current control parameters DQ PI
+kp_inv = 0.5;
+ki_inv = 45;
+pi_ctrl = kp_inv + ki_inv/s;
+pid_ctrl = c2d(pi_ctrl, glb_time.ts_inv);
+plant = 1/(s*grid_emu.trafo.Ld1 + 1);
+plantd = c2d(plant, glb_time.ts_inv);
+
+G = sogi.fltd.alpha * pid_ctrl * plantd;
+figure; margin(G, options); 
+grid on
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] ### Diode rectifier
 Vf_diode_rectifier = 0.35;
@@ -276,6 +341,29 @@ nominal_battery_power = 250e3;
 initial_battery_soc = 0.85;
 lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
 lithium_ion_battery_2 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
+%[text] ### Load
+
+trafo_load_name = 'Load Single Phase Transformer';
+trafo_load_pwr_nom = 225e3;
+trafo_load_u1_nom = 400;
+trafo_load_n1 = 50;
+trafo_load_n2 = 1;
+trafo_load_u2_nom = trafo_load_u1_nom/trafo_load_n1*trafo_load_n2;
+trafo_load_f_nom = 50;
+trafo_load_eta = 98;
+trafo_load_ucc = 5;
+trafo_load_i1m = 10;
+trafo_load_p_iron = 2e3;
+output_transformer = single_phase_transformer_setup(trafo_load_name, trafo_load_pwr_nom, trafo_load_u1_nom, ...
+    trafo_load_u2_nom, trafo_load_n1, trafo_load_n2, trafo_load_f_nom, trafo_load_eta, trafo_load_ucc, ...
+    trafo_load_i1m, trafo_load_p_iron);
+
+uload = 2;
+rload = uload / output_transformer.i2_nom;
+lload = 250e-6 / output_transformer.n12^2;
+
+% rload = 0.86/m12_load_trafo^2;
+% lload = 3e-3/m12_load_trafo^2;
 %[text] ### C-Caller Settings
 open_system(model);
 % Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
