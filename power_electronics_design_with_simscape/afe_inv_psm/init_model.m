@@ -109,6 +109,12 @@ use_current_controller_from_ccaller_module_2 = 0;
 
 use_moving_average_from_ccaller_mod1 = 1;
 use_moving_average_from_ccaller_mod2 = 0;
+
+use_single_phase_inverter_based_FHT = 0;
+use_single_phase_inverter_based_SOGI = 0;
+use_single_phase_inverter_based_PHSH = 0;
+use_single_phase_inverter_based_SOGI_ccaller = 1;
+use_single_phase_inverter_based_PHSH_ccaller = 0;
 %[text] ### Single phase inverter control
 iph_grid_pu_ref_1 = 1/3;
 iph_grid_pu_ref_2 = 1/3.;
@@ -349,7 +355,7 @@ trafo_load_u1_nom = 400;
 trafo_load_n1 = 50;
 trafo_load_n2 = 1;
 trafo_load_u2_nom = trafo_load_u1_nom/trafo_load_n1*trafo_load_n2;
-trafo_load_f_nom = 50;
+trafo_load_f_nom = frequency_set;
 trafo_load_eta = 98;
 trafo_load_ucc = 5;
 trafo_load_i1m = 10;
