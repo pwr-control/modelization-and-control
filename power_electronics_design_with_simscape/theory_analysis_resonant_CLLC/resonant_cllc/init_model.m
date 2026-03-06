@@ -339,8 +339,8 @@ time_aux_power_supply_fault = 1e3;
 nominal_battery_voltage = grid_emu.udc_nom;
 nominal_battery_power = 250e3;
 initial_battery_soc = 0.85;
-lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_dab); %[output:308b735d]
-lithium_ion_battery_2 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_dab); %[output:3ae562e1]
+lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_cllc); %[output:308b735d]
+lithium_ion_battery_2 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_cllc); %[output:3ae562e1]
 %[text] ### Load
 
 trafo_load_name = 'Load Single Phase Transformer';
