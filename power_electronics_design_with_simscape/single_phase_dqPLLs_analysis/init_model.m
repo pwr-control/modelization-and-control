@@ -131,15 +131,39 @@ dmavg_filter_enable_time = 0.025;
 %[text] ### Grid Emulator Settings
 grid_nominal_power = 1600e3;
 application_voltage = 690;
-% trafo data
-us1 = 690; us2 = 690; fgrid = 50;
-eta = 95; ucc = 5.6;
-i1m = 5; p_iron = 1200;
+
+if application_voltage == 690
+    % trafo data
+    us1 = 690; us2 = 690; fgrid = 50;
+    eta = 95; ucc = 6;
+    p_iron = 1800;
+elseif application_voltage == 480
+    % trafo data
+    us1 = 480; us2 = 480; fgrid = 60;
+    eta = 95; ucc = 4.5;
+    p_iron = 1400;
+else
+    % trafo data
+    us1 = 400; us2 = 400; fgrid = 50;
+    eta = 95; ucc = 4.5;
+    p_iron = 1000;
+end
+
+n2 = 14; n1 = floor(n2*sqrt(3));
+core_area = 0.05; core_length = 2.5;
+mu0 = 4*pi*1e-7; mur = 10e3;
+
+% two simple calculation:
+Lm1 = (n1^2 * mu0 * mur * core_area) / core_length;
+% Lm1 = u1_nom/sqrt(3)/i1m/(2*pi*fgrid);
+i1m = us1/sqrt(3)/Lm1/(2*pi*fgrid);
+
 % rererence for the voltage sequence
 up_xi_pu_ref = 1; up_eta_pu_ref = 0; un_xi_pu_ref = 0; un_eta_pu_ref = 0;
 
-grid_emu = grid_three_phase_emulator('wind_grid', grid_nominal_power, application_voltage, us1, us2, fgrid, ...
-                eta, ucc, i1m, p_iron, up_xi_pu_ref, up_eta_pu_ref, un_xi_pu_ref, un_eta_pu_ref);
+grid_emu = grid_three_phase_emulator('Dyn11-690V-690V-1600kW', grid_nominal_power, application_voltage, us1, us2, fgrid, ...
+                eta, ucc, i1m, p_iron, n1, n2, core_area, core_length, mur, ...
+                up_xi_pu_ref, up_eta_pu_ref, un_xi_pu_ref, un_eta_pu_ref);
 %%
 %[text] ## Global Hardware Settings
 single_phase_inverter_pwr_nom = 225e3;
