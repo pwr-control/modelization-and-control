@@ -100,6 +100,9 @@ use_current_controller_from_ccaller_mod1 = 1;
 use_phase_shift_filter_from_ccaller_mod1 = 1;
 use_sogi_from_ccaller_mod1 = 1;
 
+% two afe in parallel connected to a dc microgrid
+ixi_ref_mod1 = 0.75;
+ixi_ref_mod2 = 0.75;
 %[text] ### Settings for CCcaller versus Simulink
 use_ekf_bemf_module_1 = 1;
 use_ekf_bemf_module_2 = 1;
