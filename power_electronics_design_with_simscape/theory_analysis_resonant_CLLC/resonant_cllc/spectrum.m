@@ -15,7 +15,7 @@ grid on
 
 sig_fft=segnale;
 Nfft=length(sig_fft)
-u1=Nfft*Tc
+u1 = Nfft*Tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
