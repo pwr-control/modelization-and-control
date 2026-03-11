@@ -103,6 +103,8 @@ use_sogi_from_ccaller_mod1 = 1;
 % two afe in parallel connected to a dc microgrid
 ixi_ref_mod1 = 0.75;
 ixi_ref_mod2 = 0.75;
+u_cm_comp_mod1 = 1;
+u_cm_comp_mod2 = 0 %[output:005b850f]
 %[text] ### Settings for CCcaller versus Simulink
 use_ekf_bemf_module_1 = 1;
 use_ekf_bemf_module_2 = 1;
@@ -468,6 +470,9 @@ end
 %---
 %[metadata:view]
 %   data: {"layout":"onright","rightPanelPercent":33.5}
+%---
+%[output:005b850f]
+%   data: {"dataType":"textualVariable","outputData":{"name":"u_cm_comp_mod2","value":"     0"}}
 %---
 %[output:29ac8602]
 %   data: {"dataType":"text","outputData":{"text":"Device AFE_THREE_PHASE: afe690V_250kW\nNominal Voltage: 690 V | Nominal Current: 270 A\nCurrent Normalization Data: 381.84 A\nVoltage Normalization Data: 563.38 V\n---------------------------\n","truncated":false}}
