@@ -2,7 +2,7 @@ close all
 clc
 
 clear all
-load sim_results_50Hz_10kHz_1;
+load sim_results_50Hz_10kHz_2;
 
 tratto1=1;
 tratto2=2;
@@ -12,29 +12,29 @@ colore2b = [0.35 0.35 0.35];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 
-N1c = floor(Nc/50/(frequency_set/f_grid));
-N2c = floor(Nc);
-t1c = time_tc_sim(N2c) - N1c*tc*decimation_tc;
+N1c = floor(glb_time.Nc/50/(frequency_set/grid_emu.fgrid_nom));
+N2c = floor(glb_time.Nc);
+t1c = time_tc_sim(N2c) - N1c*glb_time.tc*glb_time.decimation_tc;
 t2c = time_tc_sim(N2c);
 
-N3c = floor(Nc/1000/(frequency_set/f_grid));
-N4c = floor(Nc);
-t3c = time_tc_sim(N4c) - N3c*tc*decimation_tc;
+N3c = floor(glb_time.Nc/1000/(frequency_set/grid_emu.fgrid_nom));
+N4c = floor(glb_time.Nc);
+t3c = time_tc_sim(N4c) - N3c*glb_time.tc*glb_time.decimation_tc;
 t4c = time_tc_sim(N4c);
 
-N1s = floor(Nc/10/(frequency_set/f_grid));
-N2s = floor(Nc);
-t1s = time_tc_sim(N2s) - N1s*tc*decimation_tc;
+N1s = floor(glb_time.Nc/10/(frequency_set/grid_emu.fgrid_nom));
+N2s = floor(glb_time.Nc);
+t1s = time_tc_sim(N2s) - N1s*glb_time.tc*glb_time.decimation_tc;
 t2s = time_tc_sim(N2s);
 
-N3s = floor(Nc/10);
-N4s = floor(Nc);
-t3s = time_tc_sim(N4s) - N3s*tc*decimation_tc;
+N3s = floor(glb_time.Nc/10);
+N4s = floor(glb_time.Nc);
+t3s = time_tc_sim(N4s) - N3s*glb_time.tc*glb_time.decimation_tc;
 t4s = time_tc_sim(N4s);
 
-N5s = floor(Nc/40);
-N6s = floor(Nc);
-t5s = time_tc_sim(N6s) - N5s*tc*decimation_tc;
+N5s = floor(glb_time.Nc/10);
+N6s = floor(glb_time.Nc);
+t5s = time_tc_sim(N6s) - N5s*glb_time.tc*glb_time.decimation_tc;
 t6s = time_tc_sim(N6s);
 
 fontsize_plotting = 14;
@@ -581,15 +581,14 @@ set(h,'PaperPosition', [0 0 1 1]);
 print('inverter_current_control_2','-depsc');
 movefile('inverter_current_control_2.eps', 'figures/sim_results_50Hz_10kHz_1');
 
-%% spectrum phase grid R
-N1=Nc-floor(200e-3/(tc*decimation_tc));
-N2=Nc;
+N1 = glb_time.Nc - floor(200e-3/glb_time.tc/glb_time.decimation_tc);
+N2 = glb_time.Nc;
 signal = ig_abc_sim(N1:N2,1);
 time = time_tc_sim(N1:N2);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc*decimation_tc;
+u1 = Nfft*glb_time.tc*glb_time.decimation_tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -617,12 +616,12 @@ title('Grid Phase R Current Spectrum')
 print('spectrum_grid_current_r','-depsc');
 movefile('spectrum_grid_current_r.eps', 'figures/sim_results_50Hz_10kHz_1');
 
-%% spectrum phase grid S
+
 signal = ig_abc_sim(N1:N2,2);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc*decimation_tc;
+u1 = Nfft*glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -650,12 +649,11 @@ title('Grid Phase S Current Spectrum')
 print('spectrum_grid_current_s','-depsc');
 movefile('spectrum_grid_current_s.eps', 'figures/sim_results_50Hz_10kHz_1');
 
-%% spectrum phase grid T
 signal = ig_abc_sim(N1:N2,3);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc*decimation_tc;
+u1 = Nfft*glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -682,3 +680,45 @@ legend('$F(i_{s}^{g})$','Location','northwestoutside',...
 title('Grid Phase T Current Spectrum')
 print('spectrum_grid_current_t','-depsc');
 movefile('spectrum_grid_current_t.eps', 'figures/sim_results_50Hz_10kHz_1');
+
+signal = inverter_current_output_sim(N1:N2);
+
+sig_fft = signal;
+Nfft = length(sig_fft)-1;
+u1 = Nfft*glb_time.tc;
+f_sig=fft(sig_fft,Nfft);
+Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
+freq=[0:1/u1:Nfft/2/u1-1/u1]';
+
+figure; 
+subplot 311
+plot(time,signal,'-','LineWidth',tratto2,'Color',colore1);
+title('Output Inverter Current')
+ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
+legend('$i_{load}$','Location','northwestoutside',...
+    'Interpreter','latex','FontSize',fontsize_plotting);
+xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
+legend
+set(gca,'xlim',[time(1) time(end)]);
+grid on
+subplot 312
+plot(freq,abs(Xrange),'-','LineWidth',tratto2,'Color',colore1);
+xlim([90 1e3]);
+grid;
+xlabel('$f/Hz$','Interpreter','latex','FontSize', fontsize_plotting);
+ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
+legend('$F(i_{load})$','Location','northwestoutside',...
+    'Interpreter','latex','FontSize',fontsize_plotting);
+title('Output Inverter Current Spectrum')
+subplot 313
+plot(freq,abs(Xrange),'-','LineWidth',tratto2,'Color',colore1);
+xlim([1e3 50e3]);
+grid;
+xlabel('$f/Hz$','Interpreter','latex','FontSize', fontsize_plotting);
+ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
+legend('$F(i_{load})$','Location','northwestoutside',...
+    'Interpreter','latex','FontSize',fontsize_plotting);
+title('Output Inverter Current Spectrum')
+print('spectrum_output_inverter_current','-depsc');
+movefile('spectrum_output_inverter_current.eps', 'figures/sim_results_50Hz_10kHz_1');
+
