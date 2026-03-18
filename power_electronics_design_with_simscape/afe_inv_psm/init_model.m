@@ -77,12 +77,14 @@ use_load_estimator = 0; %
 use_estimator_from_mb = 0; %mb model based
 use_motor_speed_control_mode = 0; 
 
+% advanced dqPLL
 use_dq_pll_fht_pll = 1; % 
 use_dq_pll_ddsfr_pll = 0; % 
 use_dq_pll_mod1 = 0; % 
 use_dq_pll_ccaller_mod1 = 0; % 
 use_dq_pll_ccaller_mod2 = 0; % 
 
+% dqPLL
 use_dq_pll_mode1 = use_dq_pll_mod1;
 use_dq_pll_mode2 = use_dq_pll_ccaller_mod1;
 use_dq_pll_mode3 = use_dq_pll_ddsfr_pll;
@@ -121,6 +123,14 @@ use_single_phase_inverter_based_SOGI = 0;
 use_single_phase_inverter_based_PHSH = 0;
 use_single_phase_inverter_based_SOGI_ccaller = 1;
 use_single_phase_inverter_based_PHSH_ccaller = 0;
+
+use_system_identification_based_FHT = 0;
+use_system_identification_based_SOGI = 0;
+use_system_identification_based_PHSH = 0;
+use_system_identification_based_SOGI_ccaller = 0;
+use_system_identification_based_PHSH_ccaller = 1;
+
+
 %[text] ### Single phase inverter control
 iph_grid_pu_ref_1 = 1/3;
 iph_grid_pu_ref_2 = 1/3.;
@@ -134,6 +144,7 @@ if system_identification_enable
 else
     frequency_set = 50;
 end
+omega_set = frequency_set*2*pi;
 %[text] ### Settings average filters
 mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
 dmavg_filter_enable_time = 0.025;
@@ -261,6 +272,7 @@ u_psm_scale_ekf = sqrt(3)/2 * 2/3 * hwdata.inv.udc_nom/psm.ubez;
 u_im_scale_ekf = (2/3)^2 * hwdata.inv.udc_nom/im.ubez;
 %[text] ## 
 %[text] ## **CONTROL Settings and Initialization**
+%[text] #### Permanent magnet synchronous motor control with EKF based observer
 psm_ctrl = ctrl_pmsm_setup(glb_time.ts_inv, psm.omega_bez, u_psm_scale, psm.Jm_norm);
 % psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, psm.Jm_norm, glb_time.ts_inv);
 psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, 1e6, glb_time.ts_inv);
@@ -271,16 +283,55 @@ im_ctrl = ctrl_im_setup(glb_time.ts_inv, im.omega_bez, u_im_scale, im.Jm_norm);
 im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_norm, ...
         im.mu_norm, im.Lm_norm, im.Jm_norm, glb_time.ts_inv);
 
+%[text] #### AFE control (sequences)
 afe_ctrl = ctrl_afe_setup(glb_time.ts_afe, grid_emu.omega_grid_nom);
 
 kp_udc = 0.5;
 ki_udc = 18.0;
 kp_idc = 0.5;
 ki_idc = 18.0;
+%[text] #### DCDC control
 
 dab_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 cllc_ctrl = ctrl_cllc_setup(kp_udc, ki_udc, kp_idc, ki_idc);
+%[text] #### Resonant PI settings
+kp_rpi = 0.75;
+ki_rpi = 45;
+delta_rpi = 0.025;
+% % res_nom = s/(s^2 + 2*delta_rpi*omega_set*s + (omega_set)^2);
+% % 
+% % Ares_nom = [0 1; -omega_set^2 -2*delta_rpi*omega_set]
+% % Aresd_nom = eye(2) + Ares_nom*glb_time.ts_inv
+% % a11d = 1
+% % a12d = glb_time.ts_inv
+% % a21d = -omega_set^2*glb_time.ts_inv
+% % a22d = 1 -2*delta_rpi*omega_set*glb_time.ts_inv
+% % 
+% % Bres = [0; 1];
+% % Cres = [0 1];
+% % Bresd = Bres*glb_time.ts_inv;
+% % Cresd = Cres;
+%[text] #### Sogi
+sogi_delta = 1;
+sogi = sogi_filter(omega_set, sogi_delta, glb_time.ts_afe);
 
+% gain for active sogi
+kepsilon = 2;
+%[text] #### Current control parameters DQ PI
+kp_inv = 0.5;
+ki_inv = 45;
+pi_ctrl = kp_inv + ki_inv/s;
+pid_ctrl = c2d(pi_ctrl, glb_time.ts_inv);
+plant = 1/(s*grid_emu.trafo.Ld1 + 1);
+plantd = c2d(plant, glb_time.ts_inv);
+
+G = sogi.fltd.alpha * pid_ctrl * plantd;
+figure; margin(G, options); 
+grid on
+%[text] #### Single phase inverter - with resonant PI and virtual DQ
+single_phase_inverter_ctrl = ctrl_single_phase_inverter_setup(glb_time.ts_inv, omega_set, kp_inv, ki_inv, kp_rpi, ki_rpi, delta_rpi);
+
+%[text] #### 
 %[text] ### Local time allignment to master time
 kp_align = 0.6;
 ki_align = 0.1;
@@ -300,41 +351,7 @@ b_square = 0;
 %[text] ### Settings Global Filters
 filters = setup_global_filters(glb_time.ts_afe, glb_time.ts_inv, glb_time.ts_dab, glb_time.tc);
 
-%[text] ### Sogi
-sogi_delta = 0.05;
-omega_set = 2*pi*frequency_set;
-sogi = sogi_filter(omega_set, sogi_delta, glb_time.ts_afe);
 
-% gain for active sogi
-kepsilon = 2;
-%[text] #### Resonant PI
-kp_rpi = 0.25;
-ki_rpi = 45;
-delta_rpi = 0.05;
-res_nom = s/(s^2 + 2*delta_rpi*omega_set*s + (omega_set)^2);
-
-Ares_nom = [0 1; -omega_set^2 -2*delta_rpi*omega_set]
-Aresd_nom = eye(2) + Ares_nom*glb_time.ts_inv
-a11d = 1
-a12d = glb_time.ts_inv
-a21d = -omega_set^2*glb_time.ts_inv
-a22d = 1 -2*delta_rpi*omega_set*glb_time.ts_inv
-
-Bres = [0; 1];
-Cres = [0 1];
-Bresd = Bres*glb_time.ts_inv;
-Cresd = Cres;
-%[text] ### Current control parameters DQ PI
-kp_inv = 0.5;
-ki_inv = 45;
-pi_ctrl = kp_inv + ki_inv/s;
-pid_ctrl = c2d(pi_ctrl, glb_time.ts_inv);
-plant = 1/(s*grid_emu.trafo.Ld1 + 1);
-plantd = c2d(plant, glb_time.ts_inv);
-
-G = sogi.fltd.alpha * pid_ctrl * plantd;
-figure; margin(G, options); 
-grid on
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] ### Diode rectifier
 Vf_diode_rectifier = 0.35;
@@ -387,7 +404,8 @@ trafo_load_u1_nom = 400;
 trafo_load_n1 = 50;
 trafo_load_n2 = 1;
 trafo_load_u2_nom = trafo_load_u1_nom/trafo_load_n1*trafo_load_n2;
-trafo_load_f_nom = 50;
+% trafo_load_f_nom = 50;
+trafo_load_f_nom = frequency_set;
 trafo_load_eta = 98;
 trafo_load_ucc = 5;
 trafo_load_i1m = 10;

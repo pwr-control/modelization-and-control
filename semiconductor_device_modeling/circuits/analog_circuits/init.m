@@ -29,3 +29,11 @@ Hf1 = 1/(s*R2*C + 1);
 Hf2 = R2/(s*R1*R2*C + R1 + R2);
 figure; bode(Hf1,options); grid on
 figure; bode(Hf2,options); grid on
+
+%% comparison for udc
+
+tc = ts;
+kv = 3/1450;
+udc_lim = 600*kv;
+udc_1 = 500*kv;
+udc_2 = 750*kv;
