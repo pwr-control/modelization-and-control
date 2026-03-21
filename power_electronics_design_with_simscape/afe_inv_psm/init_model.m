@@ -295,22 +295,23 @@ ki_idc = 18.0;
 dab_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 cllc_ctrl = ctrl_cllc_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 %[text] #### Resonant PI settings
-kp_rpi = 0.75;
-ki_rpi = 45;
-delta_rpi = 0.025;
-% % res_nom = s/(s^2 + 2*delta_rpi*omega_set*s + (omega_set)^2);
-% % 
-% % Ares_nom = [0 1; -omega_set^2 -2*delta_rpi*omega_set]
-% % Aresd_nom = eye(2) + Ares_nom*glb_time.ts_inv
-% % a11d = 1
-% % a12d = glb_time.ts_inv
-% % a21d = -omega_set^2*glb_time.ts_inv
-% % a22d = 1 -2*delta_rpi*omega_set*glb_time.ts_inv
-% % 
-% % Bres = [0; 1];
-% % Cres = [0 1];
-% % Bresd = Bres*glb_time.ts_inv;
-% % Cresd = Cres;
+pres_ctrl.kp_rpi = 0.75;
+pres_ctrl.ki_rpi = 45;
+pres_ctrl.delta_rpi = 0.025;
+pres_ctrl.omega_set = omega_set;
+pres_ctrl.res_nom = s/(s^2 + 2*pres_ctrl.delta_rpi*pres_ctrl.omega_set*s + (pres_ctrl.omega_set)^2);
+
+pres_ctrl.Ares_nom = [0 1; -omega_set^2 -2*pres_ctrl.delta_rpi*pres_ctrl.omega_set]
+pres_ctrl.Aresd_nom = eye(2) + pres_ctrl.Ares_nom*glb_time.ts_inv
+pres_ctrl.a11d = 1
+pres_ctrl.a12d = glb_time.ts_inv
+pres_ctrl.a21d = -pres_ctrl.omega_set^2*glb_time.ts_inv
+apres_ctrl.a22d = 1 -2*pres_ctrl.delta_rpi*pres_ctrl.omega_set*glb_time.ts_inv
+
+pres_ctrl.Bres = [0; 1];
+pres_ctrl.Cres = [0 1];
+pres_ctrl.Bresd = pres_ctrl.Bres*glb_time.ts_inv;
+pres_ctrl.Cresd = pres_ctrl.Cres;
 %[text] #### Sogi
 sogi_delta = 1;
 sogi = sogi_filter(omega_set, sogi_delta, glb_time.ts_afe);
@@ -318,19 +319,19 @@ sogi = sogi_filter(omega_set, sogi_delta, glb_time.ts_afe);
 % gain for active sogi
 kepsilon = 2;
 %[text] #### Current control parameters DQ PI
-kp_inv = 0.5;
-ki_inv = 45;
-pi_ctrl = kp_inv + ki_inv/s;
-pid_ctrl = c2d(pi_ctrl, glb_time.ts_inv);
-plant = 1/(s*grid_emu.trafo.Ld1 + 1);
-plantd = c2d(plant, glb_time.ts_inv);
+dqvector_pi.kp_inv = 0.5;
+dqvector_pi.ki_inv = 45;
+dqvector_pi.pi_ctrl = dqvector_pi.kp_inv + dqvector_pi.ki_inv/s;
+dqvector_pi.pid_ctrl = c2d(dqvector_pi.pi_ctrl, glb_time.ts_inv);
+dqvector_pi.plant = 1/(s*grid_emu.trafo.Ld1 + 1);
+dqvector_pi.plantd = c2d(dqvector_pi.plant, glb_time.ts_inv);
 
-G = sogi.fltd.alpha * pid_ctrl * plantd;
+G = sogi.fltd.alpha * dqvector_pi.pid_ctrl * dqvector_pi.plantd;
 figure; margin(G, options); 
 grid on
 %[text] #### Single phase inverter - with resonant PI and virtual DQ
-single_phase_inverter_ctrl = ctrl_single_phase_inverter_setup(glb_time.ts_inv, omega_set, kp_inv, ki_inv, kp_rpi, ki_rpi, delta_rpi);
-
+single_phase_inverter_ctrl = ctrl_single_phase_inverter_setup(glb_time.ts_inv, pres_ctrl.omega_set, ...
+    dqvector_pi.kp_inv, dqvector_pi.ki_inv, pres_ctrl.kp_rpi, pres_ctrl.ki_rpi, pres_ctrl.delta_rpi);
 %[text] #### 
 %[text] ### Local time allignment to master time
 kp_align = 0.6;
@@ -438,7 +439,7 @@ Simulink.importExternalCTypes(model,'Names',{'phase_shift_flt_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'sogi_flt_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_output_t'});
 
-%[text] ### Remove Scopes Opening Automatically
+%[text] ### **Remove Scopes Opening Automatically**
 open_scopes = find_system(model, 'BlockType', 'Scope');
 for i = 1:length(open_scopes)
     set_param(open_scopes{i}, 'Open', 'off');
@@ -479,7 +480,4 @@ else
 end
 
 %[appendix]{"version":"1.0"}
-%---
-%[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":33.5}
 %---
