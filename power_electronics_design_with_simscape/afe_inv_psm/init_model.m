@@ -16,7 +16,8 @@ fpwm_dab = 3 * fpwm;
 trgo_dab = 0; % double update
 fpwm_cllc = 5 * fpwm;
 trgo_cllc = 0; % double update
-t_measure = 0.648228176318064;
+% t_measure = 0.648228176318064;
+t_measure = 0.2;
 tc_factor = 100; % tc is ts_afe / tc_factor
 tc_decimation = 1;
 delay_pwm = 0;
@@ -62,19 +63,20 @@ else
 end
 load_step_time = 1.25;
 transmission_delay = 125e-6*2;
+sst_num_of_modules = 2;
 
 %[text] ### 
 %[text] ### Enable one/two modules
 number_of_modules = 1;
 enable_two_modules = number_of_modules;
-%[text] ### Settings for speed control or wind application
-use_torque_curve = 1; % for wind application
+%[text] ### Control Mode Settings
+use_torque_curve = 1; 
 use_speed_control = 1-use_torque_curve; %
 use_mtpa = 1; %
 use_psm_encoder = 0; % 
 use_im_encoder = 1; % 
 use_load_estimator = 0; %
-use_estimator_from_mb = 0; %mb model based
+use_estimator_from_mb = 0; % mb model based
 use_motor_speed_control_mode = 0; 
 
 % advanced dqPLL
@@ -278,7 +280,7 @@ psm_ctrl = ctrl_pmsm_setup(glb_time.ts_inv, psm.omega_bez, u_psm_scale, psm.Jm_n
 psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, 1e6, glb_time.ts_inv);
 psm_ctrl.kp_i = 0.25;
 psm_ctrl.ki_i = 35;
-
+%[text] #### Induction Motor Control
 im_ctrl = ctrl_im_setup(glb_time.ts_inv, im.omega_bez, u_im_scale, im.Jm_norm);
 im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_norm, ...
         im.mu_norm, im.Lm_norm, im.Jm_norm, glb_time.ts_inv);
@@ -290,8 +292,7 @@ kp_udc = 0.5;
 ki_udc = 18.0;
 kp_idc = 0.5;
 ki_idc = 18.0;
-%[text] #### DCDC control
-
+%[text] #### DCDC Control
 dab_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 cllc_ctrl = ctrl_cllc_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 %[text] #### Resonant PI settings
@@ -301,12 +302,12 @@ pres_ctrl.delta_rpi = 0.025;
 pres_ctrl.omega_set = omega_set;
 pres_ctrl.res_nom = s/(s^2 + 2*pres_ctrl.delta_rpi*pres_ctrl.omega_set*s + (pres_ctrl.omega_set)^2);
 
-pres_ctrl.Ares_nom = [0 1; -omega_set^2 -2*pres_ctrl.delta_rpi*pres_ctrl.omega_set]
-pres_ctrl.Aresd_nom = eye(2) + pres_ctrl.Ares_nom*glb_time.ts_inv
-pres_ctrl.a11d = 1
-pres_ctrl.a12d = glb_time.ts_inv
-pres_ctrl.a21d = -pres_ctrl.omega_set^2*glb_time.ts_inv
-apres_ctrl.a22d = 1 -2*pres_ctrl.delta_rpi*pres_ctrl.omega_set*glb_time.ts_inv
+pres_ctrl.Ares_nom = [0 1; -omega_set^2 -2*pres_ctrl.delta_rpi*pres_ctrl.omega_set];
+pres_ctrl.Aresd_nom = eye(2) + pres_ctrl.Ares_nom*glb_time.ts_inv;
+pres_ctrl.a11d = 1;
+pres_ctrl.a12d = glb_time.ts_inv;
+pres_ctrl.a21d = -pres_ctrl.omega_set^2*glb_time.ts_inv;
+apres_ctrl.a22d = 1 -2*pres_ctrl.delta_rpi*pres_ctrl.omega_set*glb_time.ts_inv;
 
 pres_ctrl.Bres = [0; 1];
 pres_ctrl.Cres = [0 1];
@@ -390,13 +391,16 @@ ideal_switch.cllc = device_ideal_switch_setting(used_device, glb_time.fPWM_CLLC,
 %[text] ### Setting Global Faults
 time_aux_power_supply_fault = 1e3;
 %[text] ### Lithium Ion Battery
+% nominal_battery_voltage_1 = hwdata.cllc.udc1_bez;
+% nominal_battery_voltage_1 = hwdata.dab.udc1_bez;
+% nominal_battery_voltage_2 = hwdata.cllc.udc2_bez;
+% nominal_battery_voltage_2 = hwdata.dab.udc2_bez;
 nominal_battery_voltage = grid_emu.udc_nom;
 nominal_battery_power = 250e3;
 initial_battery_soc = 0.85;
 lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
 lithium_ion_battery_2 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
 %[text] ### Load
-
 trafo_load_name = 'Load Single Phase Transformer';
 trafo_load_pwr_nom = 225e3;
 trafo_load_u1_nom = 400;
@@ -478,4 +482,7 @@ else
 end
 
 %[appendix]{"version":"1.0"}
+%---
+%[metadata:view]
+%   data: {"layout":"onright"}
 %---

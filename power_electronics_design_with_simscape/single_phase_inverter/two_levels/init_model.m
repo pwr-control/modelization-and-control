@@ -16,7 +16,8 @@ fpwm_dab = fpwm;
 trgo_dab = 0; % double update
 fpwm_cllc = 2*fpwm;
 trgo_cllc = 0; % double update
-t_measure = simlength;
+% t_measure = 0.648228176318064;
+t_measure = 0.2;
 tc_factor = 200; % tc is ts_afe / tc_factor
 tc_decimation = 1;
 delay_pwm = 0;
@@ -62,6 +63,7 @@ else
 end
 load_step_time = 1.25;
 transmission_delay = 125e-6*2;
+sst_num_of_modules = 2;
 
 %[text] ### 
 %[text] ### Enable one/two modules
@@ -294,41 +296,41 @@ ki_idc = 18.0;
 dab_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 cllc_ctrl = ctrl_cllc_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 %[text] #### Resonant PI settings
-kp_rpi = 0.75;
-ki_rpi = 45;
-delta_rpi = 0.025;
-% % res_nom = s/(s^2 + 2*delta_rpi*omega_set*s + (omega_set)^2);
-% % 
-% % Ares_nom = [0 1; -omega_set^2 -2*delta_rpi*omega_set]
-% % Aresd_nom = eye(2) + Ares_nom*glb_time.ts_inv
-% % a11d = 1
-% % a12d = glb_time.ts_inv
-% % a21d = -omega_set^2*glb_time.ts_inv
-% % a22d = 1 -2*delta_rpi*omega_set*glb_time.ts_inv
-% % 
-% % Bres = [0; 1];
-% % Cres = [0 1];
-% % Bresd = Bres*glb_time.ts_inv;
-% % Cresd = Cres;
+pres_ctrl.kp_rpi = 0.75;
+pres_ctrl.ki_rpi = 45;
+pres_ctrl.delta_rpi = 0.025;
+pres_ctrl.omega_set = omega_set;
+pres_ctrl.res_nom = s/(s^2 + 2*pres_ctrl.delta_rpi*pres_ctrl.omega_set*s + (pres_ctrl.omega_set)^2);
+
+pres_ctrl.Ares_nom = [0 1; -omega_set^2 -2*pres_ctrl.delta_rpi*pres_ctrl.omega_set];
+pres_ctrl.Aresd_nom = eye(2) + pres_ctrl.Ares_nom*glb_time.ts_inv;
+pres_ctrl.a11d = 1;
+pres_ctrl.a12d = glb_time.ts_inv;
+pres_ctrl.a21d = -pres_ctrl.omega_set^2*glb_time.ts_inv;
+apres_ctrl.a22d = 1 -2*pres_ctrl.delta_rpi*pres_ctrl.omega_set*glb_time.ts_inv;
+
+pres_ctrl.Bres = [0; 1];
+pres_ctrl.Cres = [0 1];
+pres_ctrl.Bresd = pres_ctrl.Bres*glb_time.ts_inv;
+pres_ctrl.Cresd = pres_ctrl.Cres;
 %[text] #### Sogi
 sogi_delta = 1;
-sogi = sogi_filter(omega_set, sogi_delta, glb_time.ts_afe);
-
-% gain for active sogi
 kepsilon = 2;
+sogi = sogi_filter(omega_set, sogi_delta, kepsilon, glb_time.ts_afe);
 %[text] #### Current control parameters DQ PI
-kp_inv = 0.5;
-ki_inv = 45;
-pi_ctrl = kp_inv + ki_inv/s;
-pid_ctrl = c2d(pi_ctrl, glb_time.ts_inv);
-plant = 1/(s*grid_emu.trafo.Ld1 + 1);
-plantd = c2d(plant, glb_time.ts_inv);
+dqvector_pi.kp_inv = 0.5;
+dqvector_pi.ki_inv = 45;
+dqvector_pi.pi_ctrl = dqvector_pi.kp_inv + dqvector_pi.ki_inv/s;
+dqvector_pi.pid_ctrl = c2d(dqvector_pi.pi_ctrl, glb_time.ts_inv);
+dqvector_pi.plant = 1/(s*grid_emu.trafo.Ld1 + 1);
+dqvector_pi.plantd = c2d(dqvector_pi.plant, glb_time.ts_inv);
 
-G = sogi.fltd.alpha * pid_ctrl * plantd;
+G = sogi.fltd.alpha * dqvector_pi.pid_ctrl * dqvector_pi.plantd;
 figure; margin(G, options); 
 grid on
 %[text] #### Single phase inverter - with resonant PI and virtual DQ
-single_phase_inverter_ctrl = ctrl_single_phase_inverter_setup(glb_time.ts_inv, omega_set, kp_inv, ki_inv, kp_rpi, ki_rpi, delta_rpi);
+single_phase_inverter_ctrl = ctrl_single_phase_inverter_setup(glb_time.ts_inv, pres_ctrl.omega_set, ...
+    dqvector_pi.kp_inv, dqvector_pi.ki_inv, pres_ctrl.kp_rpi, pres_ctrl.ki_rpi, pres_ctrl.delta_rpi);
 %[text] #### 
 %[text] ### Local time allignment to master time
 kp_align = 0.6;
@@ -348,6 +350,8 @@ tau_load_sim = psm.tau_bez/5; %N*m
 b_square = 0;
 %[text] ### Settings Global Filters
 filters = setup_global_filters(glb_time.ts_afe, glb_time.ts_inv, glb_time.ts_dab, glb_time.tc);
+
+
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] ### Diode rectifier
 Vf_diode_rectifier = 0.35;
@@ -368,6 +372,7 @@ igbt.afe = device_igbt_setup(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_nom)
 igbt.dab = device_igbt_setup(used_device, glb_time.fPWM_DAB, hwdata.dab.udc1_nom);
 igbt.cllc = device_igbt_setup(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_nom);
 %[text] ### DEVICES settings (MOSFET)
+
 % wolfspeed_CAB760M12HM3
 % infineon_FF1000UXTR23T2M1;
 used_device = 'danfoss_SKM1700MB20R4S2I4';
@@ -386,6 +391,10 @@ ideal_switch.cllc = device_ideal_switch_setting(used_device, glb_time.fPWM_CLLC,
 %[text] ### Setting Global Faults
 time_aux_power_supply_fault = 1e3;
 %[text] ### Lithium Ion Battery
+% nominal_battery_voltage_1 = hwdata.cllc.udc1_bez;
+% nominal_battery_voltage_1 = hwdata.dab.udc1_bez;
+% nominal_battery_voltage_2 = hwdata.cllc.udc2_bez;
+% nominal_battery_voltage_2 = hwdata.dab.udc2_bez;
 nominal_battery_voltage = grid_emu.udc_nom;
 nominal_battery_power = 250e3;
 initial_battery_soc = 0.85;
