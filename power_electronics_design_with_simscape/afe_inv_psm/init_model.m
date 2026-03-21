@@ -314,10 +314,8 @@ pres_ctrl.Bresd = pres_ctrl.Bres*glb_time.ts_inv;
 pres_ctrl.Cresd = pres_ctrl.Cres;
 %[text] #### Sogi
 sogi_delta = 1;
-sogi = sogi_filter(omega_set, sogi_delta, glb_time.ts_afe);
-
-% gain for active sogi
 kepsilon = 2;
+sogi = sogi_filter(omega_set, sogi_delta, kepsilon, glb_time.ts_afe);
 %[text] #### Current control parameters DQ PI
 dqvector_pi.kp_inv = 0.5;
 dqvector_pi.ki_inv = 45;
