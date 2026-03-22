@@ -107,6 +107,14 @@ lpf = (wn^2/(s^2+2*wn*s+wn^2));
 lpf_ss = ss(A,B,C,D);
 lpf_ss_init = [0,50/lpf_ss.c(2)];
 
+ts = Tcontrol_rect;
+omega_base = w_grid;
+delta = 0.05;
+pole1 = omega_base;
+pole2 = 4*omega_base;
+
+harmonic_obs = harmonic_observer(ts, omega_base, delta, pole1, pole2);
+
 % %% 
 model = 'sptr';
 open_system(model);
