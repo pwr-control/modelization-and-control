@@ -104,6 +104,29 @@ use_current_controller_from_ccaller_mod1 = 1;
 use_phase_shift_filter_from_ccaller_mod1 = 1;
 use_sogi_from_ccaller_mod1 = 1;
 
+% two afe in parallel connected to a dc microgrid
+ixi_ref_mod1 = -0.85;
+ixi_ref_mod2 = -0.85;
+ixi_ref_mod3 = -0.85;
+en_parallel_mode = 1;
+if en_parallel_mode
+   u_cm_comp_mod1 = 0;
+   u_cm_comp_mod2 = -1;
+   u_cm_comp_mod3 = -1;
+   u_cm_comp_mod4 = -1;
+else
+    u_cm_comp_mod1 = 0;
+    u_cm_comp_mod2 = 0;
+    u_cm_comp_mod3 = 0;
+    u_cm_comp_mod4 = 0;
+end
+
+% reactive current references 
+time_i_react_pos_ref_1 = 0.45;
+time_i_react_pos_ref_2 = 0.9
+i_react_pos_ref_1 = 0;
+i_react_pos_ref_2 = 0.2;
+i_react_pos_ref_3 = -0.2;
 %[text] ### Settings for CCcaller versus Simulink
 use_ekf_bemf_module_1 = 1;
 use_ekf_bemf_module_2 = 1;
@@ -119,6 +142,8 @@ use_current_controller_from_ccaller_module_2 = 0;
 
 use_moving_average_from_ccaller_mod1 = 1;
 use_moving_average_from_ccaller_mod2 = 0;
+use_moving_average_from_ccaller_mod3 = 0;
+use_moving_average_from_ccaller_mod4 = 0;
 
 use_single_phase_inverter_based_FHT = 0;
 use_single_phase_inverter_based_SOGI = 0;
@@ -218,7 +243,10 @@ VoltageQuantization = Umax_adc/2^11;
 %[text] ### Behavioural Settings
 time_gain_afe_module_1 = 1.0;
 time_gain_inv_module_1 = 1.0;
+time_gain_afe_module_3 = 0.9988;
 time_gain_afe_module_2 = 1.0;
+
+time_gain_inv_module_1 = 1.0005;
 time_gain_inv_module_2 = 1.0;
 wnp = 0;
 white_noise_power_afe_mod1 = wnp;
@@ -238,6 +266,15 @@ white_noise_power_afe_pwm_phase_shift_mod2 = 0.0;
 inv_pwm_phase_shift_mod2 = 0;
 white_noise_power_inv_pwm_phase_shift_mod2 = 0.0;
 
+afe_pwm_phase_shift_mod3 = 0;
+white_noise_power_afe_pwm_phase_shift_mod3 = 0.0;
+inv_pwm_phase_shift_mod3 = 0;
+white_noise_power_inv_pwm_phase_shift_mod3 = 0.0;
+
+afe_pwm_phase_shift_mod4 = 0;
+white_noise_power_afe_pwm_phase_shift_mod4 = 0.0;
+inv_pwm_phase_shift_mod4 = 0;
+white_noise_power_inv_pwm_phase_shift_mod4 = 0.0;
 %[text] ### FRT Settings
 test_index = 25; % type of fault: index
 test_subindex = 4; % type of fault: subindex
