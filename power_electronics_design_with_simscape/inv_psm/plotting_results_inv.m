@@ -1,297 +1,183 @@
+clear
 close all
 clc
 
-tratto1=2.2;
-tratto2=2.2;
-tratto3=1;
-colore1 = [0.5 0.5 0.5];
-colore2 = [0.8 0.8 0.8];
-t1c = t_tc_sim(end) - Nc*tc;
-t2c = t_tc_sim(end);
-t1s = t_ts_afe_sim(end) - Ns_afe*ts_afe;
-t2s = t_ts_afe_sim(end);
-% t1s = 0;
-% t2s = 1.5;
+load sim_results_DP650B1700_4kHz_520A_cosphi8p;
 
-t1c_zoom = t_tc_sim(end) - 5/50;
-t2c_zoom = t_tc_sim(end);
-t3c_zoom = t_tc_sim(end) - 50/fPWM_AFE;
-t4c_zoom = t_tc_sim(end);
-t1s_zoom = t_ts_afe_sim(end) - 5/50;
-t2s_zoom = t_ts_afe_sim(end);
+tratto1 = 2;
+tratto2 = 2;
+tratto3 = 2;
+tratto4 = 3;
+colore1 = [0.25 0.25 0.25];
+colore2 = [0.5 0.5 0.5];
+colore3 = [0.75 0.75 0.75];
+colore4 = [0 0 0];
+t1c = t_ts_inv_sim_mod1(end) - glb_time.Nc*glb_time.tc;
+t2c = t_ts_inv_sim_mod1(end);
+t1s = t_ts_inv_sim_mod1(end) - glb_time.Ns_inv*glb_time.ts_inv;
+t2s = t_ts_inv_sim_mod1(end);
 
-fontsize_plotting = 12;
+
+fontsize_title = 12;
+fontsize_labels = 13;
+options = bodeoptions;
+options.FreqUnits = 'Hz';
+
+t_tc_sim = t1c:glb_time.tc:t2c-glb_time.tc;
 
 figure;
-subplot 211
-plot(t_ts_inv_sim,iq_ref_pu_sim,'-k','LineWidth',tratto1);
-hold on
-plot(t_ts_inv_sim,iq_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
-hold off
-title('Q-Current tracking in p.u.','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$i_q^{ref}$','$i_q$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-% xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-ylabel('$p.u.$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[-1.5 1.5]);
+subplot 311
+plot(t_tc_sim,iuvw_psm_sim(:,1),'-','LineWidth',tratto1,'Color',colore1);
+title('Phase U motor current in A: 520\,A - 15\,Hz - cos(phi) = 0.8.','Interpreter','latex','FontSize',fontsize_title);
+legend('$i_\mathrm{u}$','Location','northeast',...
+    'Interpreter','latex','FontSize',fontsize_labels);
+xlabel('$t/\mathrm{s}$','Interpreter','latex','FontSize', fontsize_labels);
+ylabel('$i/\mathrm{A}$','Interpreter','latex','FontSize', fontsize_labels);
+set(gca,'ylim',[-750 750]);
 set(gca,'xlim',[t1s t2s]);
 grid on
-chH = get(gca,'Children');
-set(gca,'Children',[chH(2); chH(1)])
-subplot 212
-colororder({'k','k'})
+subplot 312
+colors = [colore1; colore2];
+colororder(colors)
 yyaxis left;
-plot(t_ts_inv_sim,omega_pu_sim.*omega_m_bez,'-','LineWidth',tratto2,'Color',colore1);
-ylabel('$\omega /rpm$','Interpreter','latex','FontSize', fontsize_plotting);
+plot(t_tc_sim,igbt_ploss_invQ1_sim,'-','LineWidth',tratto1,'Color',colore1);
+set(gca,'ylim',[0 1500]);
+ylabel('$p/\mathrm{W}$','Interpreter','latex','FontSize', fontsize_labels);
 hold on
 yyaxis right;
-plot(t_ts_inv_sim,torque_load_pu_pmsm.*tau_bez*1e-3,'-k','LineWidth',tratto1);
-ylabel('$\tau /kNm$','Interpreter','latex','FontSize', fontsize_plotting);
+plot(t_tc_sim,igbt_JH_temp_invQ1_sim,'-','LineWidth',tratto1,'Color',colore2);
+set(gca,'ylim',[0 100]);
+ylabel('$p/\mathrm{W}$','Interpreter','latex','FontSize', fontsize_labels);
 hold off
-title('Generator speed and torque in p.u.','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$\omega_m$','$\tau_m$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
+legend('$p_\mathrm{Q1}$','$\Delta T_\mathrm{Q1}^{\mathrm{jh}}$','Location','northeast',...
+    'Interpreter','latex','FontSize',fontsize_labels);
+title('DP650B1700 IGBT Q1 Power Loss and Junction-HeatSink Temperature','Interpreter','latex','FontSize',fontsize_title);
+ylabel('$T/\mathrm{C}$','Interpreter','latex','FontSize', fontsize_labels);
+xlabel('$t/\mathrm{s}$','Interpreter','latex','FontSize', fontsize_labels);
 set(gca,'xlim',[t1s t2s]);
-% set(gca,'ylim',[-1.5 1.5]);
 grid on
-% h=gcf;
-% set(h,'PaperOrientation','landscape');
-% set(h,'PaperUnits','normalized');
-% set(h,'PaperPosition', [0 0 1 1]);
-% chH = get(gca,'Children');
-% set(gca,'Children',[chH(2); chH(1)])
-% print('inverter_generator_quantities','-depsc');
+subplot 313
+colors = [colore1; colore2];
+colororder(colors)
+yyaxis left;
+plot(t_tc_sim,diode_ploss_invQ1_sim,'-','LineWidth',tratto1,'Color',colore1);
+set(gca,'ylim',[0 750]);
+ylabel('$p/\mathrm{W}$','Interpreter','latex','FontSize', fontsize_labels);
+hold on
+yyaxis right;
+plot(t_tc_sim,diode_JH_temp_invQ1_sim,'-','LineWidth',tratto1,'Color',colore2);
+set(gca,'ylim',[0 75]);
+ylabel('$p/\mathrm{W}$','Interpreter','latex','FontSize', fontsize_labels);
+hold off
+legend('$p_\mathrm{Q1}$','$\Delta T_\mathrm{D1}^{\mathrm{jh}}$','Location','northeast',...
+    'Interpreter','latex','FontSize',fontsize_labels);
+title('DP650B1700 Diode D1 Power Loss and Junction-HeatSink Temperature','Interpreter','latex','FontSize',fontsize_title);
+ylabel('$T/\mathrm{C}$','Interpreter','latex','FontSize', fontsize_labels);
+xlabel('$t/\mathrm{s}$','Interpreter','latex','FontSize', fontsize_labels);
+set(gca,'xlim',[t1s t2s]);
+grid on
+h=gcf;
+set(h,'PaperOrientation','landscape');
+set(h,'PaperUnits','normalized');
+set(h,'PaperPosition', [0 0 1 1]);
 
+print('thermal_behavior_Q1','-depsc');
+movefile('thermal_behavior_Q1.eps', 'figures/sim_results_DP650B1700_4kHz_520A_cosphi8p');
+print('thermal_behavior_Q1','-dpdf');
+movefile('thermal_behavior_Q1.pdf', 'figures/sim_results_DP650B1700_4kHz_520A_cosphi8p');
+
+% print('thermal_behavior_Q1','-depsc');
+% movefile('thermal_behavior_Q1.eps', 'figures/sim_results_FF1200R17_4kHz_520A_cosphi8p');
+% print('thermal_behavior_Q1','-dpdf');
+% movefile('thermal_behavior_Q1.pdf', 'figures/sim_results_FF1200R17_4kHz_520A_cosphi8p');
+
+clear
+
+load sim_results_FF1200R17_4kHz_520A_cosphi8p;
+
+tratto1 = 2;
+tratto2 = 2;
+tratto3 = 2;
+tratto4 = 3;
+colore1 = [0.25 0.25 0.25];
+colore2 = [0.5 0.5 0.5];
+colore3 = [0.75 0.75 0.75];
+colore4 = [0 0 0];
+t1c = t_ts_inv_sim_mod1(end) - glb_time.Nc*glb_time.tc;
+t2c = t_ts_inv_sim_mod1(end);
+t1s = t_ts_inv_sim_mod1(end) - glb_time.Ns_inv*glb_time.ts_inv;
+t2s = t_ts_inv_sim_mod1(end);
+
+
+fontsize_title = 12;
+fontsize_labels = 13;
+options = bodeoptions;
+options.FreqUnits = 'Hz';
+
+t_tc_sim = t1c:glb_time.tc:t2c-glb_time.tc;
 
 figure;
-subplot 211
-plot(t_ts_inv_sim,psi_r_alpha_pmsm_sim,'-k','LineWidth',tratto1);
+subplot 311
+plot(t_tc_sim,iuvw_psm_sim(:,1),'-','LineWidth',tratto1,'Color',colore1);
+title('Phase U motor current in A: 520\,A - 15\,Hz - cos(phi) = 0.8.','Interpreter','latex','FontSize',fontsize_title);
+legend('$i_\mathrm{u}$','Location','northeast',...
+    'Interpreter','latex','FontSize',fontsize_labels);
+xlabel('$t/\mathrm{s}$','Interpreter','latex','FontSize', fontsize_labels);
+ylabel('$i/\mathrm{A}$','Interpreter','latex','FontSize', fontsize_labels);
+set(gca,'ylim',[-750 750]);
+set(gca,'xlim',[t1s t2s]);
+grid on
+subplot 312
+colors = [colore1; colore2];
+colororder(colors)
+yyaxis left;
+plot(t_tc_sim,igbt_ploss_invQ1_sim,'-','LineWidth',tratto1,'Color',colore1);
+set(gca,'ylim',[0 1500]);
+ylabel('$p/\mathrm{W}$','Interpreter','latex','FontSize', fontsize_labels);
 hold on
-plot(t_ts_inv_sim,psi_r_alpha_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
+yyaxis right;
+plot(t_tc_sim,igbt_JH_temp_invQ1_sim,'-','LineWidth',tratto1,'Color',colore2);
+set(gca,'ylim',[0 100]);
+ylabel('$p/\mathrm{W}$','Interpreter','latex','FontSize', fontsize_labels);
 hold off
-title('$\alpha$ permanent magnet flux from observer and machine',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-legend('$\psi_{\alpha}^{m}$','$\hat{\psi}_{\alpha}^{m}$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-% xlabel('$t/s$','Interpreter','latex');
-ylabel('$\psi/Vs$','Interpreter','latex','FontSize', fontsize_plotting);
-% set(gca,'ylim',[-1.5 1.5]);
+legend('$p_\mathrm{Q1}$','$\Delta T_\mathrm{Q1}^{\mathrm{jh}}$','Location','northeast',...
+    'Interpreter','latex','FontSize',fontsize_labels);
+title('FF1200R17 IGBT Q1 Power Loss and Junction-HeatSink Temperature','Interpreter','latex','FontSize',fontsize_title);
+ylabel('$T/\mathrm{C}$','Interpreter','latex','FontSize', fontsize_labels);
+xlabel('$t/\mathrm{s}$','Interpreter','latex','FontSize', fontsize_labels);
 set(gca,'xlim',[t1s t2s]);
-set(gca,'ylim',[-5.5 5.5]);
 grid on
-chH = get(gca,'Children');
-set(gca,'Children',[chH(2); chH(1)])
-subplot 212
-plot(t_ts_inv_sim,psi_r_beta_pmsm_sim,'-k','LineWidth',tratto1);
+subplot 313
+colors = [colore1; colore2];
+colororder(colors)
+yyaxis left;
+plot(t_tc_sim,diode_ploss_invQ1_sim,'-','LineWidth',tratto1,'Color',colore1);
+set(gca,'ylim',[0 750]);
+ylabel('$p/\mathrm{W}$','Interpreter','latex','FontSize', fontsize_labels);
 hold on
-plot(t_ts_inv_sim,psi_r_beta_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
+yyaxis right;
+plot(t_tc_sim,diode_JH_temp_invQ1_sim,'-','LineWidth',tratto1,'Color',colore2);
+set(gca,'ylim',[0 75]);
+ylabel('$p/\mathrm{W}$','Interpreter','latex','FontSize', fontsize_labels);
 hold off
-title('$\beta$ permanent magnet flux from observer and machine',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-legend('$\psi_{\beta}^{m}$','$\hat{\psi}_{\beta}^{m}$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-ylabel('$\psi/Vs$','Interpreter','latex','FontSize', fontsize_plotting);
+legend('$p_\mathrm{Q1}$','$\Delta T_\mathrm{D1}^{\mathrm{jh}}$','Location','northeast',...
+    'Interpreter','latex','FontSize',fontsize_labels);
+title('FF1200R17 Diode D1 Power Loss and Junction-HeatSink Temperature','Interpreter','latex','FontSize',fontsize_title);
+ylabel('$T/\mathrm{C}$','Interpreter','latex','FontSize', fontsize_labels);
+xlabel('$t/\mathrm{s}$','Interpreter','latex','FontSize', fontsize_labels);
 set(gca,'xlim',[t1s t2s]);
-set(gca,'ylim',[-5.5 5.5]);
 grid on
-% h=gcf;
-% set(h,'PaperOrientation','landscape');
-% set(h,'PaperUnits','normalized');
-% set(h,'PaperPosition', [0 0 1 1]);
-% chH = get(gca,'Children');
-% set(gca,'Children',[chH(2); chH(1)])
-% print('inverter_fluxes_observer','-depsc');
+h=gcf;
+set(h,'PaperOrientation','landscape');
+set(h,'PaperUnits','normalized');
+set(h,'PaperPosition', [0 0 1 1]);
 
+% print('thermal_behavior_Q1','-depsc');
+% movefile('thermal_behavior_Q1.eps', 'figures/sim_results_DP650B1700_4kHz_520A_cosphi8p');
+% print('thermal_behavior_Q1','-dpdf');
+% movefile('thermal_behavior_Q1.pdf', 'figures/sim_results_DP650B1700_4kHz_520A_cosphi8p');
 
-figure;
-subplot 211
-plot(t_ts_inv_sim,omega_ref_pu_sim,'-k','LineWidth',tratto1);
-hold on
-plot(t_ts_inv_sim,omega_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
-hold off
-title('Speed tracking in p.u.','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$\omega_m^{ref}$','$\omega_m$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-% xlabel('$t/s$','Interpreter','latex');
-ylabel('$p.u.$','Interpreter','latex','FontSize', fontsize_plotting);
-% set(gca,'ylim',[-1.5 1.5]);
-set(gca,'xlim',[t1s t2s]);
-grid on
-chH = get(gca,'Children');
-set(gca,'Children',[chH(2); chH(1)])
-subplot 212
-plot(t_ts_inv_sim,torque_load_pu_pmsm,'-k','LineWidth',tratto1);
-title('Load torque in p.u.',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-legend('$\tau_m$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-ylabel('$p.u.$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'xlim',[t1s t2s]);
-grid on
-% h=gcf;
-% set(h,'PaperOrientation','landscape');
-% set(h,'PaperUnits','normalized');
-% set(h,'PaperPosition', [0 0 1 1]);
-% print('sim_results_fig_1','-depsc');
-
-figure;
-subplot 211
-plot(t_ts_inv_sim,iq_ref_pu_sim,'-k','LineWidth',tratto1);
-hold on
-plot(t_ts_inv_sim,iq_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
-hold off
-title('Q-Current tracking in p.u.','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$i_q^{ref}$','$i_q$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-% xlabel('$t/s$','Interpreter','latex');
-ylabel('$p.u.$','Interpreter','latex','FontSize', fontsize_plotting);
-% set(gca,'ylim',[-1.5 1.5]);
-set(gca,'xlim',[t1s t2s]);
-grid on
-chH = get(gca,'Children');
-set(gca,'Children',[chH(2); chH(1)])
-subplot 212
-plot(t_ts_inv_sim,id_ref_pu_sim,'-k','LineWidth',tratto1);
-hold on
-plot(t_ts_inv_sim,id_pu_sim,'-','LineWidth',tratto2,'Color',colore1);
-hold off
-title('D-Current tracking in p.u.',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-legend('$i_d^{ref}$','$i_d$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-ylabel('$p.u.$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'xlim',[t1s t2s]);
-grid on
-% h=gcf;
-% set(h,'PaperOrientation','landscape');
-% set(h,'PaperUnits','normalized');
-% set(h,'PaperPosition', [0 0 1 1]);
-chH = get(gca,'Children');
-set(gca,'Children',[chH(2); chH(1)])
-% print('sim_results_fig_2','-depsc');
-
-figure;
-plot(t_tc_sim,iuvw_sim(:,1),'-k','LineWidth',tratto1);
-hold on
-plot(t_tc_sim,iuvw_sim(:,2),'-','LineWidth',tratto2,'Color',colore1);
-hold on
-plot(t_tc_sim,iuvw_sim(:,3),'-','LineWidth',tratto2,'Color',colore2);
-hold off
-title('Motor Current in A','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$i_u$','$i_v$','$i_w$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
-% set(gca,'ylim',[-1.5 1.5]);
-set(gca,'xlim',[t1s t2s]);
-grid on
-% print('sim_results_fig_3','-depsc');
-
-figure;
-subplot 211
-plot(t_ts_inv_sim,psi_r_alpha_pmsm_sim,'-k','LineWidth',tratto1);
-hold on
-plot(t_ts_inv_sim,psi_r_alpha_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
-hold off
-title('$\alpha$-Flux Estimation in Vs','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$\psi_{\alpha}^{m}$','$\hat{\psi}_{\alpha}^{m}$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-% xlabel('$t/s$','Interpreter','latex');
-ylabel('$\psi/Vs$','Interpreter','latex','FontSize', fontsize_plotting);
-% set(gca,'ylim',[-1.5 1.5]);
-set(gca,'xlim',[t1s t2s]);
-grid on
-chH = get(gca,'Children');
-set(gca,'Children',[chH(2); chH(1)])
-subplot 212
-plot(t_ts_inv_sim,psi_r_beta_pmsm_sim,'-k','LineWidth',tratto1);
-hold on
-plot(t_ts_inv_sim,psi_r_beta_hat_sim,'-','LineWidth',tratto2,'Color',colore1);
-hold off
-title('$\beta$-Flux Estimation in Vs','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$\psi_{\beta}^{m}$','$\hat{\psi}_{\beta}^{m}$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-ylabel('$\psi/Vs$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'xlim',[t1s t2s]);
-grid on
-% h=gcf;
-% set(h,'PaperOrientation','landscape');
-% set(h,'PaperUnits','normalized');
-% set(h,'PaperPosition', [0 0 1 1]);
-chH = get(gca,'Children');
-set(gca,'Children',[chH(2); chH(1)])
-% print('sim_results_fig_4','-depsc');
-
-figure;
-subplot 211
-plot(t_tc_sim,udc_sim,'-k','LineWidth',tratto1);
-title('DClink Voltage','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$u_{dc}$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-% xlabel('$t/s$','Interpreter','latex');
-ylabel('$v/V$','Interpreter','latex','FontSize', fontsize_plotting);
-% set(gca,'ylim',[-1.5 1.5]);
-set(gca,'xlim',[t1s t2s]);
-grid on
-subplot 212
-plot(t_tc_sim,idc_sim,'-k','LineWidth',tratto1);
-title('DClink DC Current','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$i_{dc}$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'xlim',[t1s t2s]);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'xlim',[t1s t2s]);
-grid on
-% h=gcf;
-% set(h,'PaperOrientation','landscape');
-% set(h,'PaperUnits','normalized');
-% set(h,'PaperPosition', [0 0 1 1]);
-% chH = get(gca,'Children');
-% set(gca,'Children',[chH(2); chH(1)])
-% print('sim_results_fig_5','-depsc');
-
-figure;
-subplot 211
-plot(t_tc_sim,idc_sim,'-k','LineWidth',tratto1);
-title('DClink DC plus Capacitor Current','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$i_{dc}^{dclink}$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-% xlabel('$t/s$','Interpreter','latex');
-ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
-% set(gca,'ylim',[-1.5 1.5]);
-set(gca,'xlim',[t1s t2s]);
-grid on
-subplot 212
-plot(t_tc_sim,udc_sim,'-k','LineWidth',tratto1);
-title('DClink Capacitor Voltage','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$u_{dc}$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-ylabel('$v/V$','Interpreter','latex','FontSize', fontsize_plotting);
-% set(gca,'ylim',[-1.5 1.5]);
-set(gca,'xlim',[t1s t2s]);
-grid on
-% print('sim_results_fig_6','-depsc');
-% 
-N1 = Nc-floor(t1c_zoom/tc);
-dclink_terminal_current_inverter_rms = sqrt(mean(ileg_dc_inv_sim.^2))
-dclink_terminal_current_inverter_rms = sqrt(mean(ileg_dc_inv_sim(N1:Nc).^2))
-
-figure;
-plot(t_tc_sim,ileg_dc_inv_sim,'-k','LineWidth',tratto1);
-title('DC current leg - positive current means IGBT current','Interpreter','latex','FontSize',fontsize_plotting);
-legend('$i_{dc}^{leg}$','Location','best',...
-    'Interpreter','latex','FontSize',fontsize_plotting);
-xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
-ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
-% set(gca,'ylim',[-1.5 1.5]);
-set(gca,'xlim',[t1s t2s]);
-grid on
-% print('sim_results_fig_9','-depsc');
-
+print('thermal_behavior_Q1','-depsc');
+movefile('thermal_behavior_Q1.eps', 'figures/sim_results_FF1200R17_4kHz_520A_cosphi8p');
+print('thermal_behavior_Q1','-dpdf');
+movefile('thermal_behavior_Q1.pdf', 'figures/sim_results_FF1200R17_4kHz_520A_cosphi8p');
