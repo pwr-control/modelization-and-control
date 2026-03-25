@@ -470,6 +470,7 @@ Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_load_est_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dqvector_pi_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'sv_pwm_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'sv_pwm_cm_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'global_state_machine_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'first_harmonic_tracker_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dqpll_thyr_output_t'});
