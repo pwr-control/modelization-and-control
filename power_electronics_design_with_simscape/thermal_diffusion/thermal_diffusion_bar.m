@@ -1,6 +1,6 @@
 %% Diffusione Termica 1D: Sbarra di Alluminio
 %  BC sinistra  (x=0): flusso imposto  q_in = 25 W  (Neumann)
-%  BC destra    (x=L): temperatura fissa T_sink = 75 °C (Dirichlet)
+%  BC destra    (x=L): temperatura fissa T_sink = 80 °C (Dirichlet)
 %
 %  Geometria: 3 mm x 30 mm x 50 mm (sezione A = 9e-5 m^2)
 %
@@ -18,7 +18,7 @@ A     = 3e-3 * 30e-3;   % Sezione: 3 mm × 30 mm         [m²]  = 9e-5 m²
 
 % Condizioni al contorno
 q_in   = 25;        % Flusso termico imposto a x=0      [W]
-T_sink = 75;        % Temperatura pozzo a x=L           [°C]
+T_sink = 80;        % Temperatura pozzo a x=L           [°C]
 T0     = 25;        % Temperatura iniziale (ambiente)   [°C]
 
 %% ── 2. Discretizzazione Spaziale ────────────────────────────────────────
