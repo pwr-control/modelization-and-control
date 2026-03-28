@@ -31,7 +31,7 @@ x  = linspace(0, L, Nx);     % Griglia [m]
 lambda = 0.45;
 dt     = lambda * dx^2 / alpha;   % Passo temporale [s]
 
-T_final = 120;               % Durata simulazione [s] — abbondante per il regime
+T_final = 100;               % Durata simulazione [s] — abbondante per il regime
 Nt      = ceil(T_final / dt);
 
 fprintf('Parametri solver:\n');
@@ -145,6 +145,7 @@ fprintf('  Errore max vs. regime analitico: %.4f °C\n', err_max);
 set(hProf, 'YData', u, 'Color', [0.5 0.5 0.5]);
 set(hH0,   'XData', t_hist, 'YData', T_x0_hist);
 set(hHmid, 'XData', t_hist, 'YData', T_xmid_hist);
+set(gca, 'xlim', [0 T_final]);
 sgtitle(fig, sprintf('REGIME RAGGIUNTO | Sbarra Al 3×30×50 mm | Errore max: %.3f °C', err_max), ...
         'FontSize', 12, 'FontWeight', 'bold', 'Color', [0.25 0.25 0.25]);
 drawnow;
