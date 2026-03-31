@@ -11,10 +11,10 @@
 clear; clc; close all;
 
 %% ── 1. Parametri Fisici ─────────────────────────────────────────────────
-L     = 0.050;          % Lunghezza sbarra              [m]
+L     = 0.040;          % Lunghezza sbarra              [m]
 alpha = 98e-6;          % Diffusività termica Al        [m²/s]
 k     = 237;            % Conducibilità termica Al      [W/(m·K)]
-A     = 3e-3 * 30e-3;   % Sezione: 3 mm × 30 mm         [m²]  = 9e-5 m²
+A     = 4e-3 * 30e-3;   % Sezione: 3 mm × 30 mm         [m²]  = 9e-5 m²
 
 % Condizioni al contorno
 q_in   = 25;        % Flusso termico imposto a x=0      [W]
