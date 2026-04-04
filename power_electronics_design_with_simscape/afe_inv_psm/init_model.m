@@ -430,14 +430,21 @@ ideal_switch.cllc = device_ideal_switch_setting(used_device, glb_time.fPWM_CLLC,
 time_aux_power_supply_fault = 1e3;
 %[text] ### Lithium Ion Battery
 % nominal_battery_voltage_1 = hwdata.cllc.udc1_bez;
-% nominal_battery_voltage_1 = hwdata.dab.udc1_bez;
+nominal_battery_voltage_1 = hwdata.dab.udc1_bez;
 % nominal_battery_voltage_2 = hwdata.cllc.udc2_bez;
-% nominal_battery_voltage_2 = hwdata.dab.udc2_bez;
-nominal_battery_voltage = grid_emu.udc_nom;
+nominal_battery_voltage_2 = hwdata.dab.udc2_bez;
+% nominal_battery_voltage = grid_emu.udc_nom;
 nominal_battery_power = 250e3;
 initial_battery_soc = 0.85;
-lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
-lithium_ion_battery_2 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
+lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage_1, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
+lithium_ion_battery_2 = lithium_ion_battery_setup(nominal_battery_voltage_2, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
+lithium_ion_battery_1.R0 = lithium_ion_battery_1.R0/2;
+lithium_ion_battery_1.R1 = lithium_ion_battery_1.R1/2;
+lithium_ion_battery_2.R0 = lithium_ion_battery_2.R0/2;
+lithium_ion_battery_2.R1 = lithium_ion_battery_2.R1/2;
+lithium_ion_battery_1.C1 = lithium_ion_battery_1.C1/50;
+lithium_ion_battery_2.C1 = lithium_ion_battery_2.C1/50;
+
 %[text] ### Load
 trafo_load_name = 'Load Single Phase Transformer';
 trafo_load_pwr_nom = 225e3;
