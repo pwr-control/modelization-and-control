@@ -4,6 +4,7 @@ clc
 beep off
 options = bodeoptions;
 options.FreqUnits = 'Hz';
+s = tf('s');
 
 ts = 1e-8;
 
@@ -38,8 +39,6 @@ Vz = 16;
 Rz = 810;
 
 %%
-s = tf('s');
-
 L1 = 11e-6;
 Rp1 = 12e3;
 C1 = 4.7e-6*3;
@@ -59,3 +58,15 @@ figure; bode(H1,H2,options); grid on
 
 
 % open_system('psu');
+
+%% compensator
+
+R1 = 47e3;
+C1 = 6.8e-9;
+C2 = 22e-12;
+ZC1 = 1/s/C1;
+ZC2 = 1/s/C2;
+Z1 = R1 + ZC1;
+Hcom = Z1 * ZC2 / (Z1 + ZC2);
+figure; margin(Hcom, options); grid on
+
