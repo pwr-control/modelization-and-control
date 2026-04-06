@@ -1,18 +1,18 @@
 %% =========================================================================
 %  thermal_cold_plate.m
-%  Thermal resistance calculation: Al plate + Mersen pin-fin cold plate
+%  Thermal resistance calculation: Al plate + X pin-fin cold plate
 %
 %  System:
 %    - 40 x 160 x 5 mm aluminium plate (heat source on top)
-%    - Mersen pin-fin cold plate below (fins: 10 mm deep, 2 mm wide,
+%    - X pin-fin cold plate below (fins: 10 mm deep, 2 mm wide,
 %      2 mm Al walls, pitch 4 mm)
 %    - Coolant: 30% ethylene-glycol / water mixture
 %
 %  Two approaches:
-%    1) Manufacturer data (Mersen) + power-law flow scaling  [recommended]
+%    1) Manufacturer data (X) + power-law flow scaling  [recommended]
 %    2) Analytical fin model (Gnielinski + fin efficiency)   [cross-check]
 %
-%  Author : Davide
+%  Author : Shannon
 %  Date   : 2026-04
 %% =========================================================================
 
@@ -23,13 +23,13 @@ clear; clc; close all;
 %% -------------------------------------------------------------------------
 L   = 0.160;    % [m]  plate length (along fins / flow direction)
 W   = 0.040;    % [m]  plate width  (across fins)
-t   = 0.005;    % [m]  plate thickness (heat-flow axis)
+t   = 0.003;    % [m]  plate thickness (heat-flow axis)
 A   = L * W;    % [m^2] base area
 
 % Pin-fin geometry
-H_f = 0.010;    % [m]  fin depth
-w_f = 0.002;    % [m]  fin wall thickness
-w_c = 0.002;    % [m]  channel width
+H_f = 0.005;    % [m]  fin depth
+w_f = 0.003;    % [m]  fin wall thickness
+w_c = 0.003;    % [m]  channel width
 p   = w_f + w_c; % [m]  pitch
 N_f = round(W / p); % number of fins
 
@@ -78,9 +78,9 @@ fprintf('\n=== CONDUCTION RESISTANCE (Al plate) ===\n');
 fprintf('R_cond = t / (k_Al * A) = %.2f mK/W\n', R_cond*1e3);
 
 %% -------------------------------------------------------------------------
-%  4. MANUFACTURER DATA — MERSEN COLD PLATE
+%  4. MANUFACTURER DATA — X COLD PLATE
 %% -------------------------------------------------------------------------
-R_cp_ref  = 18e-3;   % [K/W]  Mersen reference value
+R_cp_ref  = 18e-3;   % [K/W]  X reference value
 Q_ref     = 18.0;    % [l/min] at which R_cp_ref is specified
 
 % Power-law scaling: R_cp(Q) = R_cp_ref * (Q_ref / Q)^n
@@ -98,7 +98,7 @@ R_cp_24_hi  = R_cp_ref * (Q_ref / Q_user)^n_hi;
 R_tot_18 = R_cond + R_cp_ref;
 R_tot_24 = R_cond + R_cp_24;
 
-fprintf('\n=== MERSEN COLD PLATE (manufacturer data + scaling) ===\n');
+fprintf('\n=== X COLD PLATE (manufacturer data + scaling) ===\n');
 fprintf('R_cp  @ %.0f l/min (reference) = %.2f mK/W\n', Q_ref, R_cp_ref*1e3);
 fprintf('R_cp  @ %.0f l/min  (n=%.2f)   = %.2f mK/W\n', Q_user, n_exp, R_cp_24*1e3);
 fprintf('  conservative (n=%.2f)         = %.2f mK/W\n', n_lo, R_cp_24_lo*1e3);
@@ -199,9 +199,10 @@ grid on; grid minor;
 xlabel('Flow rate [l/min]', 'FontSize', 11);
 ylabel('R_{th,tot} [mK/W]',  'FontSize', 11);
 title('Total Thermal Resistance vs Flow Rate', 'FontSize', 12);
-legend('Mersen data + Al plate  (n = 0.70)', 'Design points', ...
+legend('X data + Al plate  (n = 0.70)', 'Design points', ...
        'Location', 'northeast');
-xlim([10 35]); ylim([15 42]);
+xlim([10 35]); ylim([5 35]);
+
 
 % --- 7b. Contribution breakdown bar chart ---------------------------------
 figure('Name','Resistance Breakdown','NumberTitle','off');
@@ -214,7 +215,7 @@ b(2).FaceColor = [0.20 0.50 0.80];   % blue:   cold plate
 set(gca, 'XTickLabel', cats, 'FontSize', 11);
 ylabel('R_{th} [mK/W]', 'FontSize', 11);
 title('Thermal Resistance Breakdown', 'FontSize', 12);
-legend('Al plate conduction', 'Mersen cold plate', 'Location', 'northeast');
+legend('Al plate conduction', 'X cold plate', 'Location', 'northeast');
 grid on; ylim([0 30]);
 
 % Annotate totals
@@ -225,7 +226,7 @@ for k = 1:2
 end
 
 % --- 7c. Fin efficiency vs h_conv -----------------------------------------
-h_vec   = linspace(1000, 15000, 300);
+h_vec   = linspace(1000, 35000, 300);
 m_vec   = sqrt(2 * h_vec / (k_Al * w_f));
 eta_vec = tanh(m_vec * H_f) ./ (m_vec * H_f);
 
@@ -250,7 +251,7 @@ grid on; grid minor;
 xlabel('Convective coefficient h [kW/(m^2·K)]', 'FontSize', 11);
 ylabel('Fin efficiency \eta_f [%]',              'FontSize', 11);
 title('Fin Efficiency vs Convective Coefficient', 'FontSize', 12);
-xlim([0 16]); ylim([0 100]);
+xlim([0 35]); ylim([0 100]);
 
 fprintf('\nDone. Three figures generated.\n');
 
