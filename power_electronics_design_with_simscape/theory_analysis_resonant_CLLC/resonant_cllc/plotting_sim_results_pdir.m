@@ -1,5 +1,8 @@
+clear all
 close all
 clc
+
+load sim_results_pdir_1.mat
 
 tratto1=1;
 tratto2=2;
