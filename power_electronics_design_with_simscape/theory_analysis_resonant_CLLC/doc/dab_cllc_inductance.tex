@@ -1,0 +1,249 @@
+% ============================================================
+%  Technical Note: Series Inductance Design in DAB and CLLC
+%  DC-DC Isolated Converters
+%  Author: Davide
+% ============================================================
+
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{hyperref}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{parskip}
+
+\geometry{margin=2.5cm}
+
+\hypersetup{
+	colorlinks = true,
+	linkcolor  = blue!60!black,
+	urlcolor   = blue!60!black,
+}
+
+\title{\textbf{Series Inductance Design in Isolated DC-DC Converters:\\
+		DAB vs.\ CLLC}}
+\author{Davide}
+\date{\today}
+
+% ============================================================
+\begin{document}
+	\maketitle
+	\tableofcontents
+	\bigskip
+	
+	% ------------------------------------------------------------
+	\section{Introduction}
+	
+	Both the Dual Active Bridge (DAB) and the CLLC resonant converter are
+	bidirectional, galvanically isolated DC-DC topologies widely used in
+	energy-storage interfaces, on-board chargers, and solid-state
+	transformer applications.  In both cases a series inductance
+	$L_s$—realised either as the leakage inductance of the transformer or
+	as an external component—plays a central role in limiting and
+	controlling the power flow.  The underlying physics, however, differs
+	substantially between the two topologies, leading to different design
+	equations and different degrees of freedom for the power-stage
+	engineer.
+	
+	This note derives the sizing equation for $L_s$ in both converters,
+	assuming a unity transformer turns-ratio ($n = 1$) throughout, and
+	draws a direct comparison between the two approaches.
+	
+	% ------------------------------------------------------------
+	\section{Dual Active Bridge (DAB)}
+	
+	\subsection{Operating Principle}
+	
+	The DAB consists of two full-bridge voltage-source inverters connected
+	through a high-frequency transformer and its series inductance $L_s$.
+	The two bridges generate square-wave voltages at the same switching
+	frequency $f_s$, and power is transferred by introducing a controlled
+	phase-shift $\phi$ (in radians) between the two bridge outputs.  With
+	Single-Phase-Shift (SPS) modulation and $n = 1$, the average
+	transferred power is~\cite{dedoncker1991}:
+	
+	\begin{equation}
+		P = \frac{V_1 \, V_2}{2\pi f_s L_s}
+		\cdot \phi \!\left(1 - \frac{|\phi|}{\pi}\right),
+		\qquad |\phi| \leq \frac{\pi}{2}.
+		\label{eq:dab_power}
+	\end{equation}
+	
+	\subsection{Maximum Power and Inductance Sizing}
+	
+	Differentiating \eqref{eq:dab_power} with respect to $\phi$ shows that
+	the power is maximised at $\phi = \pi/2$, giving:
+	
+	\begin{equation}
+		P_{\max} = \frac{V_1 \, V_2}{8\, f_s\, L_s}.
+		\label{eq:dab_pmax}
+	\end{equation}
+	
+	Inverting \eqref{eq:dab_pmax} yields the fundamental sizing equation:
+	
+	\begin{equation}
+		\boxed{L_s = \frac{V_1 \, V_2}{8\, f_s\, P_{\max}}.}
+		\label{eq:dab_ls}
+	\end{equation}
+	
+	\subsection{Design Considerations}
+	
+	Equation~\eqref{eq:dab_ls} is \emph{closed-form}: given the DC bus
+	voltages, the switching frequency, and the rated power, $L_s$ is
+	determined uniquely.  Larger $L_s$ reduces $P_{\max}$ and increases
+	the phase-shift required at a given operating point, which can
+	improve light-load ZVS margins but worsens reactive-current stress at
+	full load.  The relationship between power and phase-shift is
+	\emph{linear} in $\phi$ for small angles, and the converter behaves
+	essentially as a controlled current source driven by a voltage
+	difference.
+	
+	% ------------------------------------------------------------
+	\section{CLLC Resonant Converter}
+	
+	\subsection{Operating Principle}
+	
+	The CLLC is the bidirectional extension of the LLC resonant converter.
+	The resonant network is formed by the series inductance $L_r$,
+	the series capacitance $C_r$, and the magnetising inductance $L_m$ on
+	the primary side; a symmetric network ($L_r'$, $C_r'$) is placed on
+	the secondary to preserve bidirectional resonant behaviour.
+	The converter is operated close to the series resonant frequency:
+	
+	\begin{equation}
+		f_r = \frac{1}{2\pi\sqrt{L_r C_r}}.
+		\label{eq:cllc_fr}
+	\end{equation}
+	
+	\subsection{First Harmonic Approximation (FHA)}
+	
+	Under FHA, the nonlinear switching network is replaced by sinusoidal
+	sources and the load is represented by its equivalent AC resistance.
+	For a resistive output load $R_{\text{out}}$ and $n = 1$, the
+	equivalent AC load resistance seen by the resonant tank is:
+	
+	\begin{equation}
+		R_{ac} = \frac{8}{\pi^2} \cdot \frac{V_2^2}{P}
+		= \frac{8}{\pi^2} \cdot R_{\text{out}}.
+		\label{eq:cllc_rac}
+	\end{equation}
+	
+	\subsection{Quality Factor and Inductance Sizing}
+	
+	The characteristic impedance of the resonant tank is:
+	
+	\begin{equation}
+		Z_r = \sqrt{\frac{L_r}{C_r}},
+		\label{eq:cllc_zr}
+	\end{equation}
+	
+	and the loaded quality factor at resonance is:
+	
+	\begin{equation}
+		Q = \frac{Z_r}{R_{ac}} = \frac{\sqrt{L_r / C_r}}{R_{ac}}.
+		\label{eq:cllc_Q}
+	\end{equation}
+	
+	From \eqref{eq:cllc_fr} and \eqref{eq:cllc_Q}, solving for $L_r$ and
+	$C_r$:
+	
+	\begin{equation}
+		\boxed{L_r = \frac{Q \cdot R_{ac}}{2\pi f_r},}
+		\qquad
+		C_r = \frac{1}{Q \cdot R_{ac} \cdot 2\pi f_r}.
+		\label{eq:cllc_LrCr}
+	\end{equation}
+	
+	A typical design targets $Q \leq 0.5 \div 1$ at full load in order
+	to guarantee ZVS over an adequate load range.
+	
+	\subsection{Design Considerations}
+	
+	Unlike the DAB, the CLLC does not have a single closed-form equation
+	that directly links $L_r$ to $P_{\max}$.  The role of $L_r$ is to set
+	the tank impedance $Z_r$ and, together with $L_m$, to shape the
+	converter voltage gain characteristic.  The three key parameters—$f_r$,
+	$Q$, and the inductance ratio $k = L_m / L_r$—must be chosen
+	simultaneously to satisfy: (i) the required voltage-gain range;
+	(ii) ZVS over the desired load range; and (iii) an acceptable
+	peak-current stress.  The primary control variable is the switching
+	frequency $f_s$, which is varied around $f_r$ to regulate the output
+	voltage.
+	
+	% ------------------------------------------------------------
+	\section{Direct Comparison}
+	
+	Table~\ref{tab:comparison} summarises the principal differences between
+	the two approaches.
+	
+	\begin{table}[ht]
+		\centering
+		\caption{DAB vs.\ CLLC: comparison of the series inductance design.}
+		\label{tab:comparison}
+		\renewcommand{\arraystretch}{1.4}
+		\begin{tabular}{lll}
+			\toprule
+			\textbf{Aspect} & \textbf{DAB} & \textbf{CLLC} \\
+			\midrule
+			Power-transfer mechanism
+			& Phase-shift across $L_s$
+			& Series resonance $L_r$–$C_r$ \\
+			$P_{\max}$ sizing equation
+			& $L_s = \dfrac{V_1 V_2}{8 f_s P_{\max}}$
+			& $L_r = \dfrac{Q \cdot R_{ac}}{2\pi f_r}$ \\
+			Primary control variable
+			& Phase-shift $\phi$ at fixed $f_s$
+			& Frequency ratio $f_s / f_r$ \\
+			ZVS condition
+			& Conditional (depends on $\phi$, load)
+			& Natural around $f_r$ \\
+			Effect of larger $L_s$
+			& Lower $P_{\max}$, higher $\phi$ at rated load
+			& Higher $Z_r$, higher $Q$ \\
+			Design complexity
+			& Closed-form, single equation
+			& Iterative, multi-parameter \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	% ------------------------------------------------------------
+	\section{Summary}
+	
+	For the DAB, the series inductance $L_s$ is determined by a single,
+	closed-form expression \eqref{eq:dab_ls} that directly links the
+	maximum transferable power to the DC bus voltages and the switching
+	frequency.  The design procedure is therefore straightforward.
+	
+	For the CLLC, the resonant inductance $L_r$ is obtained from
+	\eqref{eq:cllc_LrCr} once the resonant frequency $f_r$ and the target
+	quality factor $Q$ have been chosen.  The choice of $Q$ and of the
+	inductance ratio $k = L_m/L_r$ is, however, inherently iterative
+	because these parameters jointly determine the voltage-gain curve, the
+	ZVS range, and the peak circulating current.
+	
+	% ------------------------------------------------------------
+	\begin{thebibliography}{9}
+		\bibitem{dedoncker1991}
+		R.~W.~De~Doncker, D.~M.~Divan, and M.~H.~Kheraluwala,
+		``A three-phase soft-switched high-power-density DC/DC converter
+		for high-power applications,''
+		\emph{IEEE Transactions on Industry Applications},
+		vol.~27, no.~1, pp.~63--73, Jan./Feb.\ 1991.
+		
+		\bibitem{beiranvand2011}
+		R.~Beiranvand, B.~Rashidian, M.~R.~Zolghadri, and
+		S.~M.~H.~Alavi,
+		``Using LLC resonant converter for designing wide-range voltage
+		source,''
+		\emph{IEEE Transactions on Industrial Electronics},
+		vol.~58, no.~5, pp.~1746--1756, May 2011.
+	\end{thebibliography}
+	
+\end{document}
