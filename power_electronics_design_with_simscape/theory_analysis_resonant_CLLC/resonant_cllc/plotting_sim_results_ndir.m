@@ -1,18 +1,18 @@
-clear all
+% clear all
 close all
 clc
 
-load sim_results_ndir_1.mat
+% load sim_results_ndir_1.mat
 
-tratto1=1;
-tratto2=2;
-tratto3=3;
+tratto1 = 1;
+tratto2 = 2;
+tratto3 = 3;
 colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 t2c = time_tc_sim(end);
 t1c = t2c - 3*glb_time.tPWM_CLLC;
-t0c = t2c - glb_time.Nc*glb_time.tc*glb_time.decimation_tc;
+t0c = t2c - glb_time.Nc*glb_time.tc*glb_time.decimation_tc/3;
 % t3c = time_tc_sim(end) - glb_time.Nc*glb_time.tc*glb_time.decimation_tc/10;
 % t4c = time_tc_sim(end);
 % t5c = time_tc_sim(end) - glb_time.Nc*glb_time.tc/100*glb_time.decimation_tc;

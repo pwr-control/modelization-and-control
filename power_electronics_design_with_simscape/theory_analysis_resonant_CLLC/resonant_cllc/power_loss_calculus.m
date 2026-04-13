@@ -25,14 +25,14 @@ p2_tr = mean(i2_cllc_transformer_modA_sim.*u2_cllc_transformer_modA_sim)
 p_balance_dc = p1 + p2
 p_balance_ac = p1_tr - p2_tr
 
-p_loss_cllc_1_Q1 = mean(inverter_1_cllc_devices_data_modA_sim(:,1))
-p_loss_cllc_1_Q2 = mean(inverter_1_cllc_devices_data_modA_sim(:,6))
-p_loss_cllc_1_Q3 = mean(inverter_1_cllc_devices_data_modA_sim(:,11))
-p_loss_cllc_1_Q4 = mean(inverter_1_cllc_devices_data_modA_sim(:,16))
-p_loss_cllc_2_Q1 = mean(inverter_2_cllc_devices_data_modA_sim(:,1))
-p_loss_cllc_2_Q2 = mean(inverter_2_cllc_devices_data_modA_sim(:,6))
-p_loss_cllc_2_Q3 = mean(inverter_2_cllc_devices_data_modA_sim(:,11))
-p_loss_cllc_2_Q4 = mean(inverter_2_cllc_devices_data_modA_sim(:,16))
+p_loss_cllc_1_Q1 = mean(inverter_1_cllc_mosfet_zvs_modA_sim(:,1))
+p_loss_cllc_1_Q2 = mean(inverter_1_cllc_mosfet_zvs_modA_sim(:,6))
+p_loss_cllc_1_Q3 = mean(inverter_1_cllc_mosfet_zvs_modA_sim(:,11))
+p_loss_cllc_1_Q4 = mean(inverter_1_cllc_mosfet_zvs_modA_sim(:,16))
+p_loss_cllc_2_Q1 = mean(inverter_2_cllc_mosfet_zvs_modA_sim(:,1))
+p_loss_cllc_2_Q2 = mean(inverter_2_cllc_mosfet_zvs_modA_sim(:,6))
+p_loss_cllc_2_Q3 = mean(inverter_2_cllc_mosfet_zvs_modA_sim(:,11))
+p_loss_cllc_2_Q4 = mean(inverter_2_cllc_mosfet_zvs_modA_sim(:,16))
 
 p_loss_cllc = (p_loss_cllc_1_Q1 + p_loss_cllc_1_Q2 + ...
     p_loss_cllc_1_Q3 + p_loss_cllc_1_Q4) + ...

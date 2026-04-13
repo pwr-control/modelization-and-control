@@ -1,18 +1,18 @@
-clear all
-close all
-clc
+% clear all
+% close all
+% clc
+% 
+% load sim_results_pflow.mat
 
-load sim_results_pdir_1.mat
-
-tratto1=1;
-tratto2=2;
-tratto3=3;
+tratto1 = 1;
+tratto2 = 2;
+tratto3 = 3;
 colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 t2c = time_tc_sim(end);
 t1c = t2c - 3*glb_time.tPWM_CLLC;
-t0c = t2c - glb_time.Nc*glb_time.tc*glb_time.decimation_tc;
+t0c = t2c - glb_time.Nc*glb_time.tc*glb_time.decimation_tc/3;
 % t3c = time_tc_sim(end) - glb_time.Nc*glb_time.tc*glb_time.decimation_tc/10;
 % t4c = time_tc_sim(end);
 % t5c = time_tc_sim(end) - glb_time.Nc*glb_time.tc/100*glb_time.decimation_tc;
@@ -29,7 +29,7 @@ plot(time_tc_sim,cllc_voltage_output_modA_sim,'-','LineWidth',tratto2,'Color',co
 hold on
 plot(time_tc_sim,cllc_voltage_input_modA_sim,'--','LineWidth',tratto2,'Color',colore1);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[0 1500]);
+set(gca,'ylim',[1000 1500]);
 hold on
 yyaxis right;
 ax = gca;
@@ -39,7 +39,7 @@ hold on
 plot(time_tc_sim,cllc_current_input_modA_sim,'--','LineWidth',tratto2,'Color',colore2);
 hold off
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
-set(gca,'ylim',[0 300]);
+set(gca,'ylim',[200 300]);
 title('CLLC output current and voltage.','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$u_{2}^{dc}$','$u_{1}^{dc}$','$i_{2}^{dc}$','$i_{1}^{dc}$','Location','northwestoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
