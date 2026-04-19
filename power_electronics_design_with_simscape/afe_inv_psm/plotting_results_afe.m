@@ -8,17 +8,6 @@ colore1 = [0.5 0.5 0.5];
 colore2 = [0.8 0.8 0.8];
 t1c = t_tc_sim(end) - Nc*tc;
 t2c = t_tc_sim(end);
-t1s = t_ts_afe_sim(end) - Ns_afe*ts_afe;
-t2s = t_ts_afe_sim(end);
-% t1s = 0;
-% t2s = 1.5;
-
-t1c_zoom = t_tc_sim(end) - 5/50;
-t2c_zoom = t_tc_sim(end);
-t3c_zoom = t_tc_sim(end) - 50/fPWM_AFE;
-t4c_zoom = t_tc_sim(end);
-t1s_zoom = t_ts_afe_sim(end) - 5/50;
-t2s_zoom = t_ts_afe_sim(end);
 
 fontsize_plotting = 12;
 
@@ -36,7 +25,7 @@ legend('$i_{g}^{a}$','$i_{g}^{b}$','$i_{g}^{c}$','Location','best',...
 % xlabel('$t/s$','Interpreter','latex');
 ylabel('$i/A$','Interpreter','latex','FontSize', fontsize_plotting);
 set(gca,'ylim',[-750 750]);
-set(gca,'xlim',[t1s t2s]);
+set(gca,'xlim',[t1c t2c]);
 grid on
 chH = get(gca,'Children');
 set(gca,'Children',[chH(1); chH(2); chH(3)]);
@@ -53,7 +42,7 @@ legend('$u_{g}^{a}$','$u_{g}^{b}$','$u_{g}^{c}$','Location','best',...
 xlabel('$t/s$','Interpreter','latex','FontSize', fontsize_plotting);
 ylabel('$u/V$','Interpreter','latex','FontSize', fontsize_plotting);
 % set(gca,'ylim',[-750 750]);
-set(gca,'xlim',[t1s t2s]);
+set(gca,'xlim',[t1c t2c]);
 grid on
 chH = get(gca,'Children');
 set(gca,'Children',[chH(1); chH(2); chH(3)]);
@@ -63,6 +52,8 @@ grid on
 % set(h,'PaperUnits','normalized');
 % set(h,'PaperPosition', [0 0 1 1]);
 % print('grid_voltages_currents','-depsc');
+
+return
 
 figure;
 subplot 211
