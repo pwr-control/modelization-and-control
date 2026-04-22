@@ -123,22 +123,6 @@ else
     u_cm_comp_mod3 = 0;
     u_cm_comp_mod4 = 0;
 end
-
-% reactive current references 
-enable_i_react_pos_steps = 0;
-if enable_i_react_pos_steps
-    time_i_react_pos_ref_1 = 0.45;
-    time_i_react_pos_ref_2 = 0.9;
-    i_react_pos_ref_1 = 0;
-    i_react_pos_ref_2 = 0.2;
-    i_react_pos_ref_3 = -0.2;
-else
-    time_i_react_pos_ref_1 = 0;
-    time_i_react_pos_ref_2 = 0;
-    i_react_pos_ref_1 = 0;
-    i_react_pos_ref_2 = 0;
-    i_react_pos_ref_3 = 0;
-end
 %[text] ### Settings for CCcaller versus Simulink
 use_ekf_bemf_module_1 = 1;
 use_ekf_bemf_module_2 = 1;
@@ -193,9 +177,7 @@ dmavg_filter_enable_time = 0.025;
 %[text] ### Grid Emulator Settings
 grid_nominal_power = 1000e3;
 application_voltage = 690;
-
-eq_grid_inductance = 75e-6; % [H]
-eq_grid_resistance = 2e-3; % [Ohm]
+grid_nominal_current = grid_nominal_power/application_voltage/sqrt(3);
 
 % Transformer Dyn11
 
@@ -207,12 +189,12 @@ if application_voltage == 690
 elseif application_voltage == 480
     % trafo data
     us1 = 480; us2 = 480; fgrid = 60;
-    eta = 95; ucc = 4.5;
+    eta = 95; ucc = 5;
     p_iron = 1400;
 else
     % trafo data
     us1 = 400; us2 = 400; fgrid = 50;
-    eta = 95; ucc = 4.5;
+    eta = 95; ucc = 5;
     p_iron = 1000;
 end
 
@@ -227,6 +209,14 @@ i1m = us1/sqrt(3)/Lm1/(2*pi*fgrid);
 
 % reference for the voltage sequence
 up_xi_pu_ref = 1; up_eta_pu_ref = 0; un_xi_pu_ref = 0; un_eta_pu_ref = 0;
+
+% grid impedance
+Lgrid_base = us1/sqrt(3)*ucc/100/2/pi/fgrid/grid_nominal_current;
+if ~exist('ucc_factor', 'var')
+    ucc_factor = 1;
+end
+eq_grid_inductance = Lgrid_base*ucc_factor; % [H]
+eq_grid_resistance = 2e-3; % [Ohm]
 
 grid_emu = grid_three_phase_emulator('Dyn11', grid_nominal_power, application_voltage, us1, us2, fgrid, ...
                 eq_grid_inductance, eq_grid_resistance, eta, ucc, i1m, p_iron, n1, n2, core_area, core_length, mur, ...
@@ -307,14 +297,12 @@ enable_frt_2 = 0; % faults generated from xi_eta_pos and xi_eta_neg
 start_time_LVRT = 0.75;
 asymmetric_error_type = 1;
 deepPOSxi = 1;
-deepPOSeta = -0.35;
-deepNEGxi = -0.35;
-deepNEGeta = -0.35;
+deepPOSeta = -0.4;
+deepNEGxi = 0.4;
+deepNEGeta = 0.4;
 frt_data = frt_settings(test_index, test_subindex, asymmetric_error_type, ...
     enable_frt_1, enable_frt_2, start_time_LVRT, deepPOSxi, deepPOSeta, deepNEGxi, deepNEGeta);
 grid_fault_generator;
-
-frt_data.k_frt_ref = 0;
 %[text] ### Reactive Current References Settings
 % reactive current references 
 enable_i_react_pos_steps = 1;
@@ -502,9 +490,10 @@ time_aux_power_supply_fault = 1e3;
 %[text] ### Lithium Ion Battery
 % nominal_battery_voltage_1 = hwdata.cllc.udc1_bez;
 nominal_battery_voltage_1 = hwdata.dab.udc1_bez;
+% nominal_battery_voltage_1 = hwdata.afe.udc_nom;
 % nominal_battery_voltage_2 = hwdata.cllc.udc2_bez;
 nominal_battery_voltage_2 = hwdata.dab.udc2_bez;
-% nominal_battery_voltage = grid_emu.udc_nom;
+% nominal_battery_voltage_2 = hwdata.afe.udc_nom;
 nominal_battery_power = 250e3;
 initial_battery_soc = 0.85;
 lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage_1, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
