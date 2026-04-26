@@ -11,7 +11,7 @@ t1 = 0.7;
 t2 = 1.1;
 
 
-fontsize_plotting = 14;
+fontsize_plotting = 16;
 
 figure;
 % subplot(3,1, [1 2]); 
@@ -23,6 +23,7 @@ plot(time_ts_afe_sim,ugd_abc_grid_sim(:,2),'-','LineWidth',tratto1,'Color',color
 hold on
 plot(time_ts_afe_sim,ugd_abc_grid_sim(:,3),'-','LineWidth',tratto1,'Color',colore3);
 hold off
+set(gca,'FontName','cmr12');
 title('Grid Voltages','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$u_{g}^{a}$','$u_{g}^{b}$','$u_{g}^{c}$','Location','northeastoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
@@ -40,6 +41,7 @@ plot(time_ts_afe_sim,phase_grid_fhtsr_dqpll_sim,'-','LineWidth',tratto1,'Color',
 hold on
 plot(time_ts_afe_sim,omega_grid_fhtsr_dqpll_sim,'-','LineWidth',tratto1,'Color',colore2);
 hold off
+set(gca,'FontName','cmr12');
 title('FHTSR dqPLL outputs','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$\vartheta_{g}$','$\omega_{g}$','Location','northeastoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
@@ -55,7 +57,7 @@ h=gcf;
 set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
-print('figure_fhtsr_dqPLL_1','-depsc');
+print('figure_fhtsr_dqPLL_1', '-djpeg95', '-r300');
 
 figure;
 % subplot(3,1, [1 2]); 
@@ -65,6 +67,7 @@ plot(time_ts_afe_sim,u_fht_alpha_sim,'-','LineWidth',tratto1,'Color',colore1);
 hold on
 plot(time_ts_afe_sim,v_fht_alpha_sim,'-','LineWidth',tratto1,'Color',colore2);
 hold off
+set(gca,'FontName','cmr12');
 title('FHT-SR Voltage Outputs','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$u_{\alpha}^{fht}$','$v_{\alpha}^{fht}$','Location','northeastoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
@@ -82,6 +85,7 @@ plot(time_ts_afe_sim,u_fht_beta_sim,'-','LineWidth',tratto1,'Color',colore1);
 hold on
 plot(time_ts_afe_sim,v_fht_beta_sim,'-','LineWidth',tratto1,'Color',colore2);
 hold off
+set(gca,'FontName','cmr12');
 title('FHT-SR Voltage Outputs','Interpreter','latex','FontSize',fontsize_plotting);
 legend('$u_{\beta}^{fht}$','$v_{\beta}^{fht}$','Location','northeastoutside',...
     'Interpreter','latex','FontSize',fontsize_plotting);
@@ -97,4 +101,4 @@ h=gcf;
 set(h,'PaperOrientation','landscape');
 set(h,'PaperUnits','normalized');
 set(h,'PaperPosition', [0 0 1 1]);
-print('figure_fhtsr_dqPLL_2','-depsc');
+print('figure_fhtsr_dqPLL_2', '-djpeg95', '-r300');
