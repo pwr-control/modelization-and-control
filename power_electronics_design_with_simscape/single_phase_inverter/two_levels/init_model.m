@@ -102,8 +102,27 @@ rpi_enable = 0; % use RPI otherwise DQ PI
 system_identification_enable = 0;
 use_current_controller_from_ccaller_mod1 = 0;
 use_phase_shift_filter_from_ccaller_mod1 = 0;
-use_sogi_from_ccaller_mod1 = 0;
+use_sogi_from_ccaller_mod1 = 1;
 
+% four modules in parallel connected to a dc microgrid
+ixi_ref_mod1 = -0.85;
+ixi_ref_mod2 = -0.85;
+ixi_ref_mod3 = -0.85;
+ixi_ref_mod4 = -0.85;
+
+% common mode voltage control for hard parallelization
+en_parallel_mode = 1;
+if en_parallel_mode
+   u_cm_comp_mod1 = 0;
+   u_cm_comp_mod2 = -1;
+   u_cm_comp_mod3 = -1;
+   u_cm_comp_mod4 = -1;
+else
+    u_cm_comp_mod1 = 0;
+    u_cm_comp_mod2 = 0;
+    u_cm_comp_mod3 = 0;
+    u_cm_comp_mod4 = 0;
+end
 %[text] ### Settings for CCcaller versus Simulink
 use_ekf_bemf_module_1 = 1;
 use_ekf_bemf_module_2 = 1;
@@ -112,18 +131,22 @@ use_observer_from_ccaller_module_1 = 0;
 use_observer_from_simulink_module_2 = 0;
 use_observer_from_ccaller_module_2 = 0;
 
+% current controllers
 use_current_controller_from_simulink_module_1 = 0;
 use_current_controller_from_ccaller_module_1 = 1;
 use_current_controller_from_simulink_module_2 = 0;
 use_current_controller_from_ccaller_module_2 = 0;
 
+% moving average filters
 use_moving_average_from_ccaller_mod1 = 1;
 use_moving_average_from_ccaller_mod2 = 0;
+use_moving_average_from_ccaller_mod3 = 0;
+use_moving_average_from_ccaller_mod4 = 0;
 
-use_single_phase_inverter_based_FHT = 1;
+use_single_phase_inverter_based_FHT = 0;
 use_single_phase_inverter_based_SOGI = 0;
 use_single_phase_inverter_based_PHSH = 0;
-use_single_phase_inverter_based_SOGI_ccaller = 0;
+use_single_phase_inverter_based_SOGI_ccaller = 1;
 use_single_phase_inverter_based_PHSH_ccaller = 0;
 
 use_system_identification_based_FHT = 0;
@@ -152,23 +175,27 @@ mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
 dmavg_filter_enable_time = 0.025;
 %%
 %[text] ### Grid Emulator Settings
-grid_nominal_power = 1600e3;
-application_voltage = 400;
+grid_nominal_power = 1000e3;
+application_voltage = 690;
+grid_nominal_current = grid_nominal_power/application_voltage/sqrt(3);
+
+% Transformer Dyn11
+delta_star = 1;
 
 if application_voltage == 690
     % trafo data
     us1 = 690; us2 = 690; fgrid = 50;
-    eta = 95; ucc = 6;
+    eta = 95; ucc = 5;
     p_iron = 1800;
 elseif application_voltage == 480
     % trafo data
     us1 = 480; us2 = 480; fgrid = 60;
-    eta = 95; ucc = 4.5;
+    eta = 95; ucc = 5;
     p_iron = 1400;
 else
     % trafo data
     us1 = 400; us2 = 400; fgrid = 50;
-    eta = 95; ucc = 4.5;
+    eta = 95; ucc = 5;
     p_iron = 1000;
 end
 
@@ -181,12 +208,23 @@ Lm1 = (n1^2 * mu0 * mur * core_area) / core_length;
 % Lm1 = u1_nom/sqrt(3)/i1m/(2*pi*fgrid);
 i1m = us1/sqrt(3)/Lm1/(2*pi*fgrid);
 
-% rererence for the voltage sequence
+% reference for the voltage sequence
 up_xi_pu_ref = 1; up_eta_pu_ref = 0; un_xi_pu_ref = 0; un_eta_pu_ref = 0;
 
-grid_emu = grid_three_phase_emulator('Dyn11-690V-690V-1600kW', grid_nominal_power, application_voltage, us1, us2, fgrid, ...
-                eta, ucc, i1m, p_iron, n1, n2, core_area, core_length, mur, ...
+% grid impedance
+Lgrid_base = us1/sqrt(3)*ucc/100/2/pi/fgrid/grid_nominal_current;
+if ~exist('ucc_factor', 'var')
+    ucc_factor = 1;
+end
+eq_grid_inductance = Lgrid_base*ucc_factor; % [H]
+eq_grid_resistance = 2e-3; % [Ohm]
+
+grid_emu = grid_three_phase_emulator('Dyn11', delta_star, grid_nominal_power, application_voltage, us1, us2, fgrid, ...
+                eq_grid_inductance, eq_grid_resistance, eta, ucc, i1m, p_iron, n1, n2, core_area, core_length, mur, ...
                 up_xi_pu_ref, up_eta_pu_ref, un_xi_pu_ref, un_eta_pu_ref);
+
+
+
 %%
 %[text] ## Global Hardware Settings
 single_phase_inverter_pwr_nom = 225e3;
@@ -201,6 +239,7 @@ hwdata.single_phase_inverter = single_phase_inverter_hwdata(application_voltage,
 hwdata.afe = three_phase_afe_hwdata(application_voltage, afe_pwr_nom, glb_time.fPWM_AFE);
 hwdata.inv = three_phase_inverter_hwdata(application_voltage, inv_pwr_nom, glb_time.fPWM_INV);
 hwdata.dab = single_phase_dab_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_DAB, fres_dab);
+hwdata.three_phase_dab = three_phase_dab_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_DAB, fres_dab);
 hwdata.cllc = single_phase_cllc_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_CLLC, fres_cllc);
 
 %[text] ### Sensors endscale, and quantization
@@ -215,9 +254,13 @@ Umax_adc = 1500;
 VoltageQuantization = Umax_adc/2^11;
 %[text] ## AFE Settings and Initialization
 %[text] ### Behavioural Settings
+
 time_gain_afe_module_1 = 1.0;
 time_gain_inv_module_1 = 1.0;
+time_gain_afe_module_3 = 0.9988;
 time_gain_afe_module_2 = 1.0;
+
+time_gain_inv_module_1 = 1.0005;
 time_gain_inv_module_2 = 1.0;
 wnp = 0;
 white_noise_power_afe_mod1 = wnp;
@@ -237,17 +280,73 @@ white_noise_power_afe_pwm_phase_shift_mod2 = 0.0;
 inv_pwm_phase_shift_mod2 = 0;
 white_noise_power_inv_pwm_phase_shift_mod2 = 0.0;
 
+afe_pwm_phase_shift_mod3 = 0;
+white_noise_power_afe_pwm_phase_shift_mod3 = 0.0;
+inv_pwm_phase_shift_mod3 = 0;
+white_noise_power_inv_pwm_phase_shift_mod3 = 0.0;
+
+afe_pwm_phase_shift_mod4 = 0;
+white_noise_power_afe_pwm_phase_shift_mod4 = 0.0;
+inv_pwm_phase_shift_mod4 = 0;
+white_noise_power_inv_pwm_phase_shift_mod4 = 0.0;
 %[text] ### FRT Settings
 test_index = 25; % type of fault: index
 test_subindex = 4; % type of fault: subindex
+% test_subindex = 1; % type of fault: subindex
 enable_frt_1 = 0; % faults generated from abc
 enable_frt_2 = 0; % faults generated from xi_eta_pos and xi_eta_neg
 start_time_LVRT = 0.75;
 asymmetric_error_type = 1;
-frt_data = frt_settings(test_index, test_subindex, asymmetric_error_type, enable_frt_1, enable_frt_2, start_time_LVRT);
+deepPOSxi = 1;
+deepPOSeta = -0.4;
+deepNEGxi = 0.4;
+deepNEGeta = 0.4;
+frt_data = frt_settings(test_index, test_subindex, asymmetric_error_type, ...
+    enable_frt_1, enable_frt_2, start_time_LVRT, deepPOSxi, deepPOSeta, deepNEGxi, deepNEGeta);
 grid_fault_generator;
+%[text] ### Reactive Current References Settings
+% reactive current references 
+enable_i_react_pos_steps = 1;
+if enable_i_react_pos_steps
+    time_i_react_pos_ref_1 = start_time_LVRT + error_length + 0.335;
+    time_i_react_pos_ref_2 = time_i_react_pos_ref_1 + 0.5;
+    i_react_pos_ref_1 = 0;
+    i_react_pos_ref_2 = -ixi_ref_mod1*tan(acos(0.95));  % cos(phi) = 0.9
+    i_react_pos_ref_3 = ixi_ref_mod1*tan(acos(0.95)); % cos(phi) = 0.9
+else
+    time_i_react_pos_ref_1 = 0;
+    time_i_react_pos_ref_2 = 0;
+    i_react_pos_ref_1 = 0;
+    i_react_pos_ref_2 = 0;
+    i_react_pos_ref_3 = 0;
+end
+%[text] #### UPQC Series Transformer
+name = 'UPQC Series Transformer';
+pwr_nom = 250e3;
+u1_nom = 690;
+u2_nom = 690;
+f_nom = 50;
+eta = 98;
+ucc = 2;
+p_iron = 5e3;
+n2 = 8;
+n1 = 8;
+core_area = 0.04;
+core_length = 0.25;
+mur = 35e3;
 
+Lm1 = (n1^2 * mu0 * mur * core_area) / core_length;
+i1m = u1_nom/sqrt(3)/Lm1/f_nom/2/pi;
 
+delta_star = 0;
+
+upqc_st = three_phase_transformer_setup(name, delta_star, pwr_nom, u1_nom, u2_nom, f_nom, eta, ucc, ...
+    i1m, p_iron, n1, n2, core_area, core_length, mur);
+upqc_st.Lm1
+upqc_st.Ld1
+upqc_ctrl.kp = 2;
+upqc_ctrl.ki = 18;
+upqc_ctrl.lim = 4;
 %[text] #### DClink Lstray model (partial loop inductance)
 parasitic_dclink_data;
 %%
@@ -285,13 +384,22 @@ im_ctrl = ctrl_im_setup(glb_time.ts_inv, im.omega_bez, u_im_scale, im.Jm_norm);
 im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_norm, ...
         im.mu_norm, im.Lm_norm, im.Jm_norm, glb_time.ts_inv);
 
-%[text] #### AFE control (sequences)
+%[text] #### AFE control (with sequences)
 afe_ctrl = ctrl_afe_setup(glb_time.ts_afe, grid_emu.omega_grid_nom);
 
 kp_udc = 0.5;
 ki_udc = 18.0;
 kp_idc = 0.5;
 ki_idc = 18.0;
+
+%% gain for weak grids
+afe_ctrl.res_pi.kp_rpi = 0.5;
+afe_ctrl.res_pi.ki_rpi = 18;
+
+%% gains for LVRT
+afe_ctrl.res_pi.kp_rpi = 0.6;
+afe_ctrl.res_pi.ki_rpi = 35;
+
 %[text] #### DCDC Control
 dab_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 cllc_ctrl = ctrl_cllc_setup(kp_udc, ki_udc, kp_idc, ki_idc);
@@ -332,11 +440,11 @@ grid on
 single_phase_inverter_ctrl = ctrl_single_phase_inverter_setup(glb_time.ts_inv, pres_ctrl.omega_set, ...
     dqvector_pi.kp_inv, dqvector_pi.ki_inv, pres_ctrl.kp_rpi, pres_ctrl.ki_rpi, pres_ctrl.delta_rpi);
 %[text] #### 
-%[text] ### Local time allignment to master time
-kp_align = 0.6;
-ki_align = 0.1;
-lim_up_align = 0.2;
-lim_down_align = -0.2;
+%[text] ### Local time alignment to master time
+kp_align = 0.25;
+ki_align = 18;
+lim_up_align = 0.05;
+lim_down_align = -0.05;
 %[text] ### Simulation parameters: speed reference, load torque for energy production application
 run('n_sys_generic_1M5W_torque_curve');
 torque_overload_factor = 1;
@@ -350,16 +458,34 @@ tau_load_sim = psm.tau_bez/5; %N*m
 b_square = 0;
 %[text] ### Settings Global Filters
 filters = setup_global_filters(glb_time.ts_afe, glb_time.ts_inv, glb_time.ts_dab, glb_time.tc);
-
-
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] ### Diode rectifier
 Vf_diode_rectifier = 0.35;
 Rdon_diode_rectifier = 3.5e-3;
 %[text] ### HeatSink settings
-heatsink_liquid_2kW;
+% Aluminum plate liquid cooled with a size fit for primepack2
+% heat exchange made by an aluminum plate with a liquid flow > 28 l/min
+% "A" as "ambient" here means water: so HA means delta temperature between water and
+% heatsink surface
+% moreover the delta temperature between water in and water out is maximum
+% 5K assuming a overall power losses of 2kW 
+
+weight = 0.150;                         % kg
+no_weight = 0.150/10;                   % kg - when /10 is applied thermal inertia is not accounted 
+cp_al = 900;                            % specific heat_capacity J/K/kg - aluminum
+heat_capacity_hs = cp_al * weight;      % J/K
+thermal_conductivity_al = 160;          % W/(m K) - aluminum
+Rth_switch_HA = 15/1000;                % K/W 
+Rth_mosfet_HA = Rth_switch_HA;          % K/W
+Rth_diode_HA = Rth_switch_HA;           % K/W
+Tambient = 40;                          % degC - water temperature
+DThs_init = 0;                          % degC
+
+heatsink = liquid_cooled_plate_2kw_setup(weight, no_weight, cp_al, heat_capacity_hs, thermal_conductivity_al, ...
+    Rth_switch_HA, Rth_mosfet_HA, Rth_diode_HA, Tambient, DThs_init);
 %[text] ### DEVICES settings (IGBT)
 % infineon_FF650R17IE4D_B2;
+% infineon_FF650R17IE4;
 % infineon_FF1200R17IP5;
 % danfoss_DP650B1700T104001;
 % infineon_FF1200XTR17T2P5;
@@ -375,6 +501,7 @@ igbt.cllc = device_igbt_setup(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_
 
 % wolfspeed_CAB760M12HM3
 % infineon_FF1000UXTR23T2M1;
+% danfoss_SKM1700MB20R4S2I4
 used_device = 'danfoss_SKM1700MB20R4S2I4';
 
 mosfet.inv = device_mosfet_setup(used_device, glb_time.fPWM_INV, hwdata.inv.udc_nom);
@@ -392,14 +519,22 @@ ideal_switch.cllc = device_ideal_switch_setting(used_device, glb_time.fPWM_CLLC,
 time_aux_power_supply_fault = 1e3;
 %[text] ### Lithium Ion Battery
 % nominal_battery_voltage_1 = hwdata.cllc.udc1_bez;
-% nominal_battery_voltage_1 = hwdata.dab.udc1_bez;
+nominal_battery_voltage_1 = hwdata.dab.udc1_bez;
+% nominal_battery_voltage_1 = hwdata.afe.udc_nom;
 % nominal_battery_voltage_2 = hwdata.cllc.udc2_bez;
-% nominal_battery_voltage_2 = hwdata.dab.udc2_bez;
-nominal_battery_voltage = grid_emu.udc_nom;
+nominal_battery_voltage_2 = hwdata.dab.udc2_bez;
+% nominal_battery_voltage_2 = hwdata.afe.udc_nom;
 nominal_battery_power = 250e3;
 initial_battery_soc = 0.85;
-lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
-lithium_ion_battery_2 = lithium_ion_battery_setup(nominal_battery_voltage, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
+lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage_1, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
+lithium_ion_battery_2 = lithium_ion_battery_setup(nominal_battery_voltage_2, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
+lithium_ion_battery_1.R0 = lithium_ion_battery_1.R0/2;
+lithium_ion_battery_1.R1 = lithium_ion_battery_1.R1/2;
+lithium_ion_battery_2.R0 = lithium_ion_battery_2.R0/2;
+lithium_ion_battery_2.R1 = lithium_ion_battery_2.R1/2;
+lithium_ion_battery_1.C1 = lithium_ion_battery_1.C1/50;
+lithium_ion_battery_2.C1 = lithium_ion_battery_2.C1/50;
+
 %[text] ### Load
 trafo_load_name = 'Load Single Phase Transformer';
 trafo_load_pwr_nom = 225e3;
@@ -417,9 +552,9 @@ output_transformer = single_phase_transformer_setup(trafo_load_name, trafo_load_
     trafo_load_u2_nom, trafo_load_n1, trafo_load_n2, trafo_load_f_nom, trafo_load_eta, trafo_load_ucc, ...
     trafo_load_i1m, trafo_load_p_iron);
 
-uload = 3;
+uload = 2;
 rload = uload / output_transformer.i2_nom;
-lload = 50e-6 / output_transformer.n12^2;
+lload = 250e-6 / output_transformer.n12^2;
 
 % rload = 0.86/m12_load_trafo^2;
 % lload = 3e-3/m12_load_trafo^2;
@@ -432,6 +567,7 @@ Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_load_est_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dqvector_pi_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'sv_pwm_output_t'});
+Simulink.importExternalCTypes(model,'Names',{'sv_pwm_cm_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'global_state_machine_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'first_harmonic_tracker_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'dqpll_thyr_output_t'});
@@ -441,11 +577,11 @@ Simulink.importExternalCTypes(model,'Names',{'phase_shift_flt_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'sogi_flt_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_output_t'});
 
-%[text] ### Remove Scopes Opening Automatically
-% open_scopes = find_system(model, 'BlockType', 'Scope');
-% for i = 1:length(open_scopes)
-%     set_param(open_scopes{i}, 'Open', 'off');
-% end
+%[text] ### **Remove Scopes Opening Automatically**
+open_scopes = find_system(model, 'BlockType', 'Scope');
+for i = 1:length(open_scopes)
+    set_param(open_scopes{i}, 'Open', 'off');
+end
 
 %[text] ### Enable/Disable Subsystems
 % if use_mosfet_thermal_model
