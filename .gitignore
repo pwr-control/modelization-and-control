@@ -1,142 +1,147 @@
-# Prerequisites
-*.d
+# ============================================================
+#  C
+# ============================================================
 
 # Object files
 *.o
-*.ko
 *.obj
-*.elf
+*.lo
+*.slo
 
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
+# Precompiled headers
 *.gch
 *.pch
 
 # Libraries
-*.lib
 *.a
 *.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
+*.lai
+*.lib
 *.so
 *.so.*
 *.dylib
+*.dll
 
 # Executables
 *.exe
 *.out
 *.app
-*.i*86
-*.x86_64
-*.hex
 
-# Debug files
+# Debug / profiling
 *.dSYM/
 *.su
 *.idb
 *.pdb
+gmon.out
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+build/
+out/
 
-# debug information files
-*.dwo
+# Makefile generated
+Makefile.in
 
-# clion (demerzel)
-*.idea
+# ============================================================
+#  LaTeX
+# ============================================================
 
-# enviroment
-.venv
-.vscode
-
-# MATLAB and Simulink
-Simulink/**/slprj
-*.asv
-*.mltbx
-*.mexa64
-*.mexmaci64
-*.mexw32
-*.mexw64
-*.p
-*.mat
-*.mex
-*.bak
-*.mexmaci64
-*.mexa64
-*.mexw32
-*.mexw64
-*.mexglx
-*.mexe
-*.mexmac
-*.mexmaci
-*.mexmaci64
-*.mexw32
-*.mexw64
-*.mbd
-*.tlf
-*.prj
-*.xsg
-*.slprj
-*.sldd
-*.slddc
-*.slddrw
-*.sldrt
-*.sltx
-*.ssm
-*.nbp
-*.pbl
-*.opv
-*.autosave
-*.rtw
-*.rtm
-*.rpt
-*.slprj.bak
-*.slx.autosave
-*.mltbx.bak
-*.lm
-*.fl
-*.fda
-*.make
-*.grh
-*.nlo
-*.r20
-*.sltp
-*.sn1
-*.trace
-*.mldatx
-*.mdlp
-*.mldatx
-*.mltbxproj
-*.mexmac
-*.rtwlog
-*.rti
+# Auxiliary files
+*.aux
+*.lof
 *.log
-*.pcw
-*.ghw
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+.*.lb
 
-# Temporary files
-*.bak
+# Intermediate documents
+*.dvi
+*.xdv
+*-converted-to.*
+
+# Bibliography
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*-blx.bib
+*.run.xml
+
+# Build tool files
+*.fdb_latexmk
+*.synctex
+*.synctex(busy)
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+
+# Index / glossary
+*.alg
+*.acr
+*.acn
+*.glg
+*.glo
+*.gls
+*.glsdefs
+*.ist
+*.idx
+*.ilg
+*.ind
+
+# Minitoc
+*.maf
+*.mlf
+*.mlt
+*.mtc
+*.mtc[0-9]
+*.mtc[1-9][0-9]
+
+# listings package
+*.lol
+
+# Tikz
+*.tikz.bak
+
+# todonotes package
+*.tdo
+
+# Hyperref
+*.loe
+
+# Generated PDF (comment out if you want to track the final PDF)
+*.pdf
+
+# ============================================================
+#  Editors & OS
+# ============================================================
+
+# VS Code
+.vscode/
+
+# Vim
 *.swp
+*.swo
 *~
 
-# Ignore user-specific MATLAB configuration files
-*.matlab
+# Emacs
+\#*\#
+.\#*
 
-# Ignore Simulink cache files
-*.slxcache
+# macOS
+.DS_Store
 
-# Ignore Simulink code generation folders
-codegen/
-*.slx
+# Windows
+Thumbs.db
+Desktop.ini

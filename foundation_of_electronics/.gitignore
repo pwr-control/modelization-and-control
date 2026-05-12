@@ -1,0 +1,147 @@
+# ============================================================
+#  C
+# ============================================================
+
+# Object files
+*.o
+*.obj
+*.lo
+*.slo
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Libraries
+*.a
+*.la
+*.lai
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug / profiling
+*.dSYM/
+*.su
+*.idb
+*.pdb
+gmon.out
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+build/
+out/
+
+# Makefile generated
+Makefile.in
+
+# ============================================================
+#  LaTeX
+# ============================================================
+
+# Auxiliary files
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+.*.lb
+
+# Intermediate documents
+*.dvi
+*.xdv
+*-converted-to.*
+
+# Bibliography
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*-blx.bib
+*.run.xml
+
+# Build tool files
+*.fdb_latexmk
+*.synctex
+*.synctex(busy)
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+
+# Index / glossary
+*.alg
+*.acr
+*.acn
+*.glg
+*.glo
+*.gls
+*.glsdefs
+*.ist
+*.idx
+*.ilg
+*.ind
+
+# Minitoc
+*.maf
+*.mlf
+*.mlt
+*.mtc
+*.mtc[0-9]
+*.mtc[1-9][0-9]
+
+# listings package
+*.lol
+
+# Tikz
+*.tikz.bak
+
+# todonotes package
+*.tdo
+
+# Hyperref
+*.loe
+
+# Generated PDF (comment out if you want to track the final PDF)
+*.pdf
+
+# ============================================================
+#  Editors & OS
+# ============================================================
+
+# VS Code
+.vscode/
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+\#*\#
+.\#*
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
