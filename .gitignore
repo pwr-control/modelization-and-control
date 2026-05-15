@@ -196,3 +196,4 @@ desktop.ini
 # --- Version control helpers ---
 *.orig
 *.rej
+*.mat
