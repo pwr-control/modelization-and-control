@@ -145,3 +145,54 @@ Makefile.in
 # Windows
 Thumbs.db
 Desktop.ini
+
+# ============================================================
+#  MATLAB .gitignore
+# ============================================================
+ 
+# --- Compiled / auto-generated ---
+*.asv          # Auto-save backup files
+*.autosave
+*.m~
+*.mex*         # MEX binaries (mexw64, mexa64, mexmaci64, …)
+*.mlx~         # Live Script backup
+slprj/         # Simulink build artifacts
+codegen/       # Embedded Coder / MATLAB Coder generated code
+ 
+# --- Simulink ---
+*.slxc         # Simulink compiled cache
+*.slxp         # Simulink protected model
+*.mdlp         # Legacy protected model
+*.bak          # Simulink auto-backup
+*.r20*         # Old revision backups
+sccprj/        # Source control project folder (old SL)
+work/          # Simulink working folder
+ 
+# --- Build & deployment (Coder / HDL Coder) ---
+html/          # coder report output
+*.zip          # packaged deployable archives (mlpkginstall, etc.)
+*.ctf          # MATLAB Compiler target file
+*.prj          # (keep only if you version project files intentionally)
+ 
+# --- Data & results (usually not versioned) ---
+*.mat          # Workspace / data files  ← comment out if you DO track them
+*.fig          # Saved figures
+*.eps
+*.pdf          # Generated plots  ← remove if you version LaTeX-related PDFs
+*.png
+*.svg
+ 
+# --- Toolbox cache ---
+info.xml.bak
+pathdef.m      # Local path definition (machine-specific)
+startup.m      # Local startup (machine-specific) — remove if shared
+ 
+# --- IDE / OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+ 
+# --- Version control helpers ---
+*.orig
+*.rej
