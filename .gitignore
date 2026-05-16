@@ -146,6 +146,10 @@ Makefile.in
 Thumbs.db
 Desktop.ini
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 777b38f (no message)
 # ============================================================
 #  MATLAB .gitignore
 # ============================================================
@@ -195,5 +199,9 @@ desktop.ini
  
 # --- Version control helpers ---
 *.orig
+<<<<<<< HEAD
 *.rej
 *.mat
+=======
+*.rej
+>>>>>>> 777b38f (no message)
