@@ -389,14 +389,16 @@ im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_
 %[text] #### AFE control (with sequences)
 afe_ctrl = ctrl_afe_setup(glb_time.ts_afe, grid_emu.omega_grid_nom);
 
+afe_ctrl.kp_udc_ctrl = 2;
+
 kp_udc = 0.5;
 ki_udc = 18.0;
 kp_idc = 0.5;
 ki_idc = 18.0;
 
 %% gain for weak grids
-afe_ctrl.res_pi.kp_rpi = 0.5;
-afe_ctrl.res_pi.ki_rpi = 18;
+% afe_ctrl.res_pi.kp_rpi = 0.5;
+% afe_ctrl.res_pi.ki_rpi = 18;
 
 %% gains for LVRT
 afe_ctrl.res_pi.kp_rpi = 0.6;
@@ -406,6 +408,8 @@ afe_ctrl.res_pi.ki_rpi = 35;
 dab_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 psfbc_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 cllc_ctrl = ctrl_cllc_setup(kp_udc, ki_udc, kp_idc, ki_idc);
+
+psfbc_ctrl.kp_idc = 1;
 %[text] #### Resonant PI settings
 pres_ctrl.kp_rpi = 0.75;
 pres_ctrl.ki_rpi = 45;
