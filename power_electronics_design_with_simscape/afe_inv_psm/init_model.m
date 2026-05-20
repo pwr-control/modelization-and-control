@@ -225,9 +225,6 @@ eq_grid_resistance = 2e-3; % [Ohm]
 grid_emu = grid_three_phase_emulator('Dyn11', delta_star, grid_nominal_power, application_voltage, us1, us2, fgrid, ...
                 eq_grid_inductance, eq_grid_resistance, eta, ucc, i1m, p_iron, n1, n2, core_area, core_length, mur, ...
                 up_xi_pu_ref, up_eta_pu_ref, un_xi_pu_ref, un_eta_pu_ref);
-
-
-
 %%
 %[text] ## Global Hardware Settings
 single_phase_inverter_pwr_nom = 225e3;
