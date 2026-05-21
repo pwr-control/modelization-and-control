@@ -351,8 +351,8 @@ delta_star = 0;
 
 upqc_st = three_phase_transformer_setup(name, delta_star, pwr_nom, u1_nom, u2_nom, f_nom, eta, ucc, ...
     i1m, p_iron, n1, n2, core_area, core_length, mur);
-upqc_st.Lm1 %[output:64e0553c]
-upqc_st.Ld1 %[output:0f1aa156]
+upqc_st.Lm1; %[output:64e0553c]
+upqc_st.Ld1; %[output:0f1aa156]
 upqc_ctrl.kp = 2;
 upqc_ctrl.ki = 18;
 upqc_ctrl.lim = 4;
