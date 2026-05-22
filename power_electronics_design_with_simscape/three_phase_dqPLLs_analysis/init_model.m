@@ -13,23 +13,25 @@ trgo_afe = 1; % double update
 fpwm_inv = fpwm; % for MPC
 trgo_inv = 1; % double update
 fpwm_dab = 3 * fpwm;
-trgo_dab = 0; % double update
+trgo_dab = 1; % double update
+fpwm_psfbc = 2.5 * fpwm;
+trgo_psfbc = 0; % double update
 fpwm_cllc = 5 * fpwm;
 trgo_cllc = 0; % double update
 % t_measure = 0.648228176318064;
-% t_measure = 0.2;
-t_measure = simlength;
+t_measure = 0.2;
 tc_factor = 100; % tc is ts_afe / tc_factor
 tc_decimation = 1;
 delay_pwm = 0;
-dead_time_afe = 0;
-dead_time_inv = 0;
+dead_time_afe = 3e-6;
+dead_time_inv = 3e-6;
 dead_time_dab = 2e-6;
+dead_time_psfbc = 3e-6;
 dead_time_cllc = 2e-6;
 
-glb_time = timing_setup(fpwm_afe, trgo_afe, fpwm_inv, trgo_inv, fpwm_dab, trgo_dab, ...
+glb_time = timing_setup(fpwm_afe, trgo_afe, fpwm_inv, trgo_inv, fpwm_dab, trgo_dab,  fpwm_psfbc, trgo_psfbc, ...
                 fpwm_cllc, trgo_cllc, t_measure, tc_factor, tc_decimation, delay_pwm, dead_time_afe, ...
-                dead_time_inv, dead_time_dab, dead_time_cllc);
+                dead_time_inv, dead_time_dab, dead_time_psfbc, dead_time_cllc);
 
 % fPWM_AFE = glb_time.fPWM_AFE;
 % TRGO_AFE_double_update = glb_time.TRGO_AFE_double_update;
@@ -53,20 +55,21 @@ glb_time = timing_setup(fpwm_afe, trgo_afe, fpwm_inv, trgo_inv, fpwm_dab, trgo_d
 % Ns_cllc = glb_time.Ns_cllc;
 
 
-%[text] ### Settings for simulink model initialization and data analysis
+%[text] ## Settings for simulink model initialization and data analysis
+%[text] ### Settings Enable devices with thermal model
 use_mosfet_thermal_model = 0;
 use_thermal_model = 0;
 
 if (use_mosfet_thermal_model || use_thermal_model)
-    nonlinear_iterations = 5;
+    nonlinear_iterations = 5; % for simscape solver
 else
-    nonlinear_iterations = 3;
+    nonlinear_iterations = 3;  % for simscape solver
 end
+
+%[text] ### Enable specific settings for the simulation
 load_step_time = 1.25;
 transmission_delay = 125e-6*2;
 sst_num_of_modules = 2;
-
-%[text] ### 
 %[text] ### Enable one/two modules
 number_of_modules = 1;
 enable_two_modules = number_of_modules;
@@ -77,12 +80,12 @@ use_mtpa = 1; %
 use_psm_encoder = 0; % 
 use_im_encoder = 1; % 
 use_load_estimator = 0; %
-use_estimator_from_mb = 0; %mb model based
+use_estimator_from_mb = 0; % mb model based
 use_motor_speed_control_mode = 0; 
 
 % advanced dqPLL
 use_dq_pll_fht_pll = 1; % 
-use_dq_pll_ddsfr_pll = 0; % 
+use_dq_pll_fht_simulink_pll = 0; % 
 use_dq_pll_mod1 = 0; % 
 use_dq_pll_ccaller_mod1 = 0; % 
 use_dq_pll_ccaller_mod2 = 0; % 
@@ -90,13 +93,13 @@ use_dq_pll_ccaller_mod2 = 0; %
 % dqPLL
 use_dq_pll_mode1 = use_dq_pll_mod1;
 use_dq_pll_mode2 = use_dq_pll_ccaller_mod1;
-use_dq_pll_mode3 = use_dq_pll_ddsfr_pll;
+use_dq_pll_mode3 = use_dq_pll_fht_simulink_pll;
 use_dq_pll_mode4 = use_dq_pll_fht_pll;
 
-use_dq_pll_mode1_mod2 = 1; % simulink dqPLL
-use_dq_pll_mode2_mod2 = 0;
-use_dq_pll_mode3_mod2 = 0;
-use_dq_pll_mode4_mod2 = 0;
+use_dq_pll_mode1_modn = 0; % simulink dqPLL
+use_dq_pll_mode2_modn = 0; % ccaller dqPLL
+use_dq_pll_mode3_modn = 1; % fht simulink dqPLL
+use_dq_pll_mode4_modn = 0; % fht ccaller dqPLL
 
 % single phase inverter
 rpi_enable = 0; % use RPI otherwise DQ PI
@@ -107,6 +110,7 @@ use_sogi_from_ccaller_mod1 = 1;
 
 % four modules in parallel connected to a dc microgrid
 ixi_ref_mod1 = -0.85;
+% ixi_ref_mod1 = -0.88;
 ixi_ref_mod2 = -0.85;
 ixi_ref_mod3 = -0.85;
 ixi_ref_mod4 = -0.85;
@@ -233,6 +237,7 @@ afe_pwr_nom = 250e3;
 inv_pwr_nom = 250e3;
 dab_pwr_nom = 250e3;
 cllc_pwr_nom = 250e3;
+psfbc_pwr_nom = 275e3;
 fres_dab = glb_time.fPWM_DAB/5;
 fres_cllc = glb_time.fPWM_CLLC*1.2;
 
@@ -240,9 +245,12 @@ hwdata.single_phase_inverter = single_phase_inverter_hwdata(application_voltage,
 hwdata.afe = three_phase_afe_hwdata(application_voltage, afe_pwr_nom, glb_time.fPWM_AFE);
 hwdata.inv = three_phase_inverter_hwdata(application_voltage, inv_pwr_nom, glb_time.fPWM_INV);
 hwdata.dab = single_phase_dab_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_DAB, fres_dab);
+hwdata.psfbc = single_phase_psfbc_hwdata(application_voltage, psfbc_pwr_nom, glb_time.fPWM_PSFBC);
 hwdata.three_phase_dab = three_phase_dab_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_DAB, fres_dab);
 hwdata.cllc = single_phase_cllc_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_CLLC, fres_cllc);
 
+% modifications
+hwdata.afe.CFi = 2 * hwdata.psfbc.Cdc_dc1;
 %[text] ### Sensors endscale, and quantization
 adc_quantization = 1/2^11;
 adc12_quantization = adc_quantization;
@@ -256,12 +264,12 @@ VoltageQuantization = Umax_adc/2^11;
 %[text] ## AFE Settings and Initialization
 %[text] ### Behavioural Settings
 
-time_gain_afe_module_1 = 1.0;
-time_gain_afe_module_2 = 1.0;
-time_gain_afe_module_3 = 1.0;
-time_gain_afe_module_4 = 1.0;
+time_gain_afe_module_1 = 1.0002;
+time_gain_afe_module_2 = 1.0015;
+time_gain_afe_module_3 = 0.9988;
+time_gain_afe_module_4 = 1.0020;
 
-time_gain_inv_module_1 = 1.0;
+time_gain_inv_module_1 = 1.0005;
 time_gain_inv_module_2 = 1.0;
 time_gain_inv_module_3 = 1.0;
 time_gain_inv_module_4 = 1.0;
@@ -345,8 +353,8 @@ delta_star = 0;
 
 upqc_st = three_phase_transformer_setup(name, delta_star, pwr_nom, u1_nom, u2_nom, f_nom, eta, ucc, ...
     i1m, p_iron, n1, n2, core_area, core_length, mur);
-upqc_st.Lm1
-upqc_st.Ld1
+upqc_st.Lm1;
+upqc_st.Ld1;
 upqc_ctrl.kp = 2;
 upqc_ctrl.ki = 18;
 upqc_ctrl.lim = 4;
@@ -387,6 +395,8 @@ im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_
 %[text] #### AFE control (with sequences)
 afe_ctrl = ctrl_afe_setup(glb_time.ts_afe, grid_emu.omega_grid_nom);
 
+afe_ctrl.kp_udc_ctrl = 2;
+
 kp_udc = 0.5;
 ki_udc = 18.0;
 kp_idc = 0.5;
@@ -402,7 +412,10 @@ afe_ctrl.res_pi.ki_rpi = 35;
 
 %[text] #### DCDC Control
 dab_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
+psfbc_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 cllc_ctrl = ctrl_cllc_setup(kp_udc, ki_udc, kp_idc, ki_idc);
+
+psfbc_ctrl.kp_idc = 1;
 %[text] #### Resonant PI settings
 pres_ctrl.kp_rpi = 0.75;
 pres_ctrl.ki_rpi = 45;
@@ -460,8 +473,19 @@ b_square = 0;
 filters = setup_global_filters(glb_time.ts_afe, glb_time.ts_inv, glb_time.ts_dab, glb_time.tc);
 %[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
 %[text] ### Diode rectifier
-Vf_diode_rectifier = 0.35;
-Rdon_diode_rectifier = 3.5e-3;
+% ABB 5SDF 0131Z0401
+diode.rectifier.Vf = 0.977;
+diode.rectifier.Rdon = 22e-6;
+diode.rectifier.Cj = 0;             % F
+diode.rectifier.Irm = -75;          % A
+diode.rectifier.didt = -30;         % A/us
+diode.rectifier.trr = 5;            % us
+diode.rectifier.Qrr = 325e-6;       % C
+diode.rectifier.Ifm = 2000;         % A
+diode.rectifier.Vr = -50;           % V
+diode.rectifier.Err = 15e-3;        % J
+diode.rectifier.Rth_JC = 0.004;     % W/K
+diode.rectifier.Rth_CH = 0.003;     % W/K
 %[text] ### HeatSink settings
 % Aluminum plate liquid cooled with a size fit for primepack2
 % heat exchange made by an aluminum plate with a liquid flow > 28 l/min
@@ -490,13 +514,16 @@ heatsink = liquid_cooled_plate_2kw_setup(weight, no_weight, cp_al, heat_capacity
 % danfoss_DP650B1700T104001;
 % infineon_FF1200XTR17T2P5;
 % infineon_FF1800R23IE7;
-% infineon_FF900R12IE4
-used_device = 'infineon_FF1200R17IP5';
+% infineon_FF900R12IE4;
+% mitsubishi_CM1200DW_24T;
+used_device = 'mitsubishi_CM1200DW_24T';
 
 igbt.inv = device_igbt_setup(used_device, glb_time.fPWM_INV, hwdata.inv.udc_nom);
 igbt.afe = device_igbt_setup(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_nom);
 igbt.dab = device_igbt_setup(used_device, glb_time.fPWM_DAB, hwdata.dab.udc1_nom);
+igbt.psfbc = device_igbt_setup(used_device, glb_time.fPWM_PSFBC, hwdata.psfbc.udc1_nom);
 igbt.cllc = device_igbt_setup(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_nom);
+
 %[text] ### DEVICES settings (MOSFET)
 
 % wolfspeed_CAB760M12HM3
@@ -507,6 +534,7 @@ used_device = 'danfoss_SKM1700MB20R4S2I4';
 mosfet.inv = device_mosfet_setup(used_device, glb_time.fPWM_INV, hwdata.inv.udc_nom);
 mosfet.afe = device_mosfet_setup(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_nom);
 mosfet.dab = device_mosfet_setup(used_device, glb_time.fPWM_DAB, hwdata.dab.udc1_nom);
+mosfet.psfbc = device_mosfet_setup(used_device, glb_time.fPWM_PSFBC, hwdata.psfbc.udc1_nom);
 mosfet.cllc = device_mosfet_setup(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_nom);
 %[text] ### DEVICES settings (Ideal switch)
 used_device = 'silicon_high_power_ideal_switch';
@@ -514,6 +542,7 @@ ideal_switch = device_ideal_switch_setting(used_device, glb_time.fPWM_AFE, hwdat
 ideal_switch.afe = device_ideal_switch_setting(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_nom);
 ideal_switch.inv = device_ideal_switch_setting(used_device, glb_time.fPWM_INV, hwdata.inv.udc_nom);
 ideal_switch.dab = device_ideal_switch_setting(used_device, glb_time.fPWM_DAB, hwdata.dab.udc1_nom);
+ideal_switch.psfbc = device_ideal_switch_setting(used_device, glb_time.fPWM_PSFBC, hwdata.psfbc.udc1_nom);
 ideal_switch.cllc = device_ideal_switch_setting(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_nom);
 %[text] ### Setting Global Faults
 time_aux_power_supply_fault = 1e3;
