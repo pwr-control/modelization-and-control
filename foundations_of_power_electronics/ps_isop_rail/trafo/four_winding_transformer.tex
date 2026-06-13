@@ -1,0 +1,287 @@
+% ==============================================================================
+% Four-Winding Transformer — Circuit Model and Equations
+% Author: Davide Bagnara
+% ==============================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages -----------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{parskip}
+%\usepackage[activate={true,nocompatibility},final,tracking=false,kerning=true,spacing=false]{microtype}
+\usepackage{xcolor}
+
+\geometry{
+  a4paper,
+  top=25mm, bottom=25mm,
+  left=25mm, right=25mm
+}
+
+\hypersetup{
+  colorlinks = true,
+  linkcolor  = blue!60!black,
+  urlcolor   = blue!60!black
+}
+
+% --- Custom commands ----------------------------------------------------------
+\newcommand{\mat}[1]{\mathbf{#1}}
+\newcommand{\Rel}{\mathcal{R}}          % reluctance
+\newcommand{\FMM}{\mathcal{F}}          % magnetomotive force
+\newcommand{\der}[2]{\dfrac{d#1}{d#2}}
+
+% ==============================================================================
+\begin{document}
+
+\title{\textbf{Four-Winding Transformer}\\[4pt]
+       \large Circuit Model and Governing Equations}
+\author{Davide Bagnara}
+\date{\today}
+\maketitle
+\tableofcontents
+\vspace{6pt}
+\hrule
+\vspace{10pt}
+
+% ------------------------------------------------------------------------------
+\section{Introduction}
+
+This document derives the governing equations of a four-winding transformer
+sharing a common magnetic core.
+The four windings are grouped as two \emph{primary} (indices $1$, $2$) and two
+\emph{secondary} (indices $3$, $4$) windings.
+All windings are magnetically coupled through the same flux path in the core.
+
+Notation used throughout:
+\begin{itemize}
+  \item $N_k$ — number of turns of winding $k$
+  \item $v_k$, $i_k$, $\lambda_k$ — terminal voltage, current, and flux linkage
+        of winding $k$
+  \item $R_k$ — winding resistance
+  \item $L_{kk}$ — self-inductance of winding $k$
+  \item $M_{jk} = M_{kj}$ — mutual inductance between windings $j$ and $k$
+  \item $\Rel$ — core reluctance
+  \item $\Phi_m$ — common magnetising flux
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+\section{Flux Linkage Matrix}
+
+Each winding concatenates the total core flux. The flux linkage of winding $k$
+is:
+\begin{equation}
+  \lambda_k = L_{kk}\,i_k + \sum_{j \neq k} M_{kj}\,i_j,
+  \qquad k = 1,2,3,4.
+  \label{eq:flux_scalar}
+\end{equation}
+
+In compact matrix form:
+\begin{equation}
+  \bm{\lambda} = \mat{L}\,\mathbf{i},
+  \label{eq:flux_matrix}
+\end{equation}
+
+where
+\begin{equation}
+  \begin{bmatrix}
+    \lambda_1 \\ \lambda_2 \\ \lambda_3 \\ \lambda_4
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+    L_{11} & M_{12} & M_{13} & M_{14} \\
+    M_{12} & L_{22} & M_{23} & M_{24} \\
+    M_{13} & M_{23} & L_{33} & M_{34} \\
+    M_{14} & M_{24} & M_{34} & L_{44}
+  \end{bmatrix}
+  \begin{bmatrix}
+    i_1 \\ i_2 \\ i_3 \\ i_4
+  \end{bmatrix}.
+  \label{eq:flux_full}
+\end{equation}
+
+The inductance matrix $\mat{L}$ is \emph{symmetric} and \emph{positive definite}.
+
+\subsection{Ideal Core — Perfect Coupling}
+
+For a lossless, infinite-permeability core (no leakage), all mutual inductances
+satisfy:
+\begin{equation}
+  M_{jk} = \frac{N_j N_k}{\Rel} = \sqrt{L_{jj}\,L_{kk}},
+  \label{eq:mutual_ideal}
+\end{equation}
+
+and the coupling coefficient between any pair equals unity:
+\begin{equation}
+  k_{jm} \triangleq \frac{M_{jm}}{\sqrt{L_{jj}\,L_{mm}}} = 1.
+\end{equation}
+
+% ------------------------------------------------------------------------------
+\section{Voltage Equations (KVL)}
+
+Applying Faraday's law and Kirchhoff's voltage law to each winding:
+\begin{equation}
+  \boxed{v_k = R_k\,i_k + \der{\lambda_k}{t}
+         = R_k\,i_k + L_{kk}\der{i_k}{t}
+           + \sum_{j \neq k} M_{kj}\der{i_j}{t}},
+  \qquad k=1,2,3,4.
+  \label{eq:voltage_scalar}
+\end{equation}
+
+In vector–matrix notation:
+\begin{equation}
+  \mathbf{v} = \mat{R}\,\mathbf{i} + \mat{L}\,\der{\mathbf{i}}{t},
+  \label{eq:voltage_matrix}
+\end{equation}
+
+where $\mat{R} = \operatorname{diag}(R_1, R_2, R_3, R_4)$.
+
+% ------------------------------------------------------------------------------
+\section{T-Equivalent Model with Leakage and Magnetising Inductances}
+
+\subsection{Inductance Decomposition}
+
+Each self-inductance is decomposed into a \emph{leakage} term $L_{\sigma k}$
+and a \emph{magnetising} term referred to winding $k$:
+\begin{equation}
+  L_{kk} = L_{\sigma k} + \frac{N_k^2}{\Rel} = L_{\sigma k} + L_{m,k},
+  \label{eq:decomp}
+\end{equation}
+
+where $L_{m,k} = N_k^2/\Rel$ is the magnetising inductance seen from winding $k$.
+
+\subsection{Magnetising Flux and Back-EMF}
+
+The common magnetising flux is driven by the total magnetomotive force (MMF):
+\begin{equation}
+  \Phi_m = \frac{\FMM_{tot}}{\Rel}
+           = \frac{1}{\Rel}\sum_{k=1}^{4} N_k\,i_k.
+  \label{eq:flux_core}
+\end{equation}
+
+The back-EMF induced in winding $k$ by the common flux is:
+\begin{equation}
+  e_k = N_k\,\der{\Phi_m}{t}.
+  \label{eq:emf}
+\end{equation}
+
+\subsection{Voltage Equations — T Form}
+
+Each winding equation splits into a resistive-leakage drop and a back-EMF:
+\begin{equation}
+  v_k = R_k\,i_k + L_{\sigma k}\der{i_k}{t} + e_k.
+  \label{eq:voltage_T}
+\end{equation}
+
+\subsection{Back-EMF Proportionality}
+
+Since $e_k = N_k\,d\Phi_m/dt$, the back-EMFs are proportional to the turns
+ratio with respect to any reference winding (here winding 1):
+\begin{equation}
+  \frac{e_1}{N_1} = \frac{e_2}{N_2} = \frac{e_3}{N_3} = \frac{e_4}{N_4}
+  \quad \Longrightarrow \quad
+  e_k = \frac{N_k}{N_1}\,e_1.
+  \label{eq:emf_ratio}
+\end{equation}
+
+% ------------------------------------------------------------------------------
+\section{Ampère's Law — MMF Balance}
+
+\subsection{General Form}
+
+The net MMF sustains the core flux against the reluctance:
+\begin{equation}
+  \sum_{k=1}^{4} N_k\,i_k = \Rel\,\Phi_m.
+  \label{eq:ampere_general}
+\end{equation}
+
+\subsection{Ideal Core ($\Rel \to 0$, $i_m \approx 0$)}
+
+When the magnetising current is negligible compared to the load currents, the
+constraint reduces to:
+\begin{equation}
+  \boxed{N_1\,i_1 + N_2\,i_2 + N_3\,i_3 + N_4\,i_4 = 0.}
+  \label{eq:ampere_ideal}
+\end{equation}
+
+This is the generalised Ampère balance for the four-winding ideal transformer.
+
+% ------------------------------------------------------------------------------
+\section{Turns Ratios and Port Quantities}
+
+\subsection{Definition}
+
+With winding 1 chosen as the voltage reference:
+\begin{equation}
+  a_k \triangleq \frac{N_k}{N_1}, \qquad k = 2,3,4.
+  \label{eq:turns_ratio}
+\end{equation}
+
+\subsection{No-Load Voltages}
+
+Open-circuit terminal voltages obey:
+\begin{equation}
+  V_k^{(\text{oc})} = a_k\,V_1, \qquad k = 2,3,4.
+  \label{eq:voltage_ratio}
+\end{equation}
+
+\subsection{Current Constraint (Ideal Core)}
+
+Substituting the turns ratios into \eqref{eq:ampere_ideal}:
+\begin{equation}
+  i_1 + a_2\,i_2 = -(a_3\,i_3 + a_4\,i_4).
+  \label{eq:current_balance}
+\end{equation}
+
+The left-hand side represents the combined primary excitation; the right-hand
+side is the reflected secondary load.
+
+% ------------------------------------------------------------------------------
+\section{Summary of Parameters}
+
+\begin{table}[h!]
+  \centering
+  \caption{Parameter summary for the four-winding transformer model.}
+  \label{tab:parameters}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabular}{@{} l l l @{}}
+    \toprule
+    \textbf{Symbol} & \textbf{Unit} & \textbf{Description} \\
+    \midrule
+    $L_{\sigma k}$        & H         & Leakage inductance of winding $k$ \\
+    $L_{m,k} = N_k^2/\Rel$ & H       & Magnetising inductance seen from winding $k$ \\
+    $M_{jk} = a_j a_k L_{m,1}$ & H   & Mutual inductance between windings $j$ and $k$ \\
+    $R_k$                 & $\Omega$  & Winding resistance \\
+    $\Rel$                & A/Wb      & Core reluctance (includes air gap if present) \\
+    $a_k = N_k/N_1$       & —         & Turns ratio with respect to winding 1 \\
+    $e_k$                 & V         & Back-EMF induced by common core flux \\
+    $\Phi_m$              & Wb        & Common magnetising flux \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ------------------------------------------------------------------------------
+\section{Remarks on Multi-Port Applications}
+
+\begin{itemize}
+  \item The inductance matrix $\mat{L}$ in \eqref{eq:flux_full} is the natural
+        starting point for multi-active-bridge (MAB) converter analysis, where
+        the leakage inductances $L_{\sigma k}$ act as power-transfer reactances.
+  \item For a dual-active-bridge (DAB) extended to four ports, ZVS conditions
+        for each switch must be verified independently for each winding current
+        at the switching instants.
+  \item When two primary windings are fed from different voltage sources
+        (e.g.\ two AFE converters), circulating currents between them are
+        governed by $(v_1 - v_2)/( L_{\sigma 1} + L_{\sigma 2} + M_{12,\text{leak}})$
+        and must be controlled or suppressed by design.
+  \item The constraint \eqref{eq:ampere_ideal} allows reduction of the state
+        space: given three independent currents, the fourth is determined.
+        This is exploited in state-space models for simulation and control
+        design.
+\end{itemize}
+
+\end{document}
