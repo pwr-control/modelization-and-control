@@ -8,62 +8,52 @@ s = tf('s');
 simlength = 0.25;
 
 fpwm = 4e3;
-fpwm_afe = fpwm; % for PWM
+
+fpwm_afe = fpwm;
 trgo_afe = 1; % double update
-fpwm_inv = fpwm; % for MPC
+
+fpwm_inv = fpwm;
 trgo_inv = 1; % double update
+
+fpwm_single_phase_inv = fpwm;
+trgo_single_phase_inv = 1; % double update
+
 fpwm_dab = 3 * fpwm;
 trgo_dab = 1; % double update
-fpwm_psfbc = 2.5 * fpwm;
-trgo_psfbc = 0; % double update
-fpwm_cllc = 5 * fpwm;
+
+fpwm_psfbc = fpwm;
+trgo_psfbc = 1; % double update
+
+fpwm_isop_rail = fpwm;
+trgo_isop_rail = 1; % double update
+
+fpwm_cllc = 3 * fpwm;
 trgo_cllc = 0; % double update
-% t_measure = 0.648228176318064;
-t_measure = 0.2;
-tc_factor = 400; % tc is ts_afe / tc_factor
+
+t_measure = simlength;
+tc_factor = 200; % tc is ts_afe / tc_factor
 tc_decimation = 1;
 delay_pwm = 0;
+
 dead_time_afe = 3e-6;
 dead_time_inv = 3e-6;
+dead_time_single_phase_inv = 3e-6;
 dead_time_dab = 2e-6;
 dead_time_psfbc = 3e-6;
+dead_time_isop_rail = 3e-6;
 dead_time_cllc = 2e-6;
 
-glb_time = timing_setup(fpwm_afe, trgo_afe, fpwm_inv, trgo_inv, fpwm_dab, trgo_dab,  fpwm_psfbc, trgo_psfbc, ...
-                fpwm_cllc, trgo_cllc, t_measure, tc_factor, tc_decimation, delay_pwm, dead_time_afe, ...
-                dead_time_inv, dead_time_dab, dead_time_psfbc, dead_time_cllc);
-
-% fPWM_AFE = glb_time.fPWM_AFE;
-% TRGO_AFE_double_update = glb_time.TRGO_AFE_double_update;
-% fPWM_INV = glb_time.fPWM_INV;
-% TRGO_INV_double_update = glb_time.TRGO_INV_double_update;
-% fPWM_DAB = glb_time.fPWM_DAB;
-% TRGO_DAB_double_update = glb_time.TRGO_DAB_double_update;
-% fPWM_CLLC = glb_time.fPWM_CLLC;
-% TRGO_CLLC_double_update = glb_time.TRGO_CLLC_double_update;
-% 
-% ts_afe = glb_time.ts_afe;
-% ts_inv = glb_time.ts_inv;
-% ts_dab = glb_time.ts_dab;
-% ts_cllc = glb_time.ts_cllc;
-% tc = glb_time.tc;
-% 
-% Nc = glb_time.Nc;
-% Ns_afe = glb_time.Ns_afe;
-% Ns_inv = glb_time.Ns_inv;
-% Ns_dab = glb_time.Ns_dab;
-% Ns_cllc = glb_time.Ns_cllc;
-
-
+glb_time = timing_setup(fpwm_afe, trgo_afe, fpwm_inv, trgo_inv, fpwm_single_phase_inv, trgo_single_phase_inv, fpwm_dab, trgo_dab, ...
+    fpwm_psfbc, trgo_psfbc, fpwm_isop_rail, trgo_isop_rail, fpwm_cllc, trgo_cllc, t_measure, tc_factor, tc_decimation, delay_pwm, dead_time_afe, ...
+    dead_time_inv, dead_time_single_phase_inv, dead_time_dab, dead_time_psfbc, dead_time_isop_rail, dead_time_cllc);
 %[text] ## Settings for simulink model initialization and data analysis
 %[text] ### Settings Enable devices with thermal model
 use_mosfet_thermal_model = 0;
 use_thermal_model = 0;
 
+nonlinear_iterations = 3;  % for simscape solver
 if (use_mosfet_thermal_model || use_thermal_model)
     nonlinear_iterations = 5; % for simscape solver
-else
-    nonlinear_iterations = 3;  % for simscape solver
 end
 
 %[text] ### Enable specific settings for the simulation
@@ -110,23 +100,21 @@ use_sogi_from_ccaller_mod1 = 1;
 
 % four modules in parallel connected to a dc microgrid
 ixi_ref_mod1 = -0.85;
-% ixi_ref_mod1 = -0.88;
 ixi_ref_mod2 = -0.85;
 ixi_ref_mod3 = -0.85;
 ixi_ref_mod4 = -0.85;
 
 % common mode voltage control for hard parallelization
 en_parallel_mode = 1;
-if en_parallel_mode
    u_cm_comp_mod1 = 0;
+   u_cm_comp_mod2 = 0;
+   u_cm_comp_mod3 = 0;
+   u_cm_comp_mod4 = 0;
+
+if en_parallel_mode
    u_cm_comp_mod2 = -1;
    u_cm_comp_mod3 = -1;
    u_cm_comp_mod4 = -1;
-else
-    u_cm_comp_mod1 = 0;
-    u_cm_comp_mod2 = 0;
-    u_cm_comp_mod3 = 0;
-    u_cm_comp_mod4 = 0;
 end
 %[text] ### Settings for CCcaller versus Simulink
 use_ekf_bemf_module_1 = 1;
@@ -169,10 +157,9 @@ time_step_ref_1 = 0.025;
 time_step_ref_2 = 0.5;
 time_step_ref_3 = 1;
 %[text] ### Setting global behavioural (system identification versus normal functioning) and operative frequency
+frequency_set = 50; % default
 if system_identification_enable
     frequency_set = 300;
-else
-    frequency_set = 50;
 end
 omega_set = frequency_set*2*pi;
 %[text] ### Settings average filters
@@ -227,11 +214,18 @@ eq_grid_resistance = 2e-3; % [Ohm]
 grid_emu = grid_three_phase_emulator('Dyn11', delta_star, grid_nominal_power, application_voltage, us1, us2, fgrid, ...
                 eq_grid_inductance, eq_grid_resistance, eta, ucc, i1m, p_iron, n1, n2, core_area, core_length, mur, ...
                 up_xi_pu_ref, up_eta_pu_ref, un_xi_pu_ref, un_eta_pu_ref);
-
-
-
-%%
 %[text] ## Global Hardware Settings
+%[text] ### Rail Catenary Voltage Model
+catenary_nominal_power = 2*5.4e6; % per 12km
+catenary_nominal_voltage = 3000;
+catenary_maximum_voltage = 4000;
+catenary_nominal_current = catenary_nominal_power/catenary_nominal_voltage;
+
+isop_rail_pwr_nom = 250e3; % nominal per system
+number_of_systems = 4;
+full_bridge_application_voltage = catenary_maximum_voltage/number_of_systems;
+hwdata.isop_rail = isop_rail_aux_application(full_bridge_application_voltage, isop_rail_pwr_nom, glb_time.fPWM_ISOP_RAIL);
+%[text] ### Hardware Settings
 single_phase_inverter_pwr_nom = 225e3;
 afe_pwr_nom = 250e3;
 inv_pwr_nom = 250e3;
@@ -316,30 +310,30 @@ grid_fault_generator;
 %[text] ### Reactive Current References Settings
 % reactive current references 
 enable_i_react_pos_steps = 1;
+    time_i_react_pos_ref_1 = 0; % default
+    time_i_react_pos_ref_2 = 0; % default
+    i_react_pos_ref_1 = 0; % default
+    i_react_pos_ref_2 = 0; % default
+    i_react_pos_ref_3 = 0; % default
+
 if enable_i_react_pos_steps
     time_i_react_pos_ref_1 = start_time_LVRT + error_length + 0.335;
     time_i_react_pos_ref_2 = time_i_react_pos_ref_1 + 0.5;
-    i_react_pos_ref_1 = 0;
     i_react_pos_ref_2 = -ixi_ref_mod1*tan(acos(0.95));  % cos(phi) = 0.9
     i_react_pos_ref_3 = ixi_ref_mod1*tan(acos(0.95)); % cos(phi) = 0.9
-else
-    time_i_react_pos_ref_1 = 0;
-    time_i_react_pos_ref_2 = 0;
-    i_react_pos_ref_1 = 0;
-    i_react_pos_ref_2 = 0;
-    i_react_pos_ref_3 = 0;
 end
 %[text] #### UPQC Series Transformer
 name = 'UPQC Series Transformer';
-pwr_nom = 250e3;
-u1_nom = 690;
+pwr_nom = 3*125e3;
+u1_nom = 400;
 u2_nom = 690;
 f_nom = 50;
 eta = 98;
-ucc = 2;
+ucc = 4;
 p_iron = 5e3;
+n12 = u1_nom/u2_nom;
 n2 = 8;
-n1 = 8;
+n1 = n12*n2;
 core_area = 0.04;
 core_length = 0.25;
 mur = 35e3;
@@ -353,8 +347,10 @@ upqc_st = three_phase_transformer_setup(name, delta_star, pwr_nom, u1_nom, u2_no
     i1m, p_iron, n1, n2, core_area, core_length, mur);
 upqc_st.Lm1;
 upqc_st.Ld1;
-upqc_ctrl.kp = 2;
-upqc_ctrl.ki = 18;
+upqc_ctrl.kp_p = 1;
+upqc_ctrl.ki_p = 35;
+upqc_ctrl.kp_n = 1;
+upqc_ctrl.ki_n = 35;
 upqc_ctrl.lim = 4;
 %[text] #### DClink Lstray model (partial loop inductance)
 parasitic_dclink_data;
@@ -414,6 +410,10 @@ psfbc_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 cllc_ctrl = ctrl_cllc_setup(kp_udc, ki_udc, kp_idc, ki_idc);
 
 psfbc_ctrl.kp_idc = 1;
+dab_ctrl.ki_udc = 35;
+
+isop_rail_ctrl = ctrl_isop_rail_setup(kp_udc, ki_udc, kp_idc, ki_idc);
+%[text] ### 
 %[text] #### Resonant PI settings
 pres_ctrl.kp_rpi = 0.75;
 pres_ctrl.ki_rpi = 45;
@@ -484,6 +484,9 @@ diode.rectifier.Vr = -50;           % V
 diode.rectifier.Err = 15e-3;        % J
 diode.rectifier.Rth_JC = 0.004;     % W/K
 diode.rectifier.Rth_CH = 0.003;     % W/K
+
+diode.rectifier.Rsnubber = 1e4;     % Ohm
+diode.rectifier.Csnubber = 1e-12;     % F
 %[text] ### HeatSink settings
 % Aluminum plate liquid cooled with a size fit for primepack2
 % heat exchange made by an aluminum plate with a liquid flow > 28 l/min
@@ -506,27 +509,16 @@ DThs_init = 0;                          % degC
 heatsink = liquid_cooled_plate_2kw_setup(weight, no_weight, cp_al, heat_capacity_hs, thermal_conductivity_al, ...
     Rth_switch_HA, Rth_mosfet_HA, Rth_diode_HA, Tambient, DThs_init);
 %[text] ### DEVICES settings (IGBT)
-% infineon_FF650R17IE4D_B2;
-% infineon_FF650R17IE4;
-% infineon_FF1200R17IP5;
-% danfoss_DP650B1700T104001;
-% infineon_FF1200XTR17T2P5;
-% infineon_FF1800R23IE7;
-% infineon_FF900R12IE4;
-% mitsubishi_CM1200DW_24T;
-used_device = 'mitsubishi_CM1200DW_24T';
+used_device = 'mitsubishi_CM1200DW_34T';
 
 igbt.inv = device_igbt_setup(used_device, glb_time.fPWM_INV, hwdata.inv.udc_nom);
 igbt.afe = device_igbt_setup(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_nom);
 igbt.dab = device_igbt_setup(used_device, glb_time.fPWM_DAB, hwdata.dab.udc1_nom);
 igbt.psfbc = device_igbt_setup(used_device, glb_time.fPWM_PSFBC, hwdata.psfbc.udc1_nom);
 igbt.cllc = device_igbt_setup(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_nom);
+igbt.isop_rail = device_igbt_setup(used_device, glb_time.fPWM_ISOP_RAIL, hwdata.isop_rail.udc1_nom);
 
 %[text] ### DEVICES settings (MOSFET)
-
-% wolfspeed_CAB760M12HM3
-% infineon_FF1000UXTR23T2M1;
-% danfoss_SKM1700MB20R4S2I4
 used_device = 'danfoss_SKM1700MB20R4S2I4';
 
 mosfet.inv = device_mosfet_setup(used_device, glb_time.fPWM_INV, hwdata.inv.udc_nom);
@@ -534,6 +526,8 @@ mosfet.afe = device_mosfet_setup(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_
 mosfet.dab = device_mosfet_setup(used_device, glb_time.fPWM_DAB, hwdata.dab.udc1_nom);
 mosfet.psfbc = device_mosfet_setup(used_device, glb_time.fPWM_PSFBC, hwdata.psfbc.udc1_nom);
 mosfet.cllc = device_mosfet_setup(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_nom);
+mosfet.isop_rail = device_mosfet_setup(used_device, glb_time.fPWM_ISOP_RAIL, hwdata.isop_rail.udc1_nom);
+%[text] ### 
 %[text] ### DEVICES settings (Ideal switch)
 used_device = 'silicon_high_power_ideal_switch';
 ideal_switch = device_ideal_switch_setting(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_nom);
@@ -542,16 +536,23 @@ ideal_switch.inv = device_ideal_switch_setting(used_device, glb_time.fPWM_INV, h
 ideal_switch.dab = device_ideal_switch_setting(used_device, glb_time.fPWM_DAB, hwdata.dab.udc1_nom);
 ideal_switch.psfbc = device_ideal_switch_setting(used_device, glb_time.fPWM_PSFBC, hwdata.psfbc.udc1_nom);
 ideal_switch.cllc = device_ideal_switch_setting(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_nom);
+ideal_switch.isop_rail = device_ideal_switch_setting(used_device, glb_time.fPWM_ISOP_RAIL, hwdata.isop_rail.udc1_nom);
+%[text] ### 
 %[text] ### Setting Global Faults
 time_aux_power_supply_fault = 1e3;
 %[text] ### Lithium Ion Battery
 % nominal_battery_voltage_1 = hwdata.cllc.udc1_bez;
-nominal_battery_voltage_1 = hwdata.dab.udc1_bez;
-% nominal_battery_voltage_1 = hwdata.afe.udc_nom;
+% nominal_battery_voltage_1 = hwdata.dab.udc1_bez;
+nominal_battery_voltage_1 = hwdata.afe.udc_nom;
 % nominal_battery_voltage_2 = hwdata.cllc.udc2_bez;
-nominal_battery_voltage_2 = hwdata.dab.udc2_bez;
-% nominal_battery_voltage_2 = hwdata.afe.udc_nom;
+% nominal_battery_voltage_2 = hwdata.dab.udc2_bez;
+nominal_battery_voltage_2 = hwdata.afe.udc_nom;
 nominal_battery_power = 250e3;
+
+% nominal_battery_voltage_1 = catenary_nominal_voltage * 1.5;
+% nominal_battery_voltage_2 = catenary_nominal_voltage * 1.5;
+% nominal_battery_power = catenary_nominal_power;
+
 initial_battery_soc = 0.85;
 lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage_1, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
 lithium_ion_battery_2 = lithium_ion_battery_setup(nominal_battery_voltage_2, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
