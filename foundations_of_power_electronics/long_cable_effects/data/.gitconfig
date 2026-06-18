@@ -1,0 +1,8 @@
+[difftool "sourcetree"]
+	cmd = "'' "
+[mergetool "sourcetree"]
+	cmd = "'' "
+	trustExitCode = true
+[user]
+	name = davide.bagnara@leitner.com
+	email = davide.bagnara@leitner.com
