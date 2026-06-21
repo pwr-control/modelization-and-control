@@ -1,8 +1,12 @@
-[difftool "sourcetree"]
-	cmd = "'' "
-[mergetool "sourcetree"]
-	cmd = "'' "
-	trustExitCode = true
-[user]
-	name = davide.bagnara@leitner.com
-	email = davide.bagnara@leitner.com
+*.mat
+*.eps
+*.jpeg
+*.jpg
+*.png
+
+# Ripristina il tracking per i file di dati e immagini
+!*.mat
+!*.eps
+!*.jpeg
+!*.jpg
+!*.png
