@@ -175,12 +175,12 @@ html/          # coder report output
 *.prj          # (keep only if you version project files intentionally)
  
 # --- Data & results (usually not versioned) ---
-*.mat          # Workspace / data files  ← comment out if you DO track them
-*.fig          # Saved figures
-*.eps
-*.pdf          # Generated plots  ← remove if you version LaTeX-related PDFs
-*.png
-*.svg
+# *.mat          # Workspace / data files  ← comment out if you DO track them
+# *.fig          # Saved figures
+# *.eps
+# *.pdf          # Generated plots  ← remove if you version LaTeX-related PDFs
+# *.png
+# *.svg
  
 # --- Toolbox cache ---
 info.xml.bak
@@ -192,3 +192,18 @@ startup.m      # Local startup (machine-specific) — remove if shared
 Thumbs.db
 desktop.ini
 *.lnk
+
+# --- SPACIAL RULES ---
+*.mat
+*.eps
+*.jpeg
+*.jpg
+*.png
+
+!foundations_of_power_electronics\long_cable_effects\data/
+
+!foundations_of_power_electronics\long_cable_effects\data/*.mat
+!foundations_of_power_electronics\long_cable_effects\data/*.eps
+!foundations_of_power_electronics\long_cable_effects\data/*.jpeg
+!foundations_of_power_electronics\long_cable_effects\data/*.jpg
+!foundations_of_power_electronics\long_cable_effects\data/*.png
