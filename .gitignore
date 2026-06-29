@@ -196,12 +196,3 @@ startup.m      # Local startup (machine-specific) — remove if shared
 Thumbs.db
 desktop.ini
 *.lnk
- 
-# --- Version control helpers ---
-*.orig
-<<<<<<< HEAD
-*.rej
-*.mat
-=======
-*.rej
->>>>>>> 777b38f (no message)
