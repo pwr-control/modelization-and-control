@@ -1,0 +1,329 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[italian]{babel}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{margin=25mm}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue]{hyperref}
+
+\sisetup{output-decimal-marker={,}}
+
+\title{Modello barra--stringa ed analisi FEM 1D:\\
+risposta risonante ad eccitazione armonica a \SI{2}{kHz}}
+\author{D.~Bagnara}
+\date{\today}
+
+\newcommand{\dpar}[2]{\frac{\partial #1}{\partial #2}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Si presenta il modello dinamico di una \emph{barra--stringa} (trave di
+Eulero--Bernoulli soggetta a tensione assiale) e la sua discretizzazione agli
+elementi finiti con elementi di Hermite. Si ricavano le frequenze naturali in
+forma chiusa per il caso appoggiato--appoggiato, si costruisce la risposta
+armonica forzata e si mostra che, con un'opportuna scelta della tensione, la
+struttura entra in risonanza per un'eccitazione sinusoidale a
+$f_0 = \SI{2}{kHz}$, con una banda di risonanza (\emph{spread}) determinata
+dallo smorzamento modale. Il documento accompagna lo script MATLAB
+\texttt{beam\_string\_fem.m}.
+\end{abstract}
+
+\section{Introduzione}
+Il modello barra--stringa descrive elementi strutturali snelli in cui
+coesistono due meccanismi di richiamo elastico trasversale: la rigidezza
+flessionale $EI$ (comportamento da \emph{barra}, o trave) e la tensione
+assiale $T$ (comportamento da \emph{stringa}, o corda tesa). \`E il modello
+naturale per fili, trefoli e conduttori tesi eccitati da forze distribuite o
+concentrate, ad esempio di origine elettromagnetica. L'interesse pratico \`e
+duplice: (i) prevedere \emph{a quale frequenza} la struttura risuona, dato che
+in risonanza l'ampiezza \`e limitata solo dallo smorzamento; (ii) quantificare
+lo \emph{spread} di frequenza entro cui la risposta rimane amplificata, cio\`e
+la banda a met\`a potenza attorno al picco.
+
+\section{Modello continuo}
+\subsection{Equazione del moto}
+Sia $w(x,t)$ lo spostamento trasversale di una campata di lunghezza $L$, massa
+per unit\`a di lunghezza $\rho A$, rigidezza flessionale $EI$ e tensione
+assiale $T$ costante. Il bilancio di quantit\`a di moto trasversale fornisce
+la PDE del quarto ordine
+\begin{equation}
+\rho A \,\dpar{^2 w}{t^2}
++ c\,\dpar{w}{t}
++ EI\,\dpar{^4 w}{x^4}
+- T\,\dpar{^2 w}{x^2}
+= f(x,t),
+\label{eq:pde}
+\end{equation}
+dove $c$ \`e uno smorzamento viscoso equivalente ed $f(x,t)$ la forza
+trasversale per unit\`a di lunghezza. I due casi limite sono immediati: per
+$T \to 0$ si ritrova la trave di Eulero--Bernoulli, per $EI \to 0$ l'equazione
+delle corde vibranti. Il rapporto adimensionale
+\begin{equation}
+\mu_n = \frac{EI\,\beta_n^2}{T}, \qquad \beta_n = \frac{n\pi}{L},
+\end{equation}
+misura, modo per modo, quanto il comportamento sia da trave ($\mu_n \gg 1$) o
+da corda ($\mu_n \ll 1$): la rigidezza flessionale pesa sempre di pi\`u al
+crescere dell'ordine modale, perch\'e entra con la quarta potenza del numero
+d'onda.
+
+\subsection{Frequenze naturali (appoggiato--appoggiato)}
+Con condizioni al contorno $w(0)=w(L)=0$, $w''(0)=w''(L)=0$, le autofunzioni
+sono $\phi_n(x)=\sin(\beta_n x)$ e la relazione di dispersione fornisce
+\begin{equation}
+\omega_n^2 \;=\; \beta_n^2\,\frac{T}{\rho A}
+\;+\; \beta_n^4\,\frac{EI}{\rho A},
+\qquad
+f_n = \frac{\omega_n}{2\pi}.
+\label{eq:disp}
+\end{equation}
+Il primo termine \`e il contributo di corda (lineare in $\beta_n$ sulla
+frequenza), il secondo quello flessionale (quadratico in $\beta_n$): lo
+spettro di una barra--stringa \emph{non \`e armonico}, i modi alti sono
+progressivamente ``stirati'' verso l'alto rispetto ai multipli interi del
+fondamentale.
+
+\subsection{Sintonizzazione della risonanza a \texorpdfstring{$f_0$}{f0}}
+Fissata la geometria, la \eqref{eq:disp} si inverte rispetto a $T$: imposto
+che il modo $n^\ast$ cada esattamente su $\omega_0 = 2\pi f_0$,
+\begin{equation}
+T^\ast = \frac{\rho A\,\omega_0^2 - EI\,\beta_{n^\ast}^4}{\beta_{n^\ast}^2},
+\qquad \beta_{n^\ast} = \frac{n^\ast\pi}{L},
+\label{eq:tuning}
+\end{equation}
+con il vincolo di ammissibilit\`a $T^\ast > 0$ (e $\sigma = T^\ast/A$ entro il
+limite del materiale). Nello script il modo $n^\ast$ \`e scelto come quello
+pi\`u vicino a $f_0$ per la tensione di primo tentativo.
+
+\section{Formulazione debole e discretizzazione FEM}
+\subsection{Forma debole}
+Moltiplicando la \eqref{eq:pde} per una funzione test $v \in H^2_0(0,L)$ ed
+integrando per parti due volte il termine flessionale ed una volta quello di
+tensione si ottiene: trovare $w(\cdot,t)$ tale che
+\begin{equation}
+\int_0^L \rho A\, \ddot{w}\, v\,\mathrm{d}x
++ \int_0^L c\, \dot{w}\, v\,\mathrm{d}x
++ \int_0^L EI\, w''\, v''\,\mathrm{d}x
++ \int_0^L T\, w'\, v'\,\mathrm{d}x
+= \int_0^L f\, v\,\mathrm{d}x
+\label{eq:weak}
+\end{equation}
+per ogni $v$ ammissibile. La presenza di $w''$ richiede continuit\`a $C^1$
+delle funzioni di forma: la scelta canonica sono i polinomi cubici di Hermite.
+
+\subsection{Elemento di Hermite}
+Ogni elemento di lunghezza $h$ ha due nodi e quattro gradi di libert\`a
+$\bm{q}_e = [\,w_1\;\theta_1\;w_2\;\theta_2\,]^{\mathsf T}$ con
+$\theta_i = w'(x_i)$. In coordinate naturali $\xi = (x-x_1)/h \in [0,1]$,
+\begin{equation}
+\begin{aligned}
+N_1 &= 1 - 3\xi^2 + 2\xi^3, &\quad N_2 &= h(\xi - 2\xi^2 + \xi^3),\\
+N_3 &= 3\xi^2 - 2\xi^3,     &\quad N_4 &= h(-\xi^2 + \xi^3).
+\end{aligned}
+\end{equation}
+Sostituendo $w = \bm{N}\bm{q}_e$ nella \eqref{eq:weak} si ottengono le tre
+matrici elementari. Rigidezza flessionale:
+\begin{equation}
+\bm{K}_b^{(e)} = \frac{EI}{h^3}
+\begin{bmatrix}
+12 & 6h & -12 & 6h\\
+6h & 4h^2 & -6h & 2h^2\\
+-12 & -6h & 12 & -6h\\
+6h & 2h^2 & -6h & 4h^2
+\end{bmatrix}.
+\end{equation}
+Rigidezza \emph{geometrica} indotta dalla tensione (dal termine $T\,w'v'$):
+\begin{equation}
+\bm{K}_g^{(e)} = \frac{T}{30h}
+\begin{bmatrix}
+36 & 3h & -36 & 3h\\
+3h & 4h^2 & -3h & -h^2\\
+-36 & -3h & 36 & -3h\\
+3h & -h^2 & -3h & 4h^2
+\end{bmatrix}.
+\end{equation}
+Massa consistente:
+\begin{equation}
+\bm{M}^{(e)} = \frac{\rho A h}{420}
+\begin{bmatrix}
+156 & 22h & 54 & -13h\\
+22h & 4h^2 & 13h & -3h^2\\
+54 & 13h & 156 & -22h\\
+-13h & -3h^2 & -22h & 4h^2
+\end{bmatrix}.
+\end{equation}
+L'assemblaggio standard produce $\bm{M}$, $\bm{K} = \bm{K}_b + \bm{K}_g$
+globali; le condizioni appoggiato--appoggiato si impongono eliminando i gradi
+di libert\`a $w(0)$ e $w(L)$ (le rotazioni d'estremit\`a restano libere). Un
+carico puntuale $F_0$ in $x_F$ si proietta sui gradi di libert\`a
+dell'elemento contenente $x_F$ tramite le stesse funzioni di forma,
+$\bm{F} = F_0\,\bm{N}^{\mathsf T}(\xi_F)$: \`e il carico
+\emph{energeticamente consistente}.
+
+\subsection{Smorzamento di Rayleigh}
+Lo smorzamento \`e modellato come
+$\bm{C} = \alpha\bm{M} + \beta\bm{K}$, con $\alpha,\beta$ calibrati imponendo
+lo smorzamento modale $\zeta$ a due pulsazioni $\omega_1,\omega_2$ che
+delimitano la banda d'interesse:
+\begin{equation}
+\alpha = \frac{2\zeta\,\omega_1\omega_2}{\omega_1+\omega_2},
+\qquad
+\beta = \frac{2\zeta}{\omega_1+\omega_2}.
+\end{equation}
+Nello script si usa $\omega_1 = \omega_0$, $\omega_2 = 2\omega_0$ con
+$\zeta = 0{,}5\,\%$, valore tipico per fili metallici tesi.
+
+\section{Analisi dinamica}
+\subsection{Analisi modale}
+Il problema agli autovalori generalizzato
+$\bm{K}\bm{\phi}_n = \omega_n^2\,\bm{M}\bm{\phi}_n$ fornisce frequenze e forme
+modali FEM, da confrontare con la \eqref{eq:disp} per la verifica di
+convergenza. Con elementi di Hermite l'errore in frequenza converge come
+$O(h^4)$: con $N_e = 200$ elementi su $L = \SI{0.8}{m}$ (oltre 20 elementi per
+lunghezza d'onda del modo 9) l'errore sul modo target risulta
+$\sim 2\cdot10^{-6}\,\%$.
+
+\subsection{Risposta armonica forzata (FRF)}
+Per $f(x,t) = F_0\,\delta(x-x_F)\sin(\omega t)$ la risposta a regime \`e
+$\bm{w}(t) = \Im\{\bm{W}(\omega)e^{\mathrm{j}\omega t}\}$ con
+\begin{equation}
+\bm{W}(\omega) =
+\bigl(\bm{K} + \mathrm{j}\omega\bm{C} - \omega^2\bm{M}\bigr)^{-1}\bm{F}.
+\label{eq:frf}
+\end{equation}
+Espandendo sulla base modale ($\bm{\Phi}^{\mathsf T}\bm{M}\bm{\Phi}=\bm{I}$),
+\begin{equation}
+W(x_o,\omega) = \sum_n
+\frac{\phi_n(x_o)\,\phi_n(x_F)\,F_0}
+{\omega_n^2 - \omega^2 + 2\mathrm{j}\zeta_n\omega_n\omega},
+\label{eq:modal}
+\end{equation}
+da cui la condizione di risonanza: quando $\omega \to \omega_{n^\ast}$ il
+denominatore del termine $n^\ast$ si riduce a
+$2\mathrm{j}\zeta_{n^\ast}\omega_{n^\ast}^2$ e l'ampiezza \`e amplificata di
+un fattore $Q = 1/(2\zeta)$ rispetto alla risposta quasi-statica dello stesso
+modo ($Q = 100$ per $\zeta = 0{,}5\,\%$). La scelta di $x_F$ e $x_o$ deve
+evitare i nodi di $\phi_{n^\ast}$, altrimenti il prodotto
+$\phi_{n^\ast}(x_o)\phi_{n^\ast}(x_F)$ annulla la partecipazione del modo:
+nello script $x_F = 0{,}30\,L$ e $x_o = 0{,}37\,L$.
+
+\subsection{Spread di risonanza: banda a met\`a potenza}
+Dalla \eqref{eq:modal}, l'ampiezza scende di $\SI{3}{dB}$ rispetto al picco
+alle frequenze $f_{n^\ast}(1 \pm \zeta)$; la banda a met\`a potenza vale
+quindi
+\begin{equation}
+\Delta f_{-3\,\mathrm{dB}} \simeq 2\,\zeta\, f_{n^\ast}.
+\label{eq:band}
+\end{equation}
+Questo \`e lo \emph{spread} fisicamente rilevante: per
+$f_0 = \SI{2}{kHz}$ e $\zeta = 0{,}5\,\%$ si ottiene
+$\Delta f \simeq \SI{20}{Hz}$. Se l'eccitazione (o la tensione della campata,
+tramite la \eqref{eq:disp}) deriva entro questa banda, la struttura risponde
+ancora in condizioni sostanzialmente risonanti; al di fuori, l'ampiezza crolla
+rapidamente. \`E anche il criterio con cui interpretare lo sweep numerico
+$f \in [0{,}9\,f_0,\;1{,}1\,f_0]$ dello script: il picco \`e stretto
+($Q$ elevato) ed \`e la firma inequivocabile della risonanza del modo
+$n^\ast$.
+
+\subsection{Transitorio di aggancio alla risonanza}
+Integrando la \eqref{eq:pde} nel tempo (Newmark, accelerazione media,
+$\gamma = 1/2$, $\beta = 1/4$, incondizionatamente stabile) con eccitazione
+esattamente a $f_0$, l'inviluppo della risposta cresce come
+\begin{equation}
+w_{\mathrm{env}}(t) \propto
+\bigl(1 - e^{-\zeta\omega_0 t}\bigr),
+\end{equation}
+con costante di tempo $\tau = 1/(\zeta\omega_0) \simeq \SI{16}{ms}$: il regime
+si raggiunge in $\sim 3\tau \approx \SI{50}{ms}$, cio\`e un centinaio di cicli
+a \SI{2}{kHz}. Anche questo \`e un indicatore diagnostico utile: una crescita
+lenta dell'inviluppo con saturazione limitata dallo smorzamento \`e tipica
+dell'eccitazione \emph{in} risonanza, mentre fuori banda il regime \`e
+raggiunto quasi subito con ampiezza modesta e battimenti a
+$|f - f_{n^\ast}|$.
+
+\section{Caso numerico di riferimento}
+\label{sec:num}
+Filo di acciaio armonico: $L = \SI{0.8}{m}$, $d = \SI{2}{mm}$,
+$E = \SI{210}{GPa}$, $\rho = \SI{7850}{kg/m^3}$, da cui
+$\rho A = \SI{2.47e-2}{kg/m}$ ed $EI = \SI{0.165}{N.m^2}$. Applicando la
+\eqref{eq:tuning} con $f_0 = \SI{2}{kHz}$, il modo pi\`u vicino risulta
+$n^\ast = 9$ e la tensione di sintonia
+\begin{equation*}
+T^\ast \simeq \SI{2912}{N}
+\qquad (\sigma \simeq \SI{927}{MPa}),
+\end{equation*}
+ammissibile per filo armonico ad alta resistenza. La
+Tabella~\ref{tab:modi} riporta il confronto FEM/analitico ottenuto con lo
+script ($N_e = 200$): si noti la non-armonicit\`a dello spettro
+($f_2/f_1 > 2$, ecc.) dovuta al termine flessionale.
+
+\begin{table}[ht]
+\centering
+\caption{Frequenze naturali: FEM (Hermite, $N_e=200$) vs.\ analitico
+\eqref{eq:disp}, $T = T^\ast$.}
+\label{tab:modi}
+\begin{tabular}{ccc}
+\toprule
+$n$ & $f_n$ FEM [\si{Hz}] & $f_n$ analitica [\si{Hz}]\\
+\midrule
+1 & 214{,}85 & 214{,}85\\
+2 & 430{,}26 & 430{,}26\\
+3 & 646{,}79 & 646{,}79\\
+4 & 865{,}00 & 865{,}00\\
+5 & 1085{,}43 & 1085{,}43\\
+6 & 1308{,}63 & 1308{,}63\\
+7 & 1535{,}12 & 1535{,}12\\
+8 & 1765{,}41 & 1765{,}41\\
+\textbf{9} & \textbf{2000{,}00} & \textbf{2000{,}00}\\
+10 & 2239{,}38 & 2239{,}38\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Lo sweep FRF conferma il picco esattamente a \SI{2000}{Hz} con banda a
+$-3\,\mathrm{dB}$ di $\approx \SI{20}{Hz}$, in accordo con la
+\eqref{eq:band}; l'ampiezza al picco supera di circa due ordini di grandezza
+la risposta quasi-statica del modo, coerentemente con $Q = 100$.
+
+\section{Note di validit\`a e possibili estensioni}
+\begin{itemize}
+\item \textbf{Eulero--Bernoulli vs.\ Timoshenko.} Per il modo 9 la
+semilunghezza d'onda \`e $L/9 \approx \SI{89}{mm} \gg d = \SI{2}{mm}$:
+taglio ed inerzia rotatoria sono trascurabili e il modello E--B \`e adeguato
+fino ben oltre \SI{2}{kHz} per questa geometria.
+\item \textbf{Linearit\`a.} Il modello assume $T$ costante; per grandi
+ampiezze la tensione dinamica indotta dallo stiramento introduce una
+non-linearit\`a di tipo Duffing (irrigidente) che sposta il picco e genera il
+caratteristico salto d'isteresi. Il modello lineare resta valido finch\'e
+$w_{\max} \ll d$.
+\item \textbf{Eccitazione distribuita.} Per forze di volume (es.\ forze
+elettromagnetiche) basta sostituire il carico puntuale con la proiezione
+$\bm{F} = \int \bm{N}^{\mathsf T} f(x)\,\mathrm{d}x$; la
+\eqref{eq:modal} mostra che conta solo la proiezione modale
+$\int f(x)\phi_{n^\ast}(x)\,\mathrm{d}x$.
+\item \textbf{Incertezza sulla tensione.} Dalla \eqref{eq:disp}, una
+variazione relativa $\delta T/T$ sposta $f_{n^\ast}$ di circa
+$\tfrac{1}{2}\,\delta T/T$ (nel limite di corda): la condizione perch\'e la
+risonanza resti agganciata entro la banda \eqref{eq:band} \`e
+$\delta T/T \lesssim 4\zeta$, un vincolo pratico utile in fase di
+identificazione sperimentale.
+\end{itemize}
+
+\begin{thebibliography}{9}
+\bibitem{geradin} M.~G\'eradin, D.~Rixen, \emph{Mechanical Vibrations: Theory
+and Application to Structural Dynamics}, 3rd ed., Wiley, 2015.
+\bibitem{rao} S.~S.~Rao, \emph{Vibration of Continuous Systems}, 2nd ed.,
+Wiley, 2019.
+\bibitem{wickert} J.~A.~Wickert, C.~D.~Mote, ``Classical vibration analysis of
+axially moving continua,'' \emph{ASME J. Appl. Mech.}, vol.~57, pp.~738--744,
+1990.
+\bibitem{cook} R.~D.~Cook, D.~S.~Malkus, M.~E.~Plesha, R.~J.~Witt,
+\emph{Concepts and Applications of Finite Element Analysis}, 4th ed., Wiley,
+2002.
+\end{thebibliography}
+
+\end{document}
