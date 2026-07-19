@@ -1,5 +1,5 @@
 clear
-close all
+% close all
 clc
 
 load trace_15.mat;
@@ -20,7 +20,7 @@ tratto3 = 3;
 colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
-t1c = time(end) - 1e-3;
+t1c = time(end) - 100e-3;
 t2c = time(end);
 
 fontsize_title = 14;
@@ -36,7 +36,7 @@ legend('$i_\mathrm{z}^\mathrm{inv}$','Location','northeastoutside',...
 ylabel('Current - [A]','Interpreter','latex','FontSize', fontsize_axis);
 xlabel('Time - [s]','Interpreter','latex','FontSize', fontsize_axis);
 set(gca, 'xlim',[t1c t2c]);
-set(gca,'ylim',[-50 50]);
+set(gca,'ylim',[-100 100]);
 grid on
 h=gcf;
 set(h,'PaperOrientation','landscape');

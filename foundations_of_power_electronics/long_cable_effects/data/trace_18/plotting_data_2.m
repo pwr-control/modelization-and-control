@@ -20,7 +20,7 @@ tratto3 = 3;
 colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
-t1c = time(end) - 2e-3;
+t1c = time(end) - 10e-3;
 t2c = time(end);
 
 fontsize_title = 14;
@@ -29,7 +29,7 @@ fontsize_axis = 14;
 
 
 figure; 
-plot(time,Var3,'-k','LineWidth',tratto1);
+plot(time,Var2,'-k','LineWidth',tratto1);
 title('Zero sequence inverter output current','Interpreter','latex','FontSize',fontsize_title);
 legend('$i_\mathrm{z}^\mathrm{inv}$','Location','northeastoutside',...
     'Interpreter','latex','FontSize',fontsize_legend);

@@ -1,7 +1,7 @@
 close all
 clc
-clear 
-load sim_results_2
+% clear 
+% load sim_results_1
 
 
 tratto1 = 1;
@@ -10,8 +10,8 @@ tratto3 = 3;
 colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
-t1c = 1.5 - 1e-3;
-t2c = 1.5;
+t1c = t_tc_sim(end) - 1e-3;
+t2c = t_tc_sim(end);
 
 fontsize_title = 14;
 fontsize_legend = 14;
@@ -24,8 +24,8 @@ legend('$i_\mathrm{z}^\mathrm{inv}$','Location','northeastoutside',...
     'Interpreter','latex','FontSize',fontsize_legend);
 ylabel('Current - [A]','Interpreter','latex','FontSize', fontsize_axis);
 xlabel('Time - [s]','Interpreter','latex','FontSize', fontsize_axis);
-set(gca,'xlim',[t1c t2c]);
-set(gca,'ylim',[-50 50]);
+set(gca,'xlim',[t_tc_sim(end) - 100e-3 t_tc_sim(end)]);
+set(gca,'ylim',[-100 100]);
 grid on
 h=gcf;
 set(h,'PaperOrientation','landscape');
