@@ -372,13 +372,13 @@ hf_power_cable_model.Rs1 = 1.85e-3 / hf_power_cable_model.n %[output:98292422]
 hf_power_cable_model.RCs1 = 0.5e-3;
 hf_power_cable_model.Cp1 = 1e-8;
 
-f1 = 1/2/pi/sqrt(hf_power_cable_model.Ls1*hf_power_cable_model.Cp1) %[output:40551e4c]
+f1 = 1/2/pi/sqrt(hf_power_cable_model.Ls1*hf_power_cable_model.Cp1); %[output:40551e4c]
 
 % second branch capacitor
 hf_power_cable_model.RCs2 = 1e-3;
 hf_power_cable_model.Cp2 = 2e-10;
 
-f2 = 1/2/pi/sqrt(hf_power_cable_model.Ls1*hf_power_cable_model.Cp2) %[output:2a4b8607]
+f2 = 1/2/pi/sqrt(hf_power_cable_model.Ls1*hf_power_cable_model.Cp2); %[output:2a4b8607]
 
 % third branch pure resistor
 hf_power_cable_model.Rp1 = 80e3;
