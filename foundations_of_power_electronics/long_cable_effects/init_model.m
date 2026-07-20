@@ -370,8 +370,8 @@ hf_power_cable_model.Ls1 = Ls1 / hf_power_cable_model.n %[output:386399a0]
 hf_power_cable_model.Rs1 = 30e-3 / hf_power_cable_model.n %[output:98292422]
 
 % first branch capacitor
-hf_power_cable_model.RCs1 = 0.5e-3 / hf_power_cable_model.n;
-hf_power_cable_model.Cp1 = 72e-9 / hf_power_cable_model.n;
+hf_power_cable_model.RCs1 = 1e-3 / hf_power_cable_model.n;
+hf_power_cable_model.Cp1 = 18e-9 / hf_power_cable_model.n;
 
 f1 = 1/2/pi/sqrt(hf_power_cable_model.Ls1*hf_power_cable_model.Cp1) %[output:40551e4c]
 
@@ -721,7 +721,7 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"hf_power_cable_model","value":"      n: 2\n    Ls1: 1.500000000000000e-05\n    Rs1: 0.015000000000000"}}
 %---
 %[output:40551e4c]
-%   data: {"dataType":"textualVariable","outputData":{"name":"f1","value":"     2.165824447871323e+05"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"f1","value":"     4.331648895742645e+05"}}
 %---
 %[output:4048b61c]
 %   data: {"dataType":"text","outputData":{"text":"Induction Machine: ABB M3BP 355MLB 6 261kW\nIM Normalization Voltage Factor: 375.6 V | IM Normalization Current Factor: 581.2 A\nRotor Resistance: 0.00274 Ohm\nMagnetization Inductance: 0.00376 H\n---------------------------\n","truncated":false}}
