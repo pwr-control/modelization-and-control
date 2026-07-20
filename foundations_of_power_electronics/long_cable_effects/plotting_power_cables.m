@@ -24,8 +24,8 @@ legend('$i_\mathrm{z}^\mathrm{inv}$','Location','northeastoutside',...
     'Interpreter','latex','FontSize',fontsize_legend);
 ylabel('Current - [A]','Interpreter','latex','FontSize', fontsize_axis);
 xlabel('Time - [s]','Interpreter','latex','FontSize', fontsize_axis);
-set(gca,'xlim',[t_tc_sim(end) - 100e-3 t_tc_sim(end)]);
-set(gca,'ylim',[-100 100]);
+set(gca,'xlim',[t_tc_sim(end) - 20e-3 t_tc_sim(end)]);
+set(gca,'ylim',[-50 50]);
 grid on
 h=gcf;
 set(h,'PaperOrientation','landscape');
