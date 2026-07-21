@@ -22,7 +22,7 @@ fontsize_axis = 14;
 
 
 figure;
-plot(time,udc_pgnd,'-k','LineWidth',tratto1);
+plot(time,udc_pgnd,'-','LineWidth',tratto1,'Color',colore1);
 title('DClink Voltage p(+) - GND','Interpreter','latex','FontSize',fontsize_title);
 legend('$u_\mathrm{dc}^\mathrm{p-gnd}$','Location','northeastoutside',...
     'Interpreter','latex','FontSize',fontsize_legend);

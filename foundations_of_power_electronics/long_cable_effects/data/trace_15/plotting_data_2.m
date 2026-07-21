@@ -29,7 +29,7 @@ fontsize_axis = 14;
 
 
 figure; 
-plot(time,Var3,'-k','LineWidth',tratto1);
+plot(time,Var3,'-','LineWidth',tratto1,'Color',colore1);
 title('Zero sequence inverter output current','Interpreter','latex','FontSize',fontsize_title);
 legend('$i_\mathrm{z}^\mathrm{inv}$','Location','northeastoutside',...
     'Interpreter','latex','FontSize',fontsize_legend);

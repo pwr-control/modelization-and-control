@@ -1,7 +1,7 @@
 close all
 clc
-% clear 
-% load sim_results_1
+clear 
+load sim_results_2
 
 
 tratto1 = 1;
@@ -18,7 +18,7 @@ fontsize_legend = 14;
 fontsize_axis = 14;
 
 figure;
-plot(t_tc_sim,iz_power_cable_drive_side_sim,'-k','LineWidth',tratto1);
+plot(t_tc_sim,iz_power_cable_drive_side_sim,'-','LineWidth',tratto1,'Color',colore1);
 title('Zero sequence inverter output current','Interpreter','latex','FontSize',fontsize_title);
 legend('$i_\mathrm{z}^\mathrm{inv}$','Location','northeastoutside',...
     'Interpreter','latex','FontSize',fontsize_legend);
