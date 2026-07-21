@@ -10,7 +10,7 @@ s=tf('s');
 fPWM_RECT = 5e3; % PWM frequency 
 tPWM_RECT = 1/fPWM_RECT;
 fclock=25e6;
-Tcontrol_rect=tPWM_RECT; % Sampling time of the control 
+Tcontrol_rect = tPWM_RECT; % Sampling time of the control 
 z_rect=tf('z',Tcontrol_rect);
 
 %% Main Parameter for Simulation
@@ -25,9 +25,9 @@ I_FS = Iout_dc_nom * margin_factor;
 V_FS = Vout_dc_nom * margin_factor;
 
 %% Simulation data sampling time
-simlength = 5;
-Tc=1e-5;
-Ts=Tc/1;
+simlength = 1.2;
+Tc = 1e-6;
+Ts = Tc/1;
 t_misura=simlength;
 Nc=ceil(t_misura/Tc);
 
@@ -76,7 +76,7 @@ RCdf7 = 0.025;
 
 % carico uscita
 Rload = 1.2/4; % valore da usare per carico inverter
-Lload = 250e-4;
+Lload = 250e-6;
 
 %% grid pll
 pll_i1 = 80;
