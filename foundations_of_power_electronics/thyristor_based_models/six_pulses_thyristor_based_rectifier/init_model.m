@@ -9,7 +9,6 @@ opts.FreqUnits = 'Hz';
 s=tf('s');
 fPWM_RECT = 5e3; % PWM frequency 
 tPWM_RECT = 1/fPWM_RECT;
-fclock=25e6;
 Tcontrol_rect = tPWM_RECT; % Sampling time of the control 
 z_rect=tf('z',Tcontrol_rect);
 
@@ -26,9 +25,9 @@ V_FS = Vout_dc_nom * margin_factor;
 
 %% Simulation data sampling time
 simlength = 1.2;
-Tc = 1e-6;
+Tc = Tcontrol_rect/400;
 Ts = Tc/1;
-t_misura=simlength;
+t_misura = 20e-3;
 Nc=ceil(t_misura/Tc);
 
 %% HW components
