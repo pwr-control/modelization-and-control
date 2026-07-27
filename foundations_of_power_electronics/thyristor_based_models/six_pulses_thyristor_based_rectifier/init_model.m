@@ -44,8 +44,6 @@ l1pu = (0.025*V1b/sqrt(3)/I1b)/Z1b
 r2pu = ((Pb/3/2*0.05)/I2b^2)/Z2b
 l2pu = (0.025*V2b/sqrt(3)/I2b)/Z2b
 
-
-
 % filtro uscita in DC
 LFu_dc = 1.2e-3; %
 RLFu_dc = 2e-4;
@@ -113,6 +111,9 @@ pole1 = omega_base;
 pole2 = 4*omega_base;
 
 harmonic_obs = harmonic_observer(ts, omega_base, delta, pole1, pole2);
+
+rms_periods = 1;
+rms.n1 = 2*pi * rms_periods / omega_base / Tc;
 
 % %% 
 model = 'six_pulse_thyristor_based_rectifier';
