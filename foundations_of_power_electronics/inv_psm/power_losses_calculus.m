@@ -2,7 +2,7 @@ clear
 close all
 clc
 
-load sim_results_FF1200R17_4kHz_520A_cosphi8p;
+load sim_results_1;
 
 ploss_igbtQ1 = mean(igbt_ploss_invQ1_sim);
 ploss_diodeQ1 = mean(diode_ploss_invQ1_sim);
@@ -20,7 +20,7 @@ TjMAX_diode = Tambient + max(diode_JH_temp_invQ1_sim) + max(diode_HA_temp_invQ1_
 
 disp('----------------------------------------------------');
 fprintf('\n');
-fprintf('Test with 520A and cos(phi) = 0.8\n');
+fprintf('Test with 370A and cos(phi) = 0.8\n');
 fprintf('Used: %s\n', igbt.inv.name);
 fprintf('Power Losses IGBT: %.2f W\n', ploss_igbtQ1);
 fprintf('Power Losses Diode: %.2f W\n', ploss_diodeQ1);
@@ -37,6 +37,7 @@ fprintf('Diode Max Tj: %.2f K\n', TjMAX_diode);
 % fprintf('Diode design Tj: %.2f K\n', Tj_design_diode);
 disp('----------------------------------------------------'); 
 
+return
 
 clear
 
