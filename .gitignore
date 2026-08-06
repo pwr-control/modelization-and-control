@@ -121,7 +121,7 @@ Makefile.in
 *.loe
 
 # Generated PDF (comment out if you want to track the final PDF)
-*.pdf
+# *.pdf
 
 # ============================================================
 #  Editors & OS
