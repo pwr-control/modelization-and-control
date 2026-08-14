@@ -624,10 +624,10 @@ Simulink.importExternalCTypes(model,'Names',{'sogi_flt_output_t'});
 Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_output_t'});
 
 %[text] ### **Remove Scopes Opening Automatically**
-open_scopes = find_system(model, 'BlockType', 'Scope');
-for i = 1:length(open_scopes)
-    set_param(open_scopes{i}, 'Open', 'off');
-end
+% open_scopes = find_system(model, 'BlockType', 'Scope');
+% for i = 1:length(open_scopes)
+%     set_param(open_scopes{i}, 'Open', 'off');
+% end
 
 %[text] ### Enable/Disable Subsystems
 % if use_mosfet_thermal_model
