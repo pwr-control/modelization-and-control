@@ -25,7 +25,7 @@ V_FS = Vout_dc_nom * margin_factor;
 
 %% Simulation data sampling time
 simlength = 1.2;
-Tc = Tcontrol_rect/400;
+Tc = Tcontrol_rect/4000;
 Ts = Tc/1;
 t_misura = 20e-3;
 Nc=ceil(t_misura/Tc);
@@ -84,8 +84,9 @@ Vnom_ac_adc = 400/sqrt(3)*sqrt(2);
 Ron=1e-3;
 Vfdiode = 0.7;
 % 
-Csnubber=0.15e-6;
-Rsnubber=2.2e4;
+Csnubber = 0.1e-6;
+Rsnubber = 1000;
+Rgrading = 2.4e6;
 
 %% grid data
 kgrid = 1;
