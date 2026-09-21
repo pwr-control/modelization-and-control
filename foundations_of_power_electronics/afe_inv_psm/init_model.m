@@ -311,17 +311,17 @@ frt_data = frt_settings(test_index, test_subindex, asymmetric_error_type, ...
 grid_fault_generator;
 %[text] ### Reactive Current References Settings
 % reactive current references 
-enable_i_react_pos_steps = 1;
-    time_i_react_pos_ref_1 = 0; % default
-    time_i_react_pos_ref_2 = 0; % default
-    i_react_pos_ref_1 = 0; % default
-    i_react_pos_ref_2 = 0; % default
-    i_react_pos_ref_3 = 0; % default
+param.ctrl.enable_i_react_pos_steps = 1;
+    param.ctrl.time_i_react_pos_ref_1 = 0; % default
+    param.ctrl.time_i_react_pos_ref_2 = 0; % default
+    param.ctrl.i_react_pos_ref_1 = 0; % default
+    param.ctrl.i_react_pos_ref_2 = 0; % default
+    param.ctrl.i_react_pos_ref_3 = 0; % default
 
-if enable_i_react_pos_steps
-    time_i_react_pos_ref_1 = start_time_LVRT + error_length + 0.335;
-    time_i_react_pos_ref_2 = time_i_react_pos_ref_1 + 0.5;
-    i_react_pos_ref_2 = -ixi_ref_mod1*tan(acos(0.95));  % cos(phi) = 0.9
+if param.ctrl.enable_i_react_pos_steps
+    param.ctrl.time_i_react_pos_ref_1 = start_time_LVRT + error_length + 0.335;
+    param.ctrl.time_i_react_pos_ref_2 = param.ctrl.time_i_react_pos_ref_1 + 0.5;
+    param.ctrl.i_react_pos_ref_2 = -param.ctrl.ixi_ref_mod1*tan(acos(0.95));  % cos(phi) = 0.9
     i_react_pos_ref_3 = ixi_ref_mod1*tan(acos(0.95)); % cos(phi) = 0.9
 end
 %[text] #### UPQC Series Transformer
