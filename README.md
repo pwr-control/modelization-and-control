@@ -54,8 +54,27 @@ Each project folder follows the same pattern:
 | [`foundations_of_control_systems`](foundations_of_control_systems) | Control theory examples |
 | [`foundations_of_mathematics`](foundations_of_mathematics) | Numerical experiments (Lorenz system, Lyapunov exponent) |
 | [`foundations_of_qm`](foundations_of_qm) | 1D Schrödinger equation solved by finite differences |
+| [`tools`](tools) | Shared MATLAB tools for the projects: migration of a model from flat workspace names to the `param` structure (`migrate_model_to_param`), list of the workspace names a model reads (`list_model_workspace_names`) |
 
 Each folder has its own README with a project-by-project description.
+
+## Initialization scripts: the `param` structure
+
+The projects are being moved (September 2026, `afe_inv_psm` and `resonant_cllc` first) from a flat
+base workspace to a single struct `param` with one group per subsystem (`param.sim`, `param.time`,
+`param.glb_time`, `param.afe`, `param.inv`, `param.cllc`, `param.psm`, `param.battery`,
+`param.thermal`, ...). Rules followed:
+
+- the model's own numbers (hardware data, application voltage, PWM, control gains) live in
+  `init_model.m` as `param.<stage>.hw_in.*` and similar; the `library` provides only the setup
+  classes and algorithms (`timing_setup`, `hw_*_setup`, `ctrl_*_setup`, `device_*_setup`, ...);
+- a library function that must be frozen or changed for one project only is copied into the
+  project's `private/` folder with the same name: MATLAB resolves it before the path, for that
+  folder only; the copy states its origin in the header and `init_model.m` prints the list of
+  such overrides at every run;
+- the old flat init is kept as `init_model_legacy.m` until the migrated model is adopted; the
+  `.slx` is rewritten with `migrate_<model>.m` (a mapping plus `tools/migrate_model_to_param`),
+  the names a model really reads are listed with `tools/list_model_workspace_names`.
 
 ## Conventions
 

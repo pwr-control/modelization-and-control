@@ -7,9 +7,11 @@
 %   param.glb_time  timing_setup object (built from param.time, param.afe.pwm, param.inv.pwm)
 %   param.grid      grid emulator inputs;              param.grid.emu     grid_three_phase_emulator object
 %   param.frt       FRT test inputs;                   param.frt.data     frt_settings + grid_fault_generator data
-%   param.afe       active front end: .pwm .hw .ctrl .pll .impl .ref .behav .igbt .mosfet .ideal_switch
-%   param.inv       machine-side inverter: .pwm .hw .behav .igbt .mosfet .ideal_switch
-%   param.psm       machine and its control: .machine .mode .impl .ctrl (.ctrl.ekf) and the voltage scaling
+%   param.afe       active front end: .pwm .hw_in (hardware numbers) .hw (hw_afe_three_phase_setup object)
+%                   .ctrl .pll .impl .ref .behav .igbt .mosfet .ideal_switch
+%   param.inv       machine-side inverter: .pwm .hw_in .hw (hw_inverter_three_phase_setup) .behav .igbt .mosfet .ideal_switch
+%   param.psm       machine and its control: .machine_in (machine numbers) .machine (pmsm_setup object)
+%                   .mode .impl .ctrl (.ctrl.ekf) and the voltage scaling
 %   param.load      torque curve, speed reference, load torque, external inertia
 %   param.meas      ADC end scale and quantization
 %   param.ctrl      control settings common to all modules (time alignment, filters, PI clip release)
@@ -23,6 +25,16 @@
 % Library objects keep their name as a field: hwdata.afe -> param.afe.hw, afe_ctrl -> param.afe.ctrl,
 % psm -> param.psm.machine, psm_ctrl -> param.psm.ctrl, frt_data -> param.frt.data, grid_emu -> param.grid.emu.
 %
+% Library dependence (2026-09-30): the library provides classes and algorithms (timing_setup,
+% hw_afe_three_phase_setup, hw_inverter_three_phase_setup, pmsm_setup, ctrl_*_setup, device_*_setup,
+% liquid_cooled_plate_2kw_setup...), the model's numbers stay in this file (param.afe.hw_in,
+% param.inv.hw_in, param.psm.machine_in, the torque curve in param.load); the *_hwdata, psm_calculus and
+% torque-curve functions of the library are no longer called. The device datasets (device_igbt_setup...)
+% stay in the library: they describe components, not this model. A function that must be frozen or
+% changed for this model only goes in ./private with the same name: MATLAB resolves private functions
+% before the path, for the files of this folder only, and the list of such overrides is printed at
+% every run (see below).
+%
 % The last code section ("Transition: legacy workspace names") exports the old names still read by
 % afe_inv_psm.slx. migrate_afe_inv_psm.m rewrites the model to param.*; once done, set
 % export_legacy_names = false and delete that section.
@@ -31,6 +43,13 @@ clear;
 [model, options] = init_environment('afe_inv_psm_param');
 s = tf('s');
 param = struct();
+
+% functions overridden for this model: ./private takes precedence over the library
+overrides = dir(fullfile(fileparts(mfilename('fullpath')), 'private', '*.m'));
+if ~isempty(overrides)
+    fprintf('%s init: local overrides in private/: %s\n', model, strjoin({overrides.name}, ', '));
+end
+clear overrides
 %[text] ## Simulation
 param.sim.simlength = 1.75;                 % [s] model StopTime
 param.sim.tc = 0.25e-6;                     % [s] fixed step (model FixedStep) and logging base
@@ -180,7 +199,54 @@ end
 clear f frt_gen fn
 %[text] ## AFE
 %[text] ### Hardware
-param.afe.hw = three_phase_afe_hwdata(param.grid.application_voltage, param.afe.pwr_nom, param.glb_time.fPWM_AFE); %[output:28d1ccf6]
+% The numbers are the model's own (param.afe.hw_in), the library provides only the setup class
+% hw_afe_three_phase_setup (normalization ubez/ibez). Same data sets as three_phase_afe_hwdata of the
+% library, selected by the application voltage; DC-link capacitors and their ESR are the same for all.
+if param.grid.application_voltage == 690
+    param.afe.hw_in.name = 'afe690V';
+    param.afe.hw_in.uafe_nom = 690;                 % [V] line-to-line
+    param.afe.hw_in.iafe_freq = 50;                 % [Hz]
+    param.afe.hw_in.udc = 1070;                     % [V] DC-link
+    param.afe.hw_in.LFu = 500e-6;                   % [H] grid-side filter inductor
+    param.afe.hw_in.LFu_cm = 500e-6;                % [H] common-mode inductor
+    param.afe.hw_in.CFu = 200e-6;                   % [F] filter capacitor
+    param.afe.hw_in.Rbrake = 4;                     % [Ohm]
+elseif param.grid.application_voltage == 480
+    param.afe.hw_in.name = 'afe480V';
+    param.afe.hw_in.uafe_nom = 480;
+    param.afe.hw_in.iafe_freq = 60;
+    param.afe.hw_in.udc = 750;
+    param.afe.hw_in.LFu = 330e-6;
+    param.afe.hw_in.LFu_cm = 330e-6;
+    param.afe.hw_in.CFu = 360e-6;
+    param.afe.hw_in.Rbrake = 2.5;
+else
+    param.afe.hw_in.name = 'afe400V';
+    param.afe.hw_in.uafe_nom = 400;
+    param.afe.hw_in.iafe_freq = 50;
+    param.afe.hw_in.udc = 660;
+    param.afe.hw_in.LFu = 330e-6;
+    param.afe.hw_in.LFu_cm = 330e-6;
+    param.afe.hw_in.CFu = 360e-6;
+    param.afe.hw_in.Rbrake = 2.5;
+end
+param.afe.hw_in.iafe_nom = param.afe.pwr_nom/sqrt(3)/param.afe.hw_in.uafe_nom/0.9;    % [A] at cos(phi) = 0.9
+param.afe.hw_in.CFi = 7.2e-3;                       % [F] DC-link capacitance; the two banks of the three-level stages
+param.afe.hw_in.CFi1 = 2*param.afe.hw_in.CFi;
+param.afe.hw_in.CFi2 = 2*param.afe.hw_in.CFi;
+param.afe.hw_in.RCFi = 1e-3;                        % [Ohm] ESR
+param.afe.hw_in.RCFi1 = param.afe.hw_in.RCFi/2;
+param.afe.hw_in.RCFi2 = param.afe.hw_in.RCFi/2;
+param.afe.hw_in.RLFu = 157*0.05*param.afe.hw_in.LFu;        % [Ohm] 5 % of the reactance at 25 Hz
+param.afe.hw_in.RLFu_cm = 157*0.05*param.afe.hw_in.LFu_cm;  % [Ohm]
+param.afe.hw_in.RCFu = 50e-3;                       % [Ohm]
+
+h = param.afe.hw_in;
+param.afe.hw = hw_afe_three_phase_setup(h.name, param.afe.pwr_nom, h.uafe_nom, h.iafe_nom, h.iafe_freq, h.udc, ...
+    param.glb_time.fPWM_AFE, h.CFi, h.RCFi, h.CFi1, h.RCFi1, h.CFi2, h.RCFi2, h.LFu, h.RLFu, h.LFu_cm, h.RLFu_cm, ...
+    h.CFu, h.RCFu, h.Rbrake);
+param.afe.hw.displayInfo(); %[output:904db47a]
+clear h
 %[text] ### Control (with sequences)
 param.afe.ctrl = ctrl_afe_setup(param.glb_time.ts_afe, param.grid.emu.omega_grid_nom);
 param.afe.ctrl.kp_udc_ctrl = 2;
@@ -266,7 +332,39 @@ param.afe.behav.pwm_phase_shift_mod4 = 0;
 param.afe.behav.white_noise_power_pwm_phase_shift_mod4 = 0.0;
 %[text] ## Inverter
 %[text] ### Hardware
-param.inv.hw = three_phase_inverter_hwdata(param.grid.application_voltage, param.inv.pwr_nom, param.glb_time.fPWM_INV); %[output:100bf1bf]
+% Same data sets as three_phase_inverter_hwdata of the library (the 480 V set keeps the 400 V machine
+% side with a 750 V DC link), class hw_inverter_three_phase_setup for the normalization.
+if param.grid.application_voltage == 690
+    param.inv.hw_in.name = 'inv690V_250kW';
+    param.inv.hw_in.u_inv_nom = 550;                % [V] machine-side line-to-line
+    param.inv.hw_in.i_inv_nom = 370;                % [A]
+    param.inv.hw_in.udc = 1070;                     % [V] DC-link
+    param.inv.hw_in.LFi = 230e-6;                   % [H] machine-side filter inductor
+    param.inv.hw_in.LFi_cm = 230e-6;                % [H] common-mode inductor
+elseif param.grid.application_voltage == 480
+    param.inv.hw_in.name = 'inv480V_250kW';
+    param.inv.hw_in.u_inv_nom = 400;
+    param.inv.hw_in.i_inv_nom = 470;
+    param.inv.hw_in.udc = 750;
+    param.inv.hw_in.LFi = 160e-6;
+    param.inv.hw_in.LFi_cm = 160e-6;
+else
+    param.inv.hw_in.name = 'inv400V_250kW';
+    param.inv.hw_in.u_inv_nom = 400;
+    param.inv.hw_in.i_inv_nom = 470;
+    param.inv.hw_in.udc = 660;
+    param.inv.hw_in.LFi = 160e-6;
+    param.inv.hw_in.LFi_cm = 160e-6;
+end
+param.inv.hw_in.i_inv_freq = 15.6;                  % [Hz] nominal machine frequency
+param.inv.hw_in.RLFi = 157*0.05*param.inv.hw_in.LFi;        % [Ohm]
+param.inv.hw_in.RLFi_cm = 157*0.05*param.inv.hw_in.LFi_cm;  % [Ohm]
+
+h = param.inv.hw_in;
+param.inv.hw = hw_inverter_three_phase_setup(h.name, param.inv.pwr_nom, h.u_inv_nom, h.i_inv_nom, h.i_inv_freq, ...
+    h.udc, param.glb_time.fPWM_INV, h.LFi, h.RLFi, h.LFi_cm, h.RLFi_cm);
+param.inv.hw.displayInfo(); %[output:3ee4328d]
+clear h
 %[text] ### Module behaviour (clock mismatch, noise, PWM phase shift)
 param.inv.behav.time_gain_module_1 = 1.0005;
 param.inv.behav.time_gain_module_2 = 1.001;
@@ -300,7 +398,25 @@ param.afe.ideal_switch = device_ideal_switch_setting(param.dev.used_device_ideal
 param.inv.ideal_switch = device_ideal_switch_setting(param.dev.used_device_ideal_switch, param.glb_time.fPWM_INV, param.inv.hw.udc_nom);
 %[text] ## PSM and its control
 %[text] ### Machine
-param.psm.machine = psm_calculus(); %[output:59c28efe]
+% Machine data of psm_calculus of the library (wind generator, six three-phase systems), class pmsm_setup
+param.psm.machine_in.name = 'WindGen';
+param.psm.machine_in.number_of_systems = 6;
+param.psm.machine_in.pwr_nom = 1600e3;             % [W]
+param.psm.machine_in.i_nom = 2062;                 % [A]
+param.psm.machine_in.rpm_nom = 17.8;               % [rpm]
+param.psm.machine_in.number_poles = 104;
+param.psm.machine_in.eta = 96;                     % [%]
+param.psm.machine_in.Ld = 1.04e-3;                 % [H] per system
+param.psm.machine_in.Lq = 1.26e-3;                 % [H] per system
+param.psm.machine_in.Jm = 900e3/6;                 % [kg m^2]
+param.psm.machine_in.h5_percent = 0;               % [%] 5th and 7th back-EMF harmonics
+param.psm.machine_in.h7_percent = 0;
+
+m = param.psm.machine_in;
+param.psm.machine = pmsm_setup(m.name, m.number_of_systems, m.pwr_nom, m.i_nom, m.rpm_nom, m.number_poles, ...
+    m.eta, m.Ld, m.Lq, m.Jm, m.h5_percent, m.h7_percent);
+param.psm.machine.displayInfo(); %[output:16a9bfea]
+clear m
 param.psm.number_of_systems = 1;
 param.psm.n_sys = param.psm.machine.number_of_systems;
 %[text] ### Motor voltage to Udc scaling
@@ -334,19 +450,17 @@ param.psm.impl.use_current_controller_from_ccaller_module_2 = 0;
 %[text] ### Control with EKF based observer
 param.psm.ctrl = ctrl_pmsm_setup(param.glb_time.ts_inv, param.psm.machine.omega_bez, param.psm.u_psm_scale, param.psm.machine.Jm_norm);
 % param.psm.ctrl.ekf = ekf_pmsm_setup(param.psm.machine.Rs_norm, param.psm.machine.Ls_norm, param.psm.machine.Jm_norm, param.glb_time.ts_inv);
-param.psm.ctrl.ekf = ekf_pmsm_setup(param.psm.machine.Rs_norm, param.psm.machine.Ls_norm, 1e6, param.glb_time.ts_inv); %[output:904db47a]
+param.psm.ctrl.ekf = ekf_pmsm_setup(param.psm.machine.Rs_norm, param.psm.machine.Ls_norm, 1e6, param.glb_time.ts_inv); %[output:3269560b]
 param.psm.ctrl.kp_i = 0.25;
 param.psm.ctrl.ki_i = 35;
 %[text] ## Mechanical load, speed reference and torque curve
 param.load.b = param.psm.machine.load_friction_m;
 param.load.external_load_inertia = 1;       % alternative: 6*param.psm.machine.Jm_m
 
-% energy production: torque curve (the library script reads n_sys, writes rpm_base, torque_base)
-n_sys = param.psm.n_sys;
-run('n_sys_generic_1M5W_torque_curve');
-param.load.rpm_base = rpm_base;
-param.load.torque_base = torque_base;
-clear n_sys rpm_base torque_base
+% energy production: torque curve of the 1.5 MW generic generator (was the library script
+% n_sys_generic_1M5W_torque_curve), total torque divided among the n_sys systems
+param.load.rpm_base = [6 7 8 9 10 11 12 13 14 15 16 17 17.8 18.0 18.2];                        % [rpm]
+param.load.torque_base = 1e3/param.psm.n_sys*[50 75 100 125 150 175 200 225 275 350 450 600 750 885 885];   % [N*m]
 param.load.torque_overload_factor = 1.15;
 
 % drive application: speed reference and load torque
@@ -396,6 +510,13 @@ t = param.thermal;
 param.thermal.heatsink = liquid_cooled_plate_2kw_setup(t.weight, t.no_weight, t.cp_al, t.heat_capacity_hs, ...
     t.thermal_conductivity_al, t.Rth_switch_HA, t.Rth_mosfet_HA, t.Rth_diode_HA, t.Tambient, t.DThs_init);
 clear t
+%[text] ### Library workaround: thermal sources read the base workspace
+% Inside the thermal bridges of the library (masked_models/semiconductors_bridges/*.slx) the temperature
+% source has T = DThs_init+Tambient and the initial temperatures read Tambient, instead of the mask
+% parameters DThs_init_m / Tambient_m that the instance sets: the two flat names must exist in the base
+% workspace. Delete this section once the library is fixed (tools/fix_library_thermal_source_refs.m).
+Tambient = param.thermal.Tambient;
+DThs_init = param.thermal.DThs_init;
 %[text] ## DC-link stray inductance (partial loop inductance)
 % same data as the library script parasitic_dclink_data.m; not read by the model, Bode check only
 param.dclink.Lstray_dclink = 100e-9;                            % [H]
@@ -483,15 +604,14 @@ assignin('base', 'PowerMeterIecBus', PowerMeterIecBus);
 clear names elems e k
 %[text] ## Transition: legacy workspace names
 %[text] Old names still read by afe\_inv\_psm.slx (block and mask parameters, variant conditions, model configuration) and by the post-processing scripts (tc, Tambient). The list is the one found in the model, checked with a model compile; migrate\_afe\_inv\_psm.m rewrites the blocks to param.\*. Set export\_legacy\_names = false after the migration to check that nothing is left, then delete this section.
-export_legacy_names = true;
+export_legacy_names = false;
 if export_legacy_names
     % model configuration: StopTime = simlength, FixedStep = tc; tc also in plotting_results_*.m
     simlength = param.sim.simlength;
     tc = param.sim.tc;
 
-    % thermal sources of the power stages (T = DThs_init+Tambient) and sim_results_post_process.m
-    Tambient = param.thermal.Tambient;
-    DThs_init = param.thermal.DThs_init;
+    % Tambient and DThs_init (thermal sources of the library bridges, sim_results_post_process.m):
+    % see the library workaround in the thermal section, they stay
 
     % variant conditions
     use_torque_curve = param.psm.mode.use_torque_curve;
@@ -768,18 +888,18 @@ param.battery.charge_capacity_1 = param.battery.nominal_battery_power/param.batt
 param.battery.charge_capacity_2 = param.battery.nominal_battery_power/param.battery.nominal_battery_voltage_2;
 
 b = param.battery;
-param.battery.cell_1 = lithium_ion_battery_setup(b.nominal_battery_voltage_1, b.nominal_battery_power, ...
+param.battery.pack_1 = lithium_ion_battery_setup(b.nominal_battery_voltage_1, b.nominal_battery_power, ...
     b.charge_capacity_1, b.initial_battery_soc, param.glb_time.ts_dab);
-param.battery.cell_2 = lithium_ion_battery_setup(b.nominal_battery_voltage_2, b.nominal_battery_power, ...
+param.battery.pack_2 = lithium_ion_battery_setup(b.nominal_battery_voltage_2, b.nominal_battery_power, ...
     b.charge_capacity_2, b.initial_battery_soc, param.glb_time.ts_dab);
 
 % special settings for simulation
-param.battery.cell_1.R0 = param.battery.cell_1.R0/2;
-param.battery.cell_1.R1 = param.battery.cell_1.R1/2;
-param.battery.cell_2.R0 = param.battery.cell_2.R0/2;
-param.battery.cell_2.R1 = param.battery.cell_2.R1/2;
-param.battery.cell_1.C1 = param.battery.cell_1.C1/200;
-param.battery.cell_2.C1 = param.battery.cell_2.C1/200;
+param.battery.pack_1.R0 = param.battery.pack_1.R0/2;
+param.battery.pack_1.R1 = param.battery.pack_1.R1/2;
+param.battery.pack_2.R0 = param.battery.pack_2.R0/2;
+param.battery.pack_2.R1 = param.battery.pack_2.R1/2;
+param.battery.pack_1.C1 = param.battery.pack_1.C1/200;
+param.battery.pack_2.C1 = param.battery.pack_2.C1/200;
 
 % ---------------------------------------------------------------- load transformer and RL load
 param.trafo_load.name = 'Load Single Phase Transformer';
@@ -809,16 +929,16 @@ end
 %[metadata:view]
 %   data: {"layout":"onright","rightPanelPercent":33.8}
 %---
-%[output:28d1ccf6]
+%[output:904db47a]
 %   data: {"dataType":"text","outputData":{"text":"Device AFE_THREE_PHASE: afe690V\nNominal Voltage: 690 V | Nominal Current: 2.324276e+02 A\nCurrent Normalization Data: 328.70 A\nVoltage Normalization Data: 563.38 V\n---------------------------\n","truncated":false}}
 %---
-%[output:100bf1bf]
+%[output:3ee4328d]
 %   data: {"dataType":"text","outputData":{"text":"Device INVERTER: inv690V_250kW\nNominal Voltage: 550 V | Nominal Current: 370 A\nCurrent Normalization Data: 523.26 A\nVoltage Normalization Data: 449.07 V\n---------------------------\n","truncated":false}}
 %---
-%[output:59c28efe]
+%[output:16a9bfea]
 %   data: {"dataType":"text","outputData":{"text":"Permanent Magnet Synchronous Machine: WindGen\nPSM Normalization Voltage Factor: 365.8 V | PSM Normalization Current Factor: 486.0 A\nPer-System Direct Axis Inductance: 0.00624 H\nPer-System Quadrature Axis Inductance: 0.00756 H\n---------------------------\n","truncated":false}}
 %---
-%[output:904db47a]
+%[output:3269560b]
 %   data: {"dataType":"text","outputData":{"text":"PSM EKF Fully controllable\nPSM EKF is stable.\n","truncated":false}}
 %---
 %[output:3e92312c]

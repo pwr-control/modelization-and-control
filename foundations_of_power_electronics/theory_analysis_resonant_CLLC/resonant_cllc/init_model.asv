@@ -1,0 +1,829 @@
+%[text] # single\_phase\_cllc: model initialization (param structure by subsystem)
+% Rev. 01, 2026-09-30. Replaces the flat-workspace init_model.m (kept as init_model_legacy.m).
+% Same convention as afe_inv_psm/init_model.m: everything the model needs is in the struct "param",
+% one group per subsystem:
+%   param.sim       simulation settings (stop time, fixed step / logging base, power stage model choice)
+%   param.time      timing settings shared by all stages, and the PWM data of the stages not in this model
+%   param.cllc      CLLC converter: application_voltage, pwr_nom, fres, .pwm, .hw_in (the hardware numbers,
+%                   kept here and not in the library), .hw (hw_cllc_single_phase_setup object), .ctrl .igbt .mosfet .ideal_switch
+%   param.glb_time  timing_setup object (built from param.time and param.cllc.pwm)
+%   param.dcdc      PI gains shared by the DC/DC stages (ctrl_cllc_setup, ctrl_dab_setup, ...)
+%   param.afe       AFE hardware object only (param.afe.hw): the batteries take its DC-link voltage
+%   param.battery   battery inputs;                    param.battery.pack_1 / .pack_2  lithium_ion_battery_setup structs
+%   param.meas      ADC end scale and quantization
+%   param.ctrl      control settings common to all modules (time alignment, filters, PI clip release)
+%   param.thermal   heatsink inputs;                   param.thermal.heatsink  liquid_cooled_plate_2kw_setup object
+%   param.dev       names of the semiconductor datasets
+%
+% Naming rule: the leaf name of the old workspace variable is kept (adc12_quantization ->
+% param.meas.adc12_quantization), except that inside param.cllc the cllc_ tag becomes redundant and is
+% dropped (fpwm_cllc -> param.cllc.pwm.fpwm, cllc_pwr_nom -> param.cllc.pwr_nom, fres_cllc -> param.cllc.fres).
+% Library objects keep their name as a field: hwdata.cllc -> param.cllc.hw, cllc_ctrl -> param.cllc.ctrl,
+% mosfet.dab -> param.cllc.mosfet (the full bridges of the model read the DAB device data: same device,
+% same PWM frequency and same DC-link voltage as the CLLC one, so the data are identical),
+% ideal_switch.dab -> param.cllc.ideal_switch, heatsink -> param.thermal.heatsink,
+% lithium_ion_battery_1 -> param.battery.pack_1, glb_time -> param.glb_time.
+%
+% Library dependence: the library provides classes and algorithms (timing_setup, hw_cllc_single_phase_setup,
+% ctrl_cllc_setup, device_*_setup, liquid_cooled_plate_2kw_setup...), the model's numbers stay in this
+% file. A function that must be frozen or changed for this model only goes in ./private with the same
+% name: MATLAB resolves private functions before the path, for the files of this folder only, and
+% the list of such overrides is printed at every run (see below). Each private copy states in its
+% header where it comes from and what was changed.
+%
+% The last code section ("Transition: legacy workspace names") exports the old names still read by
+% single_phase_cllc.slx. migrate_single_phase_cllc.m rewrites the model to param.*; once done, set
+% export_legacy_names = false and delete that section.
+
+clear;
+[model, options] = init_environment('single_phase_cllc_param');   % 'single_phase_cllc_param' once migrated
+s = tf('s');
+param = struct();
+
+% functions overridden for this model: ./private takes precedence over the library
+overrides = dir(fullfile(fileparts(mfilename('fullpath')), 'private', '*.m'));
+if ~isempty(overrides)
+    fprintf('%s init: local overrides in private/: %s\n', model, strjoin({overrides.name}, ', '));
+end
+clear overrides
+%[text] ## Simulation
+param.sim.simlength = 0.25;                 % [s] model StopTime
+param.sim.tc = 0.625e-6;                    % [s] logging base and model MaxStep (glb_time.tc); FixedStep is not used (ode23tb)
+                                            %     same value as the legacy init: ts_afe/200 with fpwm = 4 kHz, double update
+
+% power stage model of the two full bridges: MOSFET with thermal model (with or without the ZVS snubber)
+% or ideal switch. The legacy init had both flags at 0 while the active bridges in the .slx were the
+% MOSFET thermal ZVS ones: the flags now reflect the model and drive the commented state (see Model setup).
+param.sim.use_mosfet_thermal_model = 1;
+param.sim.use_zvs_snubber = 1;              % Csnubber_zvs, Rsnubber_zvs across each MOSFET
+
+param.sim.nonlinear_iterations = 3;         % Simscape solver (the Solver Configuration blocks of this model have 5 hard-coded)
+if param.sim.use_mosfet_thermal_model
+    param.sim.nonlinear_iterations = 5;
+end
+
+% white noise power used by the module behaviour settings (clock and PWM phase noise)
+param.sim.wnp = 0;
+
+% template settings not read by single_phase_cllc.slx, kept with the same names as in afe_inv_psm
+param.sim.load_step_time = 1.25;            % [s]
+param.sim.transmission_delay = 125e-6*2;    % [s]
+param.sim.sst_num_of_modules = 2;
+param.sim.time_aux_power_supply_fault = 1e3;    % [s] never, in this run
+param.sim.number_of_modules = 1;
+param.sim.enable_two_modules = param.sim.number_of_modules;
+
+% stages of the shared init template not present in single_phase_cllc.slx (grid, FRT, AFE control,
+% inverter, PSM, IM, single-phase inverter, DAB, PSFBC, ISOP rail, UPQC, diode rectifier, load
+% transformer, DC-link stray inductance): see add_template_extras at the end
+param.sim.build_template_extras = false;
+%[text] ## Timing
+param.time.fpwm = 4e3;                              % [Hz] base PWM frequency
+param.time.t_measure = param.sim.simlength;         % [s]
+param.time.tc_factor = 1/param.time.fpwm/param.sim.tc/2;    % ts_afe/tc, so that glb_time.tc = param.sim.tc
+param.time.tc_decimation = 1;
+param.time.delay_pwm = 0;
+param.time.trgo_th_generator = 0.025;
+
+% stages not in this model, needed by the shared timing object only
+param.time.fpwm_afe = param.time.fpwm;
+param.time.trgo_afe = 1;                            % double update
+param.time.dead_time_afe = 3e-6;
+param.time.fpwm_inv = param.time.fpwm;
+param.time.trgo_inv = 1;                            % double update
+param.time.dead_time_inv = 3e-6;
+param.time.fpwm_single_phase_inv = param.time.fpwm;
+param.time.trgo_single_phase_inv = 1;               % double update
+param.time.dead_time_single_phase_inv = 3e-6;
+param.time.fpwm_dab = 3*param.time.fpwm;
+param.time.trgo_dab = 1;                            % double update
+param.time.dead_time_dab = 2e-6;
+param.time.fpwm_psfbc = param.time.fpwm;
+param.time.trgo_psfbc = 1;                          % double update
+param.time.dead_time_psfbc = 3e-6;
+param.time.fpwm_isop_rail = param.time.fpwm;
+param.time.trgo_isop_rail = 1;                      % double update
+param.time.dead_time_isop_rail = 3e-6;
+%[text] ### CLLC PWM
+param.cllc.application_voltage = 690;               % [V] selects the hardware set: 690 -> 1200 V DC links, 480 and 400 -> 800 V
+param.cllc.pwr_nom = 250e3;                         % [W]
+param.cllc.pwm.fpwm = 3*param.time.fpwm;            % [Hz]
+param.cllc.pwm.trgo = 0;                            % single update
+param.cllc.pwm.dead_time = 2e-6;                    % [s]
+%[text] ### Global timing object
+t = param.time;
+c = param.cllc.pwm;
+param.glb_time = timing_setup(t.fpwm_afe, t.trgo_afe, t.fpwm_inv, t.trgo_inv, ...
+    t.fpwm_single_phase_inv, t.trgo_single_phase_inv, t.fpwm_dab, t.trgo_dab, ...
+    t.fpwm_psfbc, t.trgo_psfbc, t.fpwm_isop_rail, t.trgo_isop_rail, c.fpwm, c.trgo, ...
+    t.t_measure, t.tc_factor, t.tc_decimation, t.delay_pwm, t.dead_time_afe, t.dead_time_inv, ...
+    t.dead_time_single_phase_inv, t.dead_time_dab, t.dead_time_psfbc, t.dead_time_isop_rail, c.dead_time);
+clear t c
+%[text] ## CLLC
+%[text] ### Hardware
+% The numbers are the model's own (param.cllc.hw_in), the library provides only the setup class
+% hw_cllc_single_phase_setup, which derives the tank (Q = 1: Rac, Ls, Cs, Ls1/2, Cs1/2, Ld1/2) and the
+% normalization data. Same data sets as single_phase_cllc_hwdata of the library: 1200 V for the 690 V
+% application, 800 V for 480 V and 400 V (there RCdc1_dc2 = Cdc_dc2/2 was a typo, corrected here).
+param.cllc.fres = param.glb_time.fPWM_CLLC*1.2;     % [Hz] resonance frequency of the tank
+if param.cllc.application_voltage == 690
+    param.cllc.hw_in.name = 'CLLC_1200V';
+    param.cllc.hw_in.udc1 = 1200;                   % [V] nominal DC voltages
+    param.cllc.hw_in.udc2 = 1200;
+    param.cllc.hw_in.uac1 = 1000;                   % [V] nominal AC voltages
+    param.cllc.hw_in.uac2 = 1000;
+    param.cllc.hw_in.idc1 = 250;                    % [A] nominal DC currents
+    param.cllc.hw_in.idc2 = 250;
+else
+    param.cllc.hw_in.name = 'CLLC_800V';
+    param.cllc.hw_in.udc1 = 800;
+    param.cllc.hw_in.udc2 = 800;
+    param.cllc.hw_in.uac1 = 800;
+    param.cllc.hw_in.uac2 = 800;
+    param.cllc.hw_in.idc1 = 350;
+    param.cllc.hw_in.idc2 = 350;
+end
+% transformer
+param.cllc.hw_in.n1 = 6;
+param.cllc.hw_in.n2 = 6;
+param.cllc.hw_in.Lm = 1e-3;                         % [H] magnetizing inductance, primary side
+param.cllc.hw_in.Rfe = 1e3;                         % [Ohm] iron losses
+param.cllc.hw_in.Rs1 = 1e-3;                        % [Ohm] primary winding resistance (Rs2 derived)
+param.cllc.hw_in.core_length = 1;                   % [m]
+param.cllc.hw_in.core_mur = 75;
+% DC links: total capacitance and the two banks
+param.cllc.hw_in.Cdc_dc1 = 3.6e-3;                  % [F]
+param.cllc.hw_in.Cdc1_dc1 = 2*param.cllc.hw_in.Cdc_dc1;
+param.cllc.hw_in.Cdc2_dc1 = 2*param.cllc.hw_in.Cdc_dc1;
+param.cllc.hw_in.Cdc_dc2 = 3.6e-3;                  % [F]
+param.cllc.hw_in.Cdc1_dc2 = 2*param.cllc.hw_in.Cdc_dc2;
+param.cllc.hw_in.Cdc2_dc2 = 2*param.cllc.hw_in.Cdc_dc2;
+param.cllc.hw_in.RCdc_dc1 = 1e-3;                   % [Ohm]
+param.cllc.hw_in.RCdc1_dc1 = param.cllc.hw_in.RCdc_dc1/2;
+param.cllc.hw_in.RCdc2_dc1 = param.cllc.hw_in.RCdc_dc1/2;
+param.cllc.hw_in.RCdc_dc2 = 1e-3;                   % [Ohm]
+param.cllc.hw_in.RCdc1_dc2 = param.cllc.hw_in.RCdc_dc2/2;
+param.cllc.hw_in.RCdc2_dc2 = param.cllc.hw_in.RCdc_dc2/2;
+% DC input/output inductors
+param.cllc.hw_in.Ldc_dc1 = 250e-6;                  % [H]
+param.cllc.hw_in.RLdc_dc1 = 157*0.05*param.cllc.hw_in.Ldc_dc1;    % [Ohm]
+param.cllc.hw_in.Ldc_dc2 = 250e-6;                  % [H]
+param.cllc.hw_in.RLdc_dc2 = 157*0.05*param.cllc.hw_in.Ldc_dc2;    % [Ohm]
+
+h = param.cllc.hw_in;
+param.cllc.hw = hw_cllc_single_phase_setup(h.name, param.cllc.pwr_nom, h.udc1, h.udc2, h.uac1, h.uac2, ...
+    h.idc1, h.idc2, param.glb_time.fPWM_CLLC, param.cllc.fres, ...
+    h.n1, h.n2, h.Lm, h.Rfe, h.Rs1, h.core_length, h.core_mur, h.Cdc_dc1, h.Cdc1_dc1, h.Cdc2_dc1, h.Cdc_dc2, ...
+    h.Cdc1_dc2, h.Cdc2_dc2, h.RCdc_dc1, h.RCdc1_dc1, h.RCdc2_dc1, h.RCdc_dc2, h.RCdc1_dc2, h.RCdc2_dc2, ...
+    h.Ldc_dc1, h.Ldc_dc2, h.RLdc_dc1, h.RLdc_dc2);
+param.cllc.hw.displayInfo(); %[output:296b31ad]
+clear h
+%[text] ### Control
+% PI gains shared by the DC/DC stages of the template (the model reads param.cllc.ctrl.kp_idc and .ki_idc)
+param.dcdc.kp_udc = 0.5;
+param.dcdc.ki_udc = 18.0;
+param.dcdc.kp_idc = 0.5;
+param.dcdc.ki_idc = 18.0;
+param.cllc.ctrl = ctrl_cllc_setup(param.dcdc.kp_udc, param.dcdc.ki_udc, param.dcdc.kp_idc, param.dcdc.ki_idc);
+%[text] ### Power semiconductors
+param.dev.used_device_igbt = 'mitsubishi_CM1200DW_34T';
+param.dev.used_device_mosfet = 'danfoss_SKM1700MB20R4S2I4';
+param.dev.used_device_ideal_switch = 'silicon_high_power_ideal_switch';
+
+% the full bridges of single_phase_cllc.slx read mosfet.dab / ideal_switch.dab in the legacy init: same
+% device, fPWM_DAB = fPWM_CLLC and hwdata.dab.udc1_nom = hwdata.cllc.udc1_nom, so the data are identical
+param.cllc.igbt = device_igbt_setup(param.dev.used_device_igbt, param.glb_time.fPWM_CLLC, param.cllc.hw.udc1_nom);
+param.cllc.mosfet = device_mosfet_setup(param.dev.used_device_mosfet, param.glb_time.fPWM_CLLC, param.cllc.hw.udc1_nom);
+param.cllc.ideal_switch = device_ideal_switch_setting(param.dev.used_device_ideal_switch, param.glb_time.fPWM_CLLC, param.cllc.hw.udc1_nom);
+%[text] ## Batteries
+% both batteries at the AFE DC-link voltage, as in the legacy init (hwdata.afe.udc_nom: 1070 V for the
+% 690 V application); the AFE hardware object is built here only for that value.
+% Alternatives of the legacy init: param.cllc.hw.udc1_bez / .udc2_bez (1200 V), the DAB ones.
+param.afe.pwr_nom = 250e3;                          % [W]
+param.afe.hw = three_phase_afe_hwdata(param.cllc.application_voltage, param.afe.pwr_nom, param.glb_time.fPWM_AFE); %[output:9bb98854]
+
+param.battery.nominal_battery_voltage_1 = param.afe.hw.udc_nom;     % [V]
+param.battery.nominal_battery_voltage_2 = param.afe.hw.udc_nom;     % [V]
+param.battery.nominal_battery_power = 250e3;                        % [W]
+param.battery.initial_battery_soc = 0.85;
+% lithium_ion_battery_setup takes the charge capacity [Ah] as third argument (the legacy init used the
+% old four-argument signature). ASSUMPTION: 1C rating, capacity = rated current x 1 h
+param.battery.charge_capacity_1 = param.battery.nominal_battery_power/param.battery.nominal_battery_voltage_1;
+param.battery.charge_capacity_2 = param.battery.nominal_battery_power/param.battery.nominal_battery_voltage_2;
+
+% Kalman sample time: the legacy init uses ts_dab for both packs; in the model battery_1 reads
+% glb_time.ts_dab and battery_2 reads glb_time.ts_cllc (single update: twice ts_dab).
+% lithium_ion_battery_setup is the copy in ./private (frozen for this model), not the library one.
+b = param.battery;
+param.battery.pack_1 = lithium_ion_battery_setup(b.nominal_battery_voltage_1, b.nominal_battery_power, ... %[output:group:87cf7f62] %[output:4fbc86e0]
+    b.charge_capacity_1, b.initial_battery_soc, param.glb_time.ts_dab); %[output:group:87cf7f62] %[output:4fbc86e0]
+param.battery.pack_2 = lithium_ion_battery_setup(b.nominal_battery_voltage_2, b.nominal_battery_power, ... %[output:group:85737525] %[output:67f10649]
+    b.charge_capacity_2, b.initial_battery_soc, param.glb_time.ts_dab); %[output:group:85737525] %[output:67f10649]
+clear b
+
+% special settings for simulation
+param.battery.pack_1.R0 = param.battery.pack_1.R0/2;
+param.battery.pack_1.R1 = param.battery.pack_1.R1/2;
+param.battery.pack_2.R0 = param.battery.pack_2.R0/2;
+param.battery.pack_2.R1 = param.battery.pack_2.R1/2;
+param.battery.pack_1.C1 = param.battery.pack_1.C1/50;
+param.battery.pack_2.C1 = param.battery.pack_2.C1/50;
+%[text] ## Sensors end scale and quantization
+param.meas.adc_quantization = 1/2^11;
+param.meas.adc12_quantization = param.meas.adc_quantization;
+param.meas.adc16_quantization = 1/2^15;
+
+param.meas.Imax_adc = 1049.835;             % [A]
+param.meas.CurrentQuantization = param.meas.Imax_adc/2^11;
+
+param.meas.Umax_adc = 1500;                 % [V]
+param.meas.VoltageQuantization = param.meas.Umax_adc/2^11;
+%[text] ## Control settings common to all modules
+% not read by single_phase_cllc.slx, same group as in afe_inv_psm
+% local time alignment to master time
+param.ctrl.kp_align = 0.25;
+param.ctrl.ki_align = 18;
+param.ctrl.lim_up_align = 0.05;
+param.ctrl.lim_down_align = -0.05;
+
+% filters and PI clip release
+param.ctrl.CTRPIFF_CLIP_RELEASE = 0.001;
+param.ctrl.mavarage_filter_frequency_base_order = 2;   % 2 means 100 Hz, 1 means 50 Hz
+param.ctrl.dmavg_filter_enable_time = 0.025;           % [s]
+param.ctrl.filters = setup_global_filters(param.glb_time.ts_afe, param.glb_time.ts_inv, param.glb_time.ts_dab, param.glb_time.tc);
+%[text] ## Thermal model
+% aluminium plate, liquid cooled, sized for PrimePACK2; liquid flow > 28 l/min
+% "A" (ambient) is the water: HA is the temperature rise from water to heatsink surface;
+% water in/out rise max 5 K with 2 kW total losses
+param.thermal.weight = 0.150;                                   % [kg]
+param.thermal.no_weight = 0.150/10;                             % [kg] /10: thermal inertia not accounted
+param.thermal.cp_al = 900;                                      % [J/(kg K)] specific heat, aluminium
+param.thermal.heat_capacity_hs = param.thermal.cp_al * param.thermal.weight;   % [J/K]
+param.thermal.thermal_conductivity_al = 160;                    % [W/(m K)] aluminium
+param.thermal.Rth_switch_HA = 15/1000;                          % [K/W]
+param.thermal.Rth_mosfet_HA = param.thermal.Rth_switch_HA;      % [K/W]
+param.thermal.Rth_diode_HA = param.thermal.Rth_switch_HA;       % [K/W]
+param.thermal.Tambient = 40;                                    % [degC] water temperature
+param.thermal.DThs_init = 0;                                    % [K]
+
+t = param.thermal;
+param.thermal.heatsink = liquid_cooled_plate_2kw_setup(t.weight, t.no_weight, t.cp_al, t.heat_capacity_hs, ...
+    t.thermal_conductivity_al, t.Rth_switch_HA, t.Rth_mosfet_HA, t.Rth_diode_HA, t.Tambient, t.DThs_init);
+clear t
+%[text] ## Template extras (not used by single\_phase\_cllc.slx)
+if param.sim.build_template_extras
+    param = add_template_extras(param, options);
+end
+%[text] ## Model setup
+open_system(model);
+%[text] ### C-Caller types
+% kept from the shared template (single_phase_cllc.slx has no C Caller block)
+ctypes = {'mavgflt_output_t', 'dsmavgflt_output_t', 'mavgflts_output_t', 'bemf_obsv_output_t', ...
+    'bemf_obsv_load_est_output_t', 'dqvector_pi_output_t', 'sv_pwm_output_t', 'sv_pwm_cm_output_t', ...
+    'global_state_machine_output_t', 'first_harmonic_tracker_output_t', 'dqpll_thyr_output_t', ...
+    'dqpll_grid_output_t', 'rpi_output_t', 'phase_shift_flt_output_t', 'sogi_flt_output_t', ...
+    'linear_double_integrator_observer_output_t'};
+for k = 1:numel(ctypes)
+    Simulink.importExternalCTypes(model, 'Names', ctypes(k));
+end
+clear ctypes k
+%[text] ### Scopes closed at start
+open_scopes = find_system(model, 'BlockType', 'Scope');
+for k = 1:numel(open_scopes)
+    set_param(open_scopes{k}, 'Open', 'off');
+end
+clear open_scopes k
+%[text] ### Enable/disable subsystems
+% power stage model of the two full bridges: MOSFET thermal with ZVS snubber, MOSFET thermal, or ideal
+% switch (the other two are commented out), and the matching scope subsystem. New with respect to the
+% legacy init, which left the choice to the model: the defaults reproduce the state saved in the .slx.
+if param.sim.use_mosfet_thermal_model && param.sim.use_zvs_snubber
+    active_bridge = 'full-bridge_mosfet_based_with_thermal_model_zvs';
+    active_scopes = 'thermal_analysis_inverters_mosfet_zvs';
+elseif param.sim.use_mosfet_thermal_model
+    active_bridge = 'full-bridge_mosfet_based_with_thermal_model';
+    active_scopes = 'thermal_analysis_inverters_mosfet';
+else
+    active_bridge = 'full-bridge_ideal_switch_based';
+    active_scopes = 'analysis_inverters_ideal_switches';
+end
+bridge_models = {'full-bridge_mosfet_based_with_thermal_model_zvs', ...
+                 'full-bridge_mosfet_based_with_thermal_model', ...
+                 'full-bridge_ideal_switch_based'};
+scope_models = {'thermal_analysis_inverters_mosfet_zvs', ...
+                'thermal_analysis_inverters_mosfet', ...
+                'analysis_inverters_ideal_switches'};
+% "dc/dc with galvanic isolation" has a slash in its name: "//" in the block path
+bridge_paths = {[model '/dcdc_cllc_modA/dc//dc with galvanic isolation/full-bridge 1/'], ...
+                [model '/dcdc_cllc_modA/dc//dc with galvanic isolation/full-bridge 2/']};
+commented = {'on', 'off'};                  % index 2 (off) for the active block
+for ip = 1:numel(bridge_paths)
+    for ib = 1:numel(bridge_models)
+        set_param([bridge_paths{ip} bridge_models{ib}], 'Commented', ...
+            commented{1 + strcmp(bridge_models{ib}, active_bridge)});
+    end
+end
+for ib = 1:numel(scope_models)
+    set_param([model '/scopes/' scope_models{ib}], 'Commented', ...
+        commented{1 + strcmp(scope_models{ib}, active_scopes)});
+end
+clear active_bridge active_scopes bridge_models scope_models bridge_paths commented ip ib
+%[text] ## Transition: legacy workspace names
+%[text] Old names still read by single\_phase\_cllc.slx (block parameters, library-link instance parameters, model configuration) and by the post-processing scripts (glb\_time, hwdata.cllc). The list is the one found in the model XML; migrate\_single\_phase\_cllc.m rewrites the blocks to param.\*. Set export\_legacy\_names = false after the migration to check that nothing is left, then delete this section.
+export_legacy_names = false;
+if export_legacy_names
+    % model configuration: StopTime = simlength, FixedStep = tc (unused, ode23tb), MaxStep = glb_time.tc
+    simlength = param.sim.simlength;
+    tc = param.sim.tc;
+
+    % timing, logging (Nc, decimation_tc), modulator, batteries, low-pass filters; plotting_sim_results*.m
+    glb_time = param.glb_time;
+
+    % power stage: passive components, transformer, current normalization (Idc_FS); cllc_analysis.m
+    hwdata.cllc = param.cllc.hw;
+
+    % input current control
+    cllc_ctrl = param.cllc.ctrl;
+    adc12_quantization = param.meas.adc12_quantization;
+
+    % full bridges: MOSFET thermal (with and without ZVS snubber) and ideal switch variants
+    mosfet.dab = param.cllc.mosfet;             % the model reads the DAB fields (identical data, see above)
+    ideal_switch.dab = param.cllc.ideal_switch;
+    heatsink = param.thermal.heatsink;          % ZVS variant: heatsink.no_weight, .cp, .Rth_mosfet_HA
+    Tambient = param.thermal.Tambient;
+    DThs_init = param.thermal.DThs_init;
+    weigth = param.thermal.weight;              % variant without ZVS snubber: "weigth" (typo in the model,
+    cp_al = param.thermal.cp_al;                % never defined by the legacy init), cp_al, Rth_mosfet_HA
+    Rth_mosfet_HA = param.thermal.Rth_mosfet_HA;
+
+    % batteries
+    lithium_ion_battery_1 = param.battery.pack_1;
+    lithium_ion_battery_2 = param.battery.pack_2;
+end
+%[text] ## Local functions
+function param = add_template_extras(param, options)
+% Parts of the shared init template not used by single_phase_cllc.slx, kept so that nothing of the
+% legacy init_model.m is lost. Enabled by param.sim.build_template_extras = true.
+% Same convention: one group per stage (param.grid, param.frt, param.afe, param.inv, param.psm,
+% param.load, param.spinv, param.dab, param.psfbc, param.isop_rail, param.upqc, param.im, param.diode,
+% param.trafo_load, param.dclink), each with .hw, .ctrl, devices.
+
+s = tf('s');
+ts = param.glb_time.ts_inv;
+uapp = param.cllc.application_voltage;
+dev = param.dev;
+
+% ---------------------------------------------------------------- grid emulator
+param.grid.grid_nominal_power = 1000e3;             % [W]
+param.grid.application_voltage = uapp;              % [V] 690, 480 or 400
+param.grid.grid_nominal_current = param.grid.grid_nominal_power/param.grid.application_voltage/sqrt(3);
+
+% coupling transformer Dyn11
+param.grid.delta_star = 1;
+
+if param.grid.application_voltage == 690
+    param.grid.us1 = 690; param.grid.us2 = 690; param.grid.fgrid = 50;
+    param.grid.eta = 95; param.grid.ucc = 5;
+    param.grid.p_iron = 1800;
+elseif param.grid.application_voltage == 480
+    param.grid.us1 = 480; param.grid.us2 = 480; param.grid.fgrid = 60;
+    param.grid.eta = 95; param.grid.ucc = 5;
+    param.grid.p_iron = 1400;
+else
+    param.grid.us1 = 400; param.grid.us2 = 400; param.grid.fgrid = 50;
+    param.grid.eta = 95; param.grid.ucc = 5;
+    param.grid.p_iron = 1000;
+end
+
+param.grid.n2 = 14;
+param.grid.n1 = floor(param.grid.n2*sqrt(3));
+param.grid.core_area = 0.05;                        % [m^2]
+param.grid.core_length = 2.5;                       % [m]
+param.grid.mu0 = 4*pi*1e-7;
+param.grid.mur = 10e3;
+
+% magnetizing inductance from the core geometry, no-load current from it
+param.grid.Lm1 = (param.grid.n1^2 * param.grid.mu0 * param.grid.mur * param.grid.core_area) / param.grid.core_length;
+param.grid.i1m = param.grid.us1/sqrt(3)/param.grid.Lm1/(2*pi*param.grid.fgrid);
+
+% reference for the voltage sequences
+param.grid.up_xi_pu_ref = 1;
+param.grid.up_eta_pu_ref = 0;
+param.grid.un_xi_pu_ref = 0;
+param.grid.un_eta_pu_ref = 0;
+
+% grid impedance
+param.grid.Lgrid_base = param.grid.us1/sqrt(3)*param.grid.ucc/100/2/pi/param.grid.fgrid/param.grid.grid_nominal_current;
+param.grid.ucc_factor = 1;
+param.grid.eq_grid_inductance = param.grid.Lgrid_base*param.grid.ucc_factor;    % [H]
+param.grid.eq_grid_resistance = 2e-3;                                             % [Ohm]
+
+g = param.grid;
+param.grid.emu = grid_three_phase_emulator('Dyn11', g.delta_star, g.grid_nominal_power, g.application_voltage, ...
+    g.us1, g.us2, g.fgrid, g.eq_grid_inductance, g.eq_grid_resistance, g.eta, g.ucc, g.i1m, g.p_iron, ...
+    g.n1, g.n2, g.core_area, g.core_length, g.mur, ...
+    g.up_xi_pu_ref, g.up_eta_pu_ref, g.un_xi_pu_ref, g.un_eta_pu_ref);
+
+% ---------------------------------------------------------------- FRT
+param.frt.test_index = 25;                  % type of fault: index
+param.frt.test_subindex = 4;                % type of fault: subindex
+param.frt.enable_frt_1 = 0;                 % faults generated from abc
+param.frt.enable_frt_2 = 0;                 % faults generated from xi_eta_pos and xi_eta_neg
+param.frt.start_time_LVRT = 0.75;           % [s]
+param.frt.asymmetric_error_type = 1;        % 0: variant C (two-phase), 1: variant D (single-phase)
+param.frt.deepPOSxi = 1;
+param.frt.deepPOSeta = -0.4;
+param.frt.deepNEGxi = 0.4;
+param.frt.deepNEGeta = 0.4;
+
+f = param.frt;
+param.frt.data = frt_settings(f.test_index, f.test_subindex, f.asymmetric_error_type, ...
+    f.enable_frt_1, f.enable_frt_2, f.start_time_LVRT, f.deepPOSxi, f.deepPOSeta, f.deepNEGxi, f.deepNEGeta);
+
+% grid_fault_generator is a function: it returns the fault waveform data (amplitudes, phase shift,
+% error_length, end_time_LVRT, t_ramp, k_lvrt, load levels), merged here into param.frt.data
+frt_gen = grid_fault_generator(param.frt.data, f.start_time_LVRT);
+for fn = fieldnames(frt_gen)'
+    param.frt.data.(fn{1}) = frt_gen.(fn{1});
+end
+
+% ---------------------------------------------------------------- AFE (param.afe.hw already built)
+param.afe.ctrl = ctrl_afe_setup(param.glb_time.ts_afe, param.grid.emu.omega_grid_nom);
+param.afe.ctrl.kp_udc_ctrl = 2;
+% resonant PI gains for weak grids: kp_rpi 0.5, ki_rpi 18; for LVRT (the values in use):
+param.afe.ctrl.res_pi.kp_rpi = 0.6;
+param.afe.ctrl.res_pi.ki_rpi = 35;
+
+% dqPLL selection
+param.afe.pll.use_dq_pll_fht_pll = 1;
+param.afe.pll.use_dq_pll_fht_simulink_pll = 0;
+param.afe.pll.use_dq_pll_mod1 = 0;
+param.afe.pll.use_dq_pll_ccaller_mod1 = 0;
+param.afe.pll.use_dq_pll_ccaller_mod2 = 0;
+param.afe.pll.use_dq_pll_mode1 = param.afe.pll.use_dq_pll_mod1;                 % simulink dqPLL
+param.afe.pll.use_dq_pll_mode2 = param.afe.pll.use_dq_pll_ccaller_mod1;         % ccaller dqPLL
+param.afe.pll.use_dq_pll_mode3 = param.afe.pll.use_dq_pll_fht_simulink_pll;     % fht simulink dqPLL
+param.afe.pll.use_dq_pll_mode4 = param.afe.pll.use_dq_pll_fht_pll;              % fht ccaller dqPLL
+param.afe.pll.use_dq_pll_mode1_modn = 0;    % simulink dqPLL
+param.afe.pll.use_dq_pll_mode2_modn = 0;    % ccaller dqPLL
+param.afe.pll.use_dq_pll_mode3_modn = 1;    % fht simulink dqPLL
+param.afe.pll.use_dq_pll_mode4_modn = 0;    % fht ccaller dqPLL
+
+% C-caller versus Simulink implementation
+param.afe.impl.use_moving_average_from_ccaller_mod1 = 1;
+param.afe.impl.use_moving_average_from_ccaller_mod2 = 0;
+param.afe.impl.use_moving_average_from_ccaller_mod3 = 0;
+param.afe.impl.use_moving_average_from_ccaller_mod4 = 0;
+
+% current references: four modules in parallel connected to a dc microgrid
+param.afe.ref.ixi_ref_mod1 = -0.85;
+param.afe.ref.ixi_ref_mod2 = -0.85;
+param.afe.ref.ixi_ref_mod3 = -0.85;
+param.afe.ref.ixi_ref_mod4 = -0.85;
+
+% common mode voltage control for hard parallelization
+param.afe.ref.en_parallel_mode = 1;
+param.afe.ref.u_cm_comp_mod1 = 0;
+param.afe.ref.u_cm_comp_mod2 = 0;
+param.afe.ref.u_cm_comp_mod3 = 0;
+param.afe.ref.u_cm_comp_mod4 = 0;
+if param.afe.ref.en_parallel_mode
+    param.afe.ref.u_cm_comp_mod2 = -1;
+    param.afe.ref.u_cm_comp_mod3 = -1;
+    param.afe.ref.u_cm_comp_mod4 = -1;
+end
+
+% reactive current steps after the LVRT
+param.afe.ref.enable_i_react_pos_steps = 1;
+param.afe.ref.time_i_react_pos_ref_1 = 0;   % default
+param.afe.ref.time_i_react_pos_ref_2 = 0;   % default
+param.afe.ref.i_react_pos_ref_1 = 0;        % default
+param.afe.ref.i_react_pos_ref_2 = 0;        % default
+param.afe.ref.i_react_pos_ref_3 = 0;        % default
+if param.afe.ref.enable_i_react_pos_steps
+    param.afe.ref.time_i_react_pos_ref_1 = param.frt.data.start_time_LVRT + param.frt.data.error_length + 0.335;
+    param.afe.ref.time_i_react_pos_ref_2 = param.afe.ref.time_i_react_pos_ref_1 + 0.5;
+    param.afe.ref.i_react_pos_ref_2 = -param.afe.ref.ixi_ref_mod1*tan(acos(0.95));   % cos(phi) = 0.95
+    param.afe.ref.i_react_pos_ref_3 =  param.afe.ref.ixi_ref_mod1*tan(acos(0.95));   % cos(phi) = 0.95
+end
+
+% module behaviour (clock mismatch, noise, PWM phase shift)
+param.afe.behav.time_gain_module_1 = 1.0002;
+param.afe.behav.time_gain_module_2 = 1.0015;
+param.afe.behav.time_gain_module_3 = 0.9988;
+param.afe.behav.time_gain_module_4 = 1.0020;
+param.afe.behav.white_noise_power_mod1 = param.sim.wnp;
+param.afe.behav.white_noise_power_mod2 = param.sim.wnp;
+param.afe.behav.pwm_phase_shift_mod1 = 0;
+param.afe.behav.white_noise_power_pwm_phase_shift_mod1 = 0.0;
+param.afe.behav.pwm_phase_shift_mod2 = 0;
+param.afe.behav.white_noise_power_pwm_phase_shift_mod2 = 0.0;
+param.afe.behav.pwm_phase_shift_mod3 = 0;
+param.afe.behav.white_noise_power_pwm_phase_shift_mod3 = 0.0;
+param.afe.behav.pwm_phase_shift_mod4 = 0;
+param.afe.behav.white_noise_power_pwm_phase_shift_mod4 = 0.0;
+
+% ---------------------------------------------------------------- inverter
+param.inv.pwr_nom = 250e3;
+param.inv.hw = three_phase_inverter_hwdata(uapp, param.inv.pwr_nom, param.glb_time.fPWM_INV);
+
+param.inv.behav.time_gain_module_1 = 1.0005;
+param.inv.behav.time_gain_module_2 = 1.001;
+param.inv.behav.white_noise_power_mod1 = param.sim.wnp;
+param.inv.behav.white_noise_power_mod2 = param.sim.wnp;
+param.inv.behav.pwm_phase_shift_mod1 = 0;
+param.inv.behav.white_noise_power_pwm_phase_shift_mod1 = 0.0;
+param.inv.behav.pwm_phase_shift_mod2 = 0;
+param.inv.behav.white_noise_power_pwm_phase_shift_mod2 = 0.0;
+param.inv.behav.pwm_phase_shift_mod3 = 0;
+param.inv.behav.white_noise_power_pwm_phase_shift_mod3 = 0.0;
+param.inv.behav.pwm_phase_shift_mod4 = 0;
+param.inv.behav.white_noise_power_pwm_phase_shift_mod4 = 0.0;
+
+% ---------------------------------------------------------------- PSM and its control
+param.psm.machine = psm_calculus();
+param.psm.n_sys = param.psm.machine.number_of_systems;
+param.psm.u_psm_scale = 2/3*param.inv.hw.udc_nom/param.psm.machine.ubez;
+param.psm.u_psm_scale_ekf = sqrt(3)/2 * 2/3 * param.inv.hw.udc_nom/param.psm.machine.ubez;
+
+param.psm.mode.use_torque_curve = 1;                                        % energy production
+param.psm.mode.use_speed_control = 1 - param.psm.mode.use_torque_curve;     % drive
+param.psm.mode.use_mtpa = 1;
+param.psm.mode.use_psm_encoder = 0;
+param.psm.mode.use_im_encoder = 1;
+param.psm.mode.use_load_estimator = 0;
+param.psm.mode.use_estimator_from_mb = 0;                                   % mb: model based
+param.psm.mode.use_motor_speed_control_mode = 0;
+param.psm.mode.motor_torque_mode = 1 - param.psm.mode.use_motor_speed_control_mode;   % torque curve for wind application
+param.psm.mode.time_start_motor_control = 0.25;                             % [s]
+
+param.psm.impl.use_ekf_bemf_module_1 = 1;
+param.psm.impl.use_ekf_bemf_module_2 = 1;
+param.psm.impl.use_observer_from_simulink_module_1 = 0;
+param.psm.impl.use_observer_from_ccaller_module_1 = 0;
+param.psm.impl.use_observer_from_simulink_module_2 = 0;
+param.psm.impl.use_observer_from_ccaller_module_2 = 0;
+param.psm.impl.use_current_controller_from_simulink_module_1 = 0;
+param.psm.impl.use_current_controller_from_ccaller_module_1 = 1;
+param.psm.impl.use_current_controller_from_simulink_module_2 = 0;
+param.psm.impl.use_current_controller_from_ccaller_module_2 = 0;
+
+param.psm.ctrl = ctrl_pmsm_setup(ts, param.psm.machine.omega_bez, param.psm.u_psm_scale, param.psm.machine.Jm_norm);
+% alternative: ekf_pmsm_setup(Rs_norm, Ls_norm, Jm_norm, ts)
+param.psm.ctrl.ekf = ekf_pmsm_setup(param.psm.machine.Rs_norm, param.psm.machine.Ls_norm, 1e6, ts);
+param.psm.ctrl.kp_i = 0.25;
+param.psm.ctrl.ki_i = 35;
+
+% ---------------------------------------------------------------- mechanical load, speed reference, torque curve
+param.load.b = param.psm.machine.load_friction_m;
+param.load.external_load_inertia = 1;       % alternative: 6*param.psm.machine.Jm_m
+
+% energy production: torque curve (the library script reads n_sys, writes rpm_base, torque_base;
+% the two outputs are declared first so that the script can overwrite them inside this function)
+n_sys = param.psm.n_sys; %#ok<NASGU>
+rpm_base = []; torque_base = [];
+run('n_sys_generic_1M5W_torque_curve');
+param.load.rpm_base = rpm_base;
+param.load.torque_base = torque_base;
+param.load.torque_overload_factor = 1;
+
+% drive application: speed reference and load torque
+param.load.rpm_sim = 17.8;                  % alternatives: 3000, 15.2
+param.load.omega_m_sim = param.psm.machine.omega_m_bez;
+param.load.omega_sim = param.load.omega_m_sim*param.psm.machine.number_poles/2;
+param.load.tau_load_sim = param.psm.machine.tau_bez/5;  % [N*m]
+param.load.b_square = 0;
+
+% ---------------------------------------------------------------- induction machine
+param.im.machine = im_calculus();
+param.im.u_im_scale = 2/3*param.inv.hw.udc_nom/param.im.machine.ubez;
+param.im.u_im_scale_ekf = (2/3)^2 * param.inv.hw.udc_nom/param.im.machine.ubez;
+param.im.ctrl = ctrl_im_setup(ts, param.im.machine.omega_bez, param.im.u_im_scale, param.im.machine.Jm_norm);
+param.im.ctrl.ekf = ekf_im_setup(param.im.machine.alpha_norm, param.im.machine.beta_norm, param.im.machine.gamma_norm, ...
+    param.im.machine.sigma_norm, param.im.machine.mu_norm, param.im.machine.Lm_norm, param.im.machine.Jm_norm, ts);
+
+% ---------------------------------------------------------------- single-phase inverter
+% global behaviour: system identification versus normal operation
+param.spinv.system_identification_enable = 0;
+param.spinv.frequency_set = 50;             % default
+if param.spinv.system_identification_enable
+    param.spinv.frequency_set = 300;
+end
+param.spinv.omega_set = param.spinv.frequency_set*2*pi;
+
+param.spinv.rpi_enable = 0;                 % use RPI otherwise DQ PI
+param.spinv.impl.use_current_controller_from_ccaller_mod1 = 1;
+param.spinv.impl.use_phase_shift_filter_from_ccaller_mod1 = 1;
+param.spinv.impl.use_sogi_from_ccaller_mod1 = 1;
+
+param.spinv.impl.use_single_phase_inverter_based_FHT = 0;
+param.spinv.impl.use_single_phase_inverter_based_SOGI = 0;
+param.spinv.impl.use_single_phase_inverter_based_PHSH = 0;
+param.spinv.impl.use_single_phase_inverter_based_SOGI_ccaller = 1;
+param.spinv.impl.use_single_phase_inverter_based_PHSH_ccaller = 0;
+
+param.spinv.impl.use_system_identification_based_FHT = 0;
+param.spinv.impl.use_system_identification_based_SOGI = 0;
+param.spinv.impl.use_system_identification_based_PHSH = 0;
+param.spinv.impl.use_system_identification_based_SOGI_ccaller = 0;
+param.spinv.impl.use_system_identification_based_PHSH_ccaller = 1;
+
+% current references
+param.spinv.ref.iph_grid_pu_ref_1 = 1/3;
+param.spinv.ref.iph_grid_pu_ref_2 = 1/3;
+param.spinv.ref.iph_grid_pu_ref_3 = 1/3;
+param.spinv.ref.time_step_ref_1 = 0.025;
+param.spinv.ref.time_step_ref_2 = 0.5;
+param.spinv.ref.time_step_ref_3 = 1;
+
+param.spinv.pwr_nom = 225e3;
+param.spinv.hw = single_phase_inverter_hwdata(uapp, param.spinv.pwr_nom, param.glb_time.fPWM_INV);
+
+% ---------------------------------------------------------------- rail catenary and ISOP rail
+param.isop_rail.catenary_nominal_power = 2*5.4e6;   % per 12 km
+param.isop_rail.catenary_nominal_voltage = 3000;
+param.isop_rail.catenary_maximum_voltage = 4000;
+param.isop_rail.catenary_nominal_current = param.isop_rail.catenary_nominal_power/param.isop_rail.catenary_nominal_voltage;
+param.isop_rail.pwr_nom = 250e3;                    % nominal per system
+param.isop_rail.number_of_systems = 4;
+param.isop_rail.full_bridge_application_voltage = param.isop_rail.catenary_maximum_voltage/param.isop_rail.number_of_systems;
+param.isop_rail.hw = isop_rail_aux_application(param.isop_rail.full_bridge_application_voltage, ...
+    param.isop_rail.pwr_nom, param.glb_time.fPWM_ISOP_RAIL);
+
+% ---------------------------------------------------------------- isolated DC/DC stages
+param.dab.pwr_nom = 250e3;
+param.dab.fres = param.glb_time.fPWM_DAB/5;
+param.dab.hw = single_phase_dab_hwdata(uapp, param.dab.pwr_nom, param.glb_time.fPWM_DAB, param.dab.fres);
+param.three_phase_dab.pwr_nom = param.dab.pwr_nom;
+param.three_phase_dab.hw = three_phase_dab_hwdata(uapp, param.three_phase_dab.pwr_nom, param.glb_time.fPWM_DAB, param.dab.fres);
+param.psfbc.pwr_nom = 275e3;
+param.psfbc.hw = single_phase_psfbc_hwdata(uapp, param.psfbc.pwr_nom, param.glb_time.fPWM_PSFBC);
+% modification of the legacy init
+param.afe.hw.CFi = 2 * param.psfbc.hw.Cdc_dc1;
+
+% ---------------------------------------------------------------- UPQC series transformer
+param.upqc.name = 'UPQC Series Transformer';
+param.upqc.pwr_nom = 3*125e3;
+param.upqc.u1_nom = 400;
+param.upqc.u2_nom = 690;
+param.upqc.f_nom = 50;
+param.upqc.eta = 98;
+param.upqc.ucc = 4;
+param.upqc.p_iron = 5e3;
+param.upqc.n12 = param.upqc.u1_nom/param.upqc.u2_nom;
+param.upqc.n2 = 8;
+param.upqc.n1 = param.upqc.n12*param.upqc.n2;
+param.upqc.core_area = 0.04;
+param.upqc.core_length = 0.25;
+param.upqc.mur = 35e3;
+param.upqc.Lm1 = (param.upqc.n1^2 * param.grid.mu0 * param.upqc.mur * param.upqc.core_area) / param.upqc.core_length;
+param.upqc.i1m = param.upqc.u1_nom/sqrt(3)/param.upqc.Lm1/param.upqc.f_nom/2/pi;
+param.upqc.delta_star = 0;
+
+u = param.upqc;
+param.upqc.st = three_phase_transformer_setup(u.name, u.delta_star, u.pwr_nom, u.u1_nom, u.u2_nom, u.f_nom, ...
+    u.eta, u.ucc, u.i1m, u.p_iron, u.n1, u.n2, u.core_area, u.core_length, u.mur);
+param.upqc.ctrl.kp_p = 1;
+param.upqc.ctrl.ki_p = 35;
+param.upqc.ctrl.kp_n = 1;
+param.upqc.ctrl.ki_n = 35;
+param.upqc.ctrl.lim = 4;
+
+% ---------------------------------------------------------------- DC/DC control of the other stages
+d = param.dcdc;
+param.dab.ctrl = ctrl_dab_setup(d.kp_udc, d.ki_udc, d.kp_idc, d.ki_idc);
+param.psfbc.ctrl = ctrl_dab_setup(d.kp_udc, d.ki_udc, d.kp_idc, d.ki_idc);
+param.isop_rail.ctrl = ctrl_isop_rail_setup(d.kp_udc, d.ki_udc, d.kp_idc, d.ki_idc);
+% special settings
+param.psfbc.ctrl.kp_idc = 1;
+param.dab.ctrl.ki_udc = 35;
+
+% ---------------------------------------------------------------- resonant PI
+param.spinv.pres_ctrl.kp_rpi = 0.75;
+param.spinv.pres_ctrl.ki_rpi = 45;
+param.spinv.pres_ctrl.delta_rpi = 0.025;
+param.spinv.pres_ctrl.omega_set = param.spinv.omega_set;
+w = param.spinv.pres_ctrl.omega_set;
+dr = param.spinv.pres_ctrl.delta_rpi;
+param.spinv.pres_ctrl.res_nom = s/(s^2 + 2*dr*w*s + w^2);
+param.spinv.pres_ctrl.Ares_nom = [0 1; -w^2 -2*dr*w];
+param.spinv.pres_ctrl.Aresd_nom = eye(2) + param.spinv.pres_ctrl.Ares_nom*ts;
+param.spinv.pres_ctrl.a11d = 1;
+param.spinv.pres_ctrl.a12d = ts;
+param.spinv.pres_ctrl.a21d = -w^2*ts;
+param.spinv.pres_ctrl.a22d = 1 - 2*dr*w*ts;         % legacy init writes it to apres_ctrl (typo)
+param.spinv.pres_ctrl.Bres = [0; 1];
+param.spinv.pres_ctrl.Cres = [0 1];
+param.spinv.pres_ctrl.Bresd = param.spinv.pres_ctrl.Bres*ts;
+param.spinv.pres_ctrl.Cresd = param.spinv.pres_ctrl.Cres;
+
+% ---------------------------------------------------------------- SOGI
+param.spinv.sogi_delta = 1;
+param.spinv.kepsilon = 2;
+param.spinv.sogi = sogi_filter(param.spinv.omega_set, param.spinv.sogi_delta, param.spinv.kepsilon, param.glb_time.ts_afe);
+
+% ---------------------------------------------------------------- DQ PI current control
+param.spinv.dqvector_pi.kp_inv = 0.5;
+param.spinv.dqvector_pi.ki_inv = 45;
+param.spinv.dqvector_pi.pi_ctrl = param.spinv.dqvector_pi.kp_inv + param.spinv.dqvector_pi.ki_inv/s;
+param.spinv.dqvector_pi.pid_ctrl = c2d(param.spinv.dqvector_pi.pi_ctrl, ts);
+param.spinv.dqvector_pi.plant = 1/(s*param.grid.emu.trafo.Ld1 + 1);
+param.spinv.dqvector_pi.plantd = c2d(param.spinv.dqvector_pi.plant, ts);
+param.spinv.dqvector_pi.G = param.spinv.sogi.fltd.alpha * param.spinv.dqvector_pi.pid_ctrl * param.spinv.dqvector_pi.plantd;
+figure; margin(param.spinv.dqvector_pi.G, options); grid on
+
+% ---------------------------------------------------------------- single-phase inverter control
+param.spinv.ctrl = ctrl_single_phase_inverter_setup(ts, param.spinv.pres_ctrl.omega_set, ...
+    param.spinv.dqvector_pi.kp_inv, param.spinv.dqvector_pi.ki_inv, param.spinv.pres_ctrl.kp_rpi, ...
+    param.spinv.pres_ctrl.ki_rpi, param.spinv.pres_ctrl.delta_rpi);
+
+% ---------------------------------------------------------------- devices of the other stages
+param.afe.igbt = device_igbt_setup(dev.used_device_igbt, param.glb_time.fPWM_AFE, param.afe.hw.udc_nom);
+param.inv.igbt = device_igbt_setup(dev.used_device_igbt, param.glb_time.fPWM_INV, param.inv.hw.udc_nom);
+param.dab.igbt = device_igbt_setup(dev.used_device_igbt, param.glb_time.fPWM_DAB, param.dab.hw.udc1_nom);
+param.psfbc.igbt = device_igbt_setup(dev.used_device_igbt, param.glb_time.fPWM_PSFBC, param.psfbc.hw.udc1_nom);
+param.isop_rail.igbt = device_igbt_setup(dev.used_device_igbt, param.glb_time.fPWM_ISOP_RAIL, param.isop_rail.hw.udc1_nom);
+
+param.afe.mosfet = device_mosfet_setup(dev.used_device_mosfet, param.glb_time.fPWM_AFE, param.afe.hw.udc_nom);
+param.inv.mosfet = device_mosfet_setup(dev.used_device_mosfet, param.glb_time.fPWM_INV, param.inv.hw.udc_nom);
+param.dab.mosfet = device_mosfet_setup(dev.used_device_mosfet, param.glb_time.fPWM_DAB, param.dab.hw.udc1_nom);
+param.psfbc.mosfet = device_mosfet_setup(dev.used_device_mosfet, param.glb_time.fPWM_PSFBC, param.psfbc.hw.udc1_nom);
+param.isop_rail.mosfet = device_mosfet_setup(dev.used_device_mosfet, param.glb_time.fPWM_ISOP_RAIL, param.isop_rail.hw.udc1_nom);
+
+param.afe.ideal_switch = device_ideal_switch_setting(dev.used_device_ideal_switch, param.glb_time.fPWM_AFE, param.afe.hw.udc_nom);
+param.inv.ideal_switch = device_ideal_switch_setting(dev.used_device_ideal_switch, param.glb_time.fPWM_INV, param.inv.hw.udc_nom);
+param.dab.ideal_switch = device_ideal_switch_setting(dev.used_device_ideal_switch, param.glb_time.fPWM_DAB, param.dab.hw.udc1_nom);
+param.psfbc.ideal_switch = device_ideal_switch_setting(dev.used_device_ideal_switch, param.glb_time.fPWM_PSFBC, param.psfbc.hw.udc1_nom);
+param.isop_rail.ideal_switch = device_ideal_switch_setting(dev.used_device_ideal_switch, param.glb_time.fPWM_ISOP_RAIL, param.isop_rail.hw.udc1_nom);
+
+% ---------------------------------------------------------------- diode rectifier
+% ABB 5SDF 0131Z0401 (slow recovery)
+param.diode.rectifier.Vf = 0.977;           % [V]
+param.diode.rectifier.Rdon = 22e-6;         % [Ohm]
+param.diode.rectifier.Cj = 0;               % [F]
+param.diode.rectifier.Irm = -75;            % [A]
+param.diode.rectifier.didt = -30;           % [A/us]
+param.diode.rectifier.trr = 5;              % [us]
+param.diode.rectifier.Qrr = 325e-6;         % [C]
+param.diode.rectifier.Ifm = 2000;           % [A]
+param.diode.rectifier.Vr = -50;             % [V]
+param.diode.rectifier.Err = 15e-3;          % [J]
+param.diode.rectifier.Rth_JC = 0.004;       % [K/W]
+param.diode.rectifier.Rth_CH = 0.003;       % [K/W]
+param.diode.rectifier.Rsnubber = 1e4;       % [Ohm]
+param.diode.rectifier.Csnubber = 1e-12;     % [F]
+
+% ---------------------------------------------------------------- load transformer and RL load
+param.trafo_load.name = 'Load Single Phase Transformer';
+param.trafo_load.pwr_nom = 225e3;
+param.trafo_load.u1_nom = 400;
+param.trafo_load.n1 = 50;
+param.trafo_load.n2 = 1;
+param.trafo_load.u2_nom = param.trafo_load.u1_nom/param.trafo_load.n1*param.trafo_load.n2;
+param.trafo_load.f_nom = param.spinv.frequency_set;     % alternative: 50
+param.trafo_load.eta = 98;
+param.trafo_load.ucc = 5;
+param.trafo_load.i1m = 10;
+param.trafo_load.p_iron = 2e3;
+
+tl = param.trafo_load;
+param.trafo_load.output_transformer = single_phase_transformer_setup(tl.name, tl.pwr_nom, tl.u1_nom, ...
+    tl.u2_nom, tl.n1, tl.n2, tl.f_nom, tl.eta, tl.ucc, tl.i1m, tl.p_iron);
+
+param.trafo_load.uload = 2;
+param.trafo_load.rload = param.trafo_load.uload / param.trafo_load.output_transformer.i2_nom;
+param.trafo_load.lload = 250e-6 / param.trafo_load.output_transformer.n12^2;
+% alternative: rload = 0.86/m12_load_trafo^2; lload = 3e-3/m12_load_trafo^2;
+
+% ---------------------------------------------------------------- DC-link stray inductance (partial loop inductance)
+% same data as the library script parasitic_dclink_data.m; Bode check only
+param.dclink.Lstray_dclink = 100e-9;                            % [H]
+param.dclink.RLstray_dclink = 10e-3;                            % [Ohm]
+param.dclink.C_HF_Lstray_dclink = 15e-6;                        % [F]
+param.dclink.R_HF_Lstray_dclink = 22000;                        % [Ohm]
+param.dclink.Z_HF_Lstray_dclink = 1/s/param.dclink.C_HF_Lstray_dclink + param.dclink.R_HF_Lstray_dclink;
+param.dclink.Z_LF_Lstray_dclink = s*param.dclink.Lstray_dclink + param.dclink.RLstray_dclink;
+param.dclink.Z_Lstray_dclink = param.dclink.Z_HF_Lstray_dclink*param.dclink.Z_LF_Lstray_dclink/ ...
+    (param.dclink.Z_HF_Lstray_dclink + param.dclink.Z_LF_Lstray_dclink);
+param.dclink.ZCFi = 7/s/param.afe.hw.CFi;
+param.dclink.sys_dclink = minreal(param.dclink.ZCFi/(param.dclink.ZCFi + param.dclink.Z_Lstray_dclink));
+figure; bode(param.dclink.sys_dclink, param.dclink.Z_Lstray_dclink, options); grid on
+end
+
+%[appendix]{"version":"1.0"}
+%---
+%[metadata:view]
+%   data: {"layout":"onright","rightPanelPercent":33.8}
+%---
+%[output:296b31ad]
+%   data: {"dataType":"text","outputData":{"text":"Single Phase CLLC: CLLC_1200V\nNominal Power: 250000 [W]\nNormalization Voltage DC1: 1200 [V] | Normalization Current DC1: 250 [A]\nNormalization Voltage DC2: 1200 [V] | Normalization Current DC2: 250 [A]\nInternal Tank Ls: 2.580123e-05 [H] | Internal Tank Cs: 4.734509e-06 [F]\n---------------------------\n","truncated":false}}
+%---
+%[output:9bb98854]
+%   data: {"dataType":"text","outputData":{"text":"Device AFE_THREE_PHASE: afe690V\nNominal Voltage: 690 V | Nominal Current: 2.324276e+02 A\nCurrent Normalization Data: 328.70 A\nVoltage Normalization Data: 563.38 V\n---------------------------\n","truncated":false}}
+%---
+%[output:4fbc86e0]
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjAAAAFRCAYAAABqsZcNAAAQAElEQVR4Aey9DWxV553n\/6P\/7B9DnEKyAYyByBD+SqsM8K9aFmYSQWdjJqz64jYSo8XLFomRHLJhBVsgbHaHjLeZXbYBqqBNN6mlseRpZEsbiYa+SHSgO2MrqBA3ywZP1FbrgDcYY0M2gYaAUaPJ8nnCc3N8fO77vb7nnvuN8vN5zvN2nufznHufL7\/nOed+5mP9JwIiIAIiIAIiIAJVRuAzpv9EQAREQAREQATyJKDslSYgAVPpEdD1RUAEREAEREAE8iYgAZM3MhUQAREQgcoTUAtEoNYJSMDU+h2g\/ouACIiACIhAFRKQgKnCQVOTRaDyBNQCERABEagsAQmYyvLX1UVABERABERABAogIAFTADQVqTwBtUAEREAERKC2CUjA1Pb4q\/clJHDp0iVbu3atM8IlrHpSVQMDA7ZixQprbW21a9euTUovVwT9mqo+5tIHz+Gll17KJXvs8+zatcuWLFnijHC+DYYD5TnmW3Yq8tMn7h\/uo6m4nq6RbAKfSXb3ytU71SsC8STABHH8+PEpb1ylrtvV1WWzZ8+2xx57LOc+w4f25lzgVsZCytwqltf\/XOPw4cN5lam2zJs3b7YrV65Y0vtZbeNSre2VgKnWkVO7Y0dg7ty51tvb64xwORu4bNkye\/PNN627u9vq6+udFwZvzFRPDHh\/KnFd2OJ9OXbsmK1cudJy5Y1noq2tjeI5WyFlcq48IiNi7OzZs3bgwIGI1OqOWrx4sT344IPW09Nj8sJU91gW3PoSFpSAKSFMVVU6AvwLGVe4NyYRXzsTl18+OXjwoHO3k4+JlAnV5+MLEnc1aVgwPVjHq6++mqqDeknzdYSP1E891IcF8\/vrcU3CGGHsL\/7iL9w1CBOfTz20wef316ONhGnL2NiYMSmfPHmSrC5MPGVcxO0\/nin\/0r8dZYTpRzA\/rInzRjmfP3i8fv26u1bUdX37fB0cqdeXp21ck3j6QR2cE6Ys+YJ5yOfZkYadOHHCPvjgA1u6dCmnzihLHeT3Rh9J5PrPPfccQecBIB\/5w9ehHG0hPl0ZKiGNvN78dUiLMsadPvj8\/vrkpS7GkDAiNJhGXNC4jq+DY7rxoU7SsXAezon3RrtoH9fx5bhniScPccE0H0e8D5OO+TjiMdpLPIbYbmxstPPnz9uZM2eIkolAwQQkYApGp4LlIMCkweTBl3iwfiYevnSDcUx63\/\/+91NRnDMJUAdfxhs2bHBflD5DMD0Y9+1vf9ufuglx3759zqORirwdoF7qp57bUS7\/pk2bjInQx4WPfFn\/8Ic\/dNELFiywjz\/+eMLETwITcbZ6yFeMrV+\/3hU\/evSoO\/LHh7ds2eI8OTCGNWneGAvGhP77uEzHd99917Zt2+bYBPO9+OKLjhP1BDnS98cff9yGh4dT2cN5SIAjY8rYcj44OMghJWAYAxhSn0u4\/Wfnzp3uurdPJx3a29stOKZk4Pzll18mGGlM0mFO9Ck4WQcL0rZ169ZNuB9pZ0tLixORwbyZwtTPdYJ5GB\/GLRj305\/+1ILtIw9tJg9Hzgl7g20wP\/Hcs8QTRiRSLpiHMNch3Vs4D\/G0l3YTxqiLox8\/wlNoulSCCEjAJGgwk9AVJg7srrvusiNHjhiudI6cs1zARBDsZ0dHx4Q8lMX4gubL17vjqYcwaVhUHdRF\/IULFwzvAuGgUQ5btGiRm\/Co86mnnnITNd6AYN5wmHzkZ8mHPhRaT7hezu+8806j7atXr+bUhbkO\/9p1Ebf\/LF++3Gh7f3+\/c98jBAgTRxrtgjHZqY\/2BttJmDRvM2fOdNcKX7epqckto1Ee41\/a5GHCxlt07tw5e+utt4wxZWzJgyctKGC4FkY5ypMHhowpY4vAGRkZcXXMmzfPN8kdg2Uox1IbS25bt2416iAT94KPZ6mGfN58HibYqDJcjyWQYPvpB+ednZ2R4pe9OvQ\/2DZ\/HcogvGAebhvn3ugzeTmnLO2FEePHODKepGFcizTykJc4+sORPhHvzV8XnlyDPBj1+jpod19fH9GOIWVJ4zou8tYfrp8LFwmYW7D0f0kISMCUBKMqKRUB\/yX7xBNPGJMO9XLkX698WQaFAl+qWDAPYerACDPZ4cbGCBPn0wjzJc3kTZgj54SjzJfbuHFjas+Fnww4RpUhjontoYceIuis0Hpc4SL+sE+EtiMCEAUYYb+HBHEBYyb35uZmdyVfhhPvrSGcizEZ4rmBK5OdL+Ovw5gytsQzjhhhzDOiHOUZP\/7F79MQmAhNzr35\/RXBMlyfdvg8mY54D4LXSZeX9rMRFVZ4UCjDkXPaRNuCZbk+4oD74Omnn3aeLtLhzP2GmEPUEZfJqJf6KUNZ8jI+Ufuu\/JiSxwsGwkHDK0Lb8ZAE4304WEe6a3M\/+fz5coEJbHx5HUUgXwISMPkSU\/5EEWBJB09COTvFUzL8qz3fazBJMilQzk8ghIsxhBQTKWIEoy6\/tES4FMa\/xNk78ZWvfMWef\/55t9chKE5KcY2oOvA44XlCmPnreTHDZB1VhjiWX5jImejxLHiPBWnVavQlXdu9UEMk0l\/vgQnnz1RHOK\/ORaASBCRgKkFd10xLwH9p+v0SZPRLG0y8TMDEYUxOGGEmTdzohKkDI8y\/VPmSDlombwll0pmvEzc51yOfnwyYBDnPxXKth3\/RewHDpIy3JF39TN5sjkyXfjvevJcCbxTGRI+RjsiCMfF+wqef9Jf0KKETdV3K01b\/L\/iw+PLXYbmKsaVuxhEjjHlGtI2+B8ePJR9EJ+KTvGGjTQgZyngx4sWar9eX4fq0A68Gnh7imdg5eguXof2IUlixdMR1vOENwSviy3KkPYwN4xncX+U58VQO40LeTOb7DFvKkpfxQSxm2vRLPm\/kZzxpu\/8shfvr8waP6a5NXT5fvlxgAhtfXkcRyJeABEy+xJS\/rASYsDC+7HHL8y9jjpwHlxx8I3B\/k4cyfLFzxBAuTEp80ZPuLdcvel9\/8Ei9mL8OdfpljajJPVg2GKYOLF09frKgjO8fR85zMfKmWzphwlizZk2qGsLEEcFyDowJUwf9C7aTMGnpjDJcF+7k8ewpR1+Jw5ismbQZU8aW67DRduHChSQ7owyGqEFYkMcb4oo2MwFShxd5xPs8\/phufGgb98J7773n3iND+7ge5UhzjQj9IZ4yXI+lE67t2085LJ2Q5f0niIZgf3zb\/Abq0OUmndJn8pJAWa5Hm2k7POFKWibz91aw7dSVqQxpXJt7hTD5\/bXpE3EYwi0XLl4whYUhdchEIB8CEjD50FLe4gjkUJovSv71jAAJZudf0vzLOxjHl\/f3vve9VBTnuMOpgy\/TV155xW1a9Rn4suXJEiZqH5fPkXqpn+sEyxHn94wE49OFs9VDOksvXghQz5NPPmnh6xIftKCIYq8Eno9gug\/Dlrrh4f8V7tNgDGt\/zpH8jAnt4jxs4evieaGMz0cYRpzjCaEezn1\/aMcPfvADCwqYcB7KYpTzrP0E6CdE4vGIUB95vdEf0jhHDNF3wkziv\/\/9723v3r2cOiPtxz\/+sbtv8OjhsQiXQcDgxaNeV+j2H\/oJv9unEw7cc97T4xNoJ+31bfPxmY7khUEwDxyJg1kwPipMnqefftptfiadNjC21JFtL064z\/T\/q1\/9KtWkLJyHhDAXP15+\/MgjE4FCCEjAFEJNZcpOgInAu+U58sUYdVG+0EnH+CLmC9rnQ8Tg0icN80+dkM6EwnmwjM9PGcLkCxv1U4b6vNEG8lGGshhhjDBGmDzeMtVDHvJTzl8DDwXXpc20HSNMHHVRhnb4\/JSlDuLDRjzplKeecDqsfT0cGQufx5elPGHio65LGcpihH0ewizbIJzwRjDx0g6epGICpT5v9Iv+UYc36vHp1MEE7CdE4ukP9fn8HOkPaRhtpu3EY9SHEcZI+4M\/+AP3FBVh8mOEScfIT13Uy7k3+kZ8OgvXQztpr89PvdSVrR6fj7wYjGBFPb5NHDnHfH5fL9fk2pTliHihDsKkUZY0jpTH2GyLdw3vC4KEdJ6c8k8mkccb5Uj35q9LOvWweRehiDAkTiYChRJIpIDhCxJ3J8cAmMggeXLNG1mBIkVABPIiwFIHSx4UYtmJ5QiWYvCIEE86admMyZYlL+8pyZZf6YUTQCDxPUkNLKUxZggQRCgiEjFJWjbjaSuEKktNCLps+ZUuApkIJE7AoPDZKHf16tVM\/XZp+eR1BfRHBESgaAJMhuElMirFE4BHhnTOczH2lvC0FpNqLvmVp3ACeFbwvgRrQLzksyzb1ZX\/b1cFr6dwpQjE87qJEzD8i4AXYs2aNSsr8XzyZq1MGaaMAP\/yxt2N2zufyW7KGqgLZSXAv757e3vdSwj9UkMh4+nvBSbXrBdVhqIJsBzkx4sjn0PGINeKKc+4M\/65llE+EUhHIFEChg13vKnymWeeSdffVHw+eVOFFBABERABEZhyArqgCEQRSJSAwY3MOi3vI4jqbDAun7x4dPDWyE66V+iLgzjoHtA9oHugeu4B5rDg\/JeUcGIEDJtxT58+beyMzzY4+eRl4Hfv3m3swJe1ikOrGNTe50BjrjGv7nuAOYy5LNvcWG3piREwbA7bsGFD6ndGMg1EPnkZ9FOnTtn+\/fuNNXpZd0k4bN++3Q2RuJaGZ\/C+FNvSM\/V8xVZs\/b1QLUfuWeYw5jL3pZugP4kQMOxn4VHK4COZDBaPZvJ2zuB45ZM3WI7XlvOUhGy1e6FasRxWrVrl8Iprdp75shbb0jP1YyC2YuvvhWo5+nvWfeEm7E8iBAw72tnZzq54jLdb8lZPjrzEKThm+eQNllNYBERABERABEQgPgQSIWCy4eR9L6zhhr0x2copHQLlsYaGBuMdHhzLc4XarRWmYlue8Rfb8nClVrGFgiwfAokUMLyXgFdccwQG7wphvTLsjSGNPMG8xMnKT4Avq29961vGsfxXq60rwFRsyzPmYlsertQqtlCQ5UMg9gImn84orwiIgAiIgAiIQG0QkICpjXFWL0VABERABGqLQOJ7KwGT+CFWB0VABERABEQgeQQkYJI3puqRCIiACFSegFogAmUmIAFTZsCqXgREQAREQAREoPQEJGBKz1Q1ioAIVJ6AWiACIpBwAhIwCR9gdU8EREAEREAEkkhAAiaJo6o+VZ6AWiACIiACIlBWAhIwZcWrykVABERABERABMpBQAKmHFQrX6daIAIiIAIiIAKJJiABk+jhVedEQAREQAREIJkEyiNgkslKvRIBERABERABEYgJAQmYmAyEmiECIiACIiACIpA7AQmY3FkppwiIgAiIgAiIQEwISMDEZCDUDBEQARGoPAG1QASqh4AETPWMlVoqAiIgAiIgAiJwm0AiBczAwICtWbPGON7u54TDpUuXbO3atbZkyRJnra2tdu3atQl5dCICIjD1BHRFERABEciVQOIEDEJk3759dvXq1UgGpO\/YscM2btxoZ8+etTNnzrh87e3tWLwetQAAEABJREFU7qg\/IiACIiACIiAC8SeQOAFz8uRJGx4etlmzZkXSr6+vt+7ubtu6datL5xxvzcjIiLwwjkgt\/1HfRUAEREAEqoVAogQMS0OdnZ32zDPPVAt\/tVMEREAEREAERKAAAokSMIcPH3Z7X+bNm5czCkRPT0+PK4c3Jl3BU6dOGd4dbGhoyMbHx0tutVbnzZs37caNG+JYhntJbMv3+RRbsY37dzVzFHMVdv79cfvo3gfsxNtX7J33xtNNcVUZnxgBw4bd06dP26ZNm3IeCL8fZsGCBVnLHTp0yNjsi3V1ddnFixdlRTAYHR21y5cv29jYmDgWwTHqPhTb8n02xVZsoz5zcYtjjmKuwv7Nd\/\/Krj38lP3HN6YnWcDkPO\/HMiMDtmHDBquvr8+pfYiXtrY2l7ejoyNruf3797u9M+yf2bx5s82fP19WBAO8ZHPmzLGGhgZxLIJj1H0otuX7bIqt2EZ95uIWxxzFXIVt377dzXNJ\/JMIDwzLQP39\/YYg4dHolpYWt5GX4\/HjxyeNmxcvjY2NTpTkInrw0qxevdqwpqYmq6urkxXBYMaMGTZ9+nQxLIJhuntQbMv32RRbsY383JXhc1zMdZijmKuwhQsXTpoDkxKRCAEzd+5c6+3tdY9F82j0kSNHjEHj2NzcPGms\/CPT\/jgpgyJEQAREQAREQARiTSARAiYbYTwurAXijfHeGjY3LV++3L3IDq8NL7YjLVtdShcBERCBmBFQc0SgJgkkUsAsW7bM+vr6jCOjyhIRa4F4Y8LeGjw2GB4c0sgvEwEREAEREIEkEHjnvRtJ6EZkHxIpYCJ7qkgREIHyEFCtIiACIlABAhIwFYCuS4qACIiACIjAVBO47566qb5kWa8nAVNWvKp8CgjoEiIgAiIgAjVIQAKmBgddXRYBERABERCBaicgAVPsCKq8CIiACIiACIjAlBOQgJly5LqgCIiACIiACIhAsQQkYIolqPIiIAIiIAIiEFMCSfsBxyBmCZggDYVFQAREQARqhEDtdVNPIdXemKvHIiACIiACIiACMSMgD0zMBkTNEQERqA0C6qUIiEBxBCRgiuOn0iIgAiIgAiIgAhUgIAFTAei6pAhUnoBaIAIiUAsEtIm3FkZZfRQBERABERABEagaAvLAVM1QJauh6o0IiIAIiMDUEUjaE0iQk4CBgkwEREAEREAERKCqCNSogKmqMVJjRUAEREAEREAEQgQkYEJAdCoCIiACIiACIpCGQIyia17ADAwM2Jo1a4xjjMZFTREBERABERCBogmcf3\/c1bHo7jp3TNKfmhYw165ds3379tnVq1eTNKbqiwiIgAgklYD6lQcBHqHG8ihSVVlrWsCcPHnShoeHbdasWVU1aGqsCIiACIiACORD4OGls\/PJXhV5a1bAXLp0yTo7O+2ZZ57JaaBOnTplCB5saGjIxsfHZUUyuHnzpt24cUMci+QYdS+KbZk+n7fGSmzFNuozF6c45ijmql8ODOY0v1VrppoVMIcPH3Z7X+bNm5fT2B06dMhaW1uddXV12cWLF2VFMBgdHbXLly\/b2NiYOBbBMeo+FNvyfTbFVmyjPnNxi2OOYr7a+RffTc1vD91\/dyqclEBNChg27J4+fdo2bdqU8zju37\/furu7nW3evNnmz58vK4IBwnHOnDnW0NAgjrlzzImV2Jbvsym2YlsN3\/3MUcxX3\/yXj+c8x1VjxpoUMKjTDRs2WH19fc5jtmDBAlu9erWzpqYmq6urkxXBYMaMGTZ9+nQxLIJhuntQbMv32RRbsU33uYtTPHMU89XQ+J1ujvvM9Xftjnd\/48JJ+lNzAoa9L\/39\/dbW1mZLliyxlpYWt5GX4\/Hjx5M0tqXvi2oUAREQARGoGgIn3r7i2vqZ6\/\/HHZP2p+YEzNy5c623t9fOnj3r7MiRI7Zw4ULj2NzcnLTxVX9EQAREQARqkMBrg5+IF7qeRO8L\/aomAUN7ZSIgAiIgAiIgAlkInHj7\/VSOO979bSqcpEDNC5hly5ZZX1+fcUzSwKovIiACIiACtUvAe2A+4\/a\/SMDU7p2gnouACIiACIhAlRBAvPj9L011H1ZJq\/NvZs17YPJHphIiIAIiIAL5EFDeqSXw3Z+fS11w48qGVDhpAQmYpI2o+iMCIiACIlCzBILel4fun21YUmFUTMDwOPPatWvdo8w8zpyrUSapg6F+iYAIlIOA6hSB2iDwznvjFvS+7Hl0caI7XjEB46l2dHS4x5n9Y82ZjuT15XQUAREQAREQARH4lEBP\/0Xze19YOkriDzh+2luziguYYGMUFoEkElCfREAERKDcBHr6R295X4bcZe67p86S7n2hoxUTMP6Fcvm8PI68vISOhstEQAREQAREQATMEC9P9vzaoUC8vPDPP28cXUSC\/1RMwAT3wOzatSvBiCvdNV1fBERABEQgqQTY8+LFC32shaUj+olVTMB4D8xjjz1mhw8fdpt5V6xYYQMDA7RLJgIiIAIiIAIikIaA37D73Z9\/smxEtj2PNtXE0hF9xcouYLhIJjtw4IDbxHvy5EmbPXu2tbS0ODEjr0wmakoTAREQARGoVQKIl6\/\/19OhPS+1JV4Y+4oLGBqBeY8MTyHxw4rHjh1zQkZeGejIREAEREAEaozApO4iXFgy+v\/\/8pdGmAzsdfnxv\/pCTXle6DcWGwFDY7zxu0Rvvvmm88wcPHjQtm3bZuyZ8ek6ioAIiIAIiECtEECseOESXDJivwviBRFTKyyC\/YylgGEfDJ4XXm7X1tZme\/fuNTw0wYYrLAIiIAIiUEYCqrriBLxwCS4X0SgEC\/tdvr+xNp42os9RFhsBc+3aNWttbXXLRuyDefDBB+3MmTPOC8Pj01GNV5wIiIAIiIAIJI2AFy4sFeFx4Zw+euHyP\/\/8D2tyyQgGQftM8KQSYTbr4mlZvny5sZGXt+2yD6a7u9vq6+sr0SRdUwREoPIE1AIRqCkCiBTe5\/K17582L1w8AC9cWC7ak\/CfB\/B9zuVYMQHDnhZ+14hHqFevXi1vSy6jpTwiIAIiIAKJIYBo4ccXeY8LooWj\/ykAOumFi\/e4cE687BMCFRMwly9ftps3bxoel1y9LcePHzdEzydNn\/g3uASFRwfPzsQcE89eeuklt1xFXpauKD8xh85qmoA6LwIiIAJlIBAWLexvwfMSvBRChf0tXrgE0xT+lEDFBMycOXNs+vTpn7akyFB7e7s1Nja6PTMsRfX39xsiJapahFBPT49bsmKfDXkoz1EmAiIgAiIgAqUkgGhBpOBhwdOSTrTsebTJEC0YTxiVsg1JrKtiAsbD5CkjvCC5GHl9ufCRF+JhxPPE0sqVK21wcJDTSUb8ggULbObMmW6fzZo1a2xkZMRi5IWZ1GZFiIAIiIAIVAcBBMtrg1cMweL3tBBGxAR7gKcFocLeFkTLnkcX18RvGAUZFBOumIBBZPDDjGzYzccok63D7K\/BA7N+\/frIrEuXLrULFy7Y9evXnWjp6+szRIw2DUfiUqQIiIAIiEAGAl6w8K4WL1i8lyW4p4UqEC17bnlavGhhqejhpbNJkuVJIFrA5FlJnLKz94VNwXhYOEa1jceyX3jhBVu3bp3x9NOWLVts69atUVlTcadOnXJLTixPDQ0N2fj4uKxIBuyBunHjhjgWyTHqXhTb8n0+xVZsz166ZnhT8KoEBct3fz5kYcHS+Nk77JvLZtuBbzTZyH\/6Qzu56wu2fe18+9LCurJ99zFHMVdh\/GM9NZElLJA4AcMyEh4d9sOw5BS1LMTeGN7uy88VkPfo0aOG8Mk0tocOHXLvqWHDb1dXl128eFFWBIPR0VFjI\/fY2Jg4FsEx6j4U2\/J9NsW29ti+8dvz9tNfnbOO\/\/6\/7PEfDljjv\/ulfek\/97vlIURMWLAgWL64oM7a\/sls63iswX6yeaH9+Zdn2x8vsin7rmOOYq7Cdu\/enWlqq+q0xAkYPxqbN2+24eFhO3funI9yRwQNS0YbN25Mvd2XvK+\/\/rrxBmCXKeLP\/v37jaelMPLPnz\/fZIUzmDdvnrGRu6GhQRxLfC+JbeH3ZbbPtNgmm+3vp99tb39YZ3973uwv\/+6KtR0eta91Dbtj+\/F37Se\/vjZpdmBJiH0sflnoV\/92pf3kyS9Y+zc+b1\/90uKKfL8xRzFXYdu3b5\/U5qREJFbA8C\/7adOmGV84pRgsvyTFslRTU5PV1dXJimAwY8YM9xSaOJb+PhLb0jP192n82Zav755BuY5TzfbSdbNfDY\/bjwau2M4fnbMNf\/VrW33gtP1p529s16tDLv6NC+OTpg8vWNi7EtzHsufRxcZelnLxyade5ijmKmzVqlWT+pCUiMQIGJaAMAYGL0tnZ6fxJBKbhYnzxkZdNuzyGDWbfYnH3bZw4UJbvHgxpzIREAEREIGEEHjnvXH3y80s9\/g9K\/d8+2\/NP85MHGnhpSC6HxYr733vj91jzogXvC4IFvLJKkMgVgKGvSn+cWre1cI5a3gIkmx42tvb3aPQlGdjLvmJ40h56qFOztmwi7hBnZKfR6h5oR7ihnSZCIhAYQRUSgQqRSAsVBAmfoMtYoXzdEKFNnuxsuf2E0ISK1CJt8VGwOA9YW\/KL37xC1u0aJGjtmnTJnf0QsSdpPmD+GC9j025GGHiyM6R8+bmZk6d+c2+4bwuUX9EQAREQARiSSBXoZJOrCBUMDwoeFJYBgqKlT23l4Ji2Xk1agKBWAgYlnJ4bwuPM995552pBiI8iCONPKkEBUQgkoAiRUAEkkIAofLa4JVJjyvjTcG8RyWdUIGDFypBscIL4zDEC\/FaBoJUdVosBEx1olOrRUAEREAEiiEQFClspOVJn2\/+YMDS7VEhf9T1ooRK0KsisRJFrfrjYiFg2GjLY81svP3www9TVPG6PPvss0YaeVIJMQ2oWSIgAiIgAhMJIDqCnhQ8J+xNiRIpPKZ86n9PflSZGhEpGF4TBAkWXv4hjnR5VSCWfIuFgAEzG2tZLnrkkUfs\/Pnzxkvo2GSLeCGNPDIREAEREIF4EUCgYEGRgkDBokRKpiUfeoZIeej+2YYQQZAgUljy8UYcaZiECsQSYQV1IjYChtazyZZNtUGTeIGMTAREQAQqRyAoUPi9H+9FYS+KN377h3gvUE68fSVtg6NEyn\/b8jl74183uVft8yI4L1QQKeRPW5kSapZArARMzY6COi4CIiACFSQQFCgIEIQIHhTESdiLwu\/9kAeBQrmoZiM4sLAnBW+K35sSFikPL707qqqpidNVqpJALAQMe13Wrl1rvJMlk\/GodVVSVqNFQAREoIIEEBp+iQfxkUmgkEaeTAKFriBQMJZyMDwmCBS\/1MNxskiZTVGZCJSEQCwEDBt02evC+1\/49Uy\/hESYuKeeesrOnDnjXlQnEVOScVclIiAC8SFQVEsQJ5gXKOElnrAHJV+BEvSieJHivSiIFOIwRMzDS2cboqaoDqmwCORIIBYCBg8Mrw6DuBwAABAASURBVPbfu3dv6gcWaT\/ChjjSrl+\/bmzy5Z0wpMlEQAREoBYIBMUJnhEECMYSjxcnLPX4PSi5LPHADaGBZRMoQS+KFymUl4lApQnEQsBUGoKuLwI1TUCdrxgBxAmGMMEQJhjiBFHiBYoXJ6SRD2OJJ1PDEScYogPDS4KxzBP0oEigZKKotDgTiIWAwdPCEhLvfMEb44ERJo408gwODtqCBQt8so4iIAIiEFsCCBMs29IOQgVhgiFMMMQJZTN1DnHivSdeoCBOsKBAQbRg5MFY5slUr9JEoFoIxELAAIvHpVku4t0vfiMvYeJI44cdX3zxRXv66afJLksOAfVEBKqOAOLCCxMEB+IDC3tOECfee5Lr0g4wECcYggNDgGCIE\/adeIHivSekkQ9xglGHTASSTiA2AgbQUe+BIY40RMybb75py5Yt41QmAiIgAiUngDDB0omT1QdO2xf\/y5Bx9MIE4YKIwXL1nCBOvPdkz6NNhgAJixOECvEY4gRDnFC25B1XhSJQhQRiJWAqwk8XFQERqAkCCBPMi5Pg0zp4Tvx+k6DXpJTiBIHiPSeIE+892fPoYvfWWYmTmrgN1ckSEoiNgBkYGLAVK1ZEvguGd8SwH6aE\/VZVIiACCSGAKMG8MMETgvDAECYIkihxElzSwXOSDQeej8bP3mFf+3y9Exx7MnhOosQJAiXbNZQuAtVEoNJtjYWAuXbtmu3bt8+eeOIJ974X9r50dHSYfw8M+2DYxGv6TwREoGYIIEqwfIUJwgURgyFMqCMTNIQJ5pd0WKph2QbDa4K3xHtOfvVvV1p787128JuLbY88J5mwKk0Eyk4gFgKGd7xcuHDBli5davX19dbY2Gg8cYRoQbx0dnYaIqfsNHQBERCBshN4571xw8otTOgIwgRDlGB7Al4TxIkXJogU7zVBuJAXw2tCeeqSxY2A2lPrBGIhYMKDgJBBwPh4xA0ix59HHRE4ra2tqSWobG\/sPX78eCqvlqiiiCpOBPIjgCjBXhu8Yng\/MLwhWKalHNLJi+XiMaFViArMe028MEF8IEwQJEFxQjy2J+A1QZxQl0wERKA6CcRCwOBpWblypR09etRRRMDwxl32vSBkePfLzJkzXVq6P+3t7c5zw88QsPREeR69jsrPfpudO3cay1Tk5z0zO3bskJcnCpbiap4AogTzwsRvfkV4lFuY4AVBeGBRwsR7TbwwIT\/CBHFT7oFT\/SIgApUlEAsBAwIEyMjIiCE6eHQaQcNeGP\/uF5aWyJfODhw4YBjpXhAhfjgP24kTJ2zdunXGdUjbunWrdXd3u+UrzmUikHQCCBLMixK8H16YIEqwbJtfKVOoxwShgSjBMgkT0smLSZgk\/a5U\/0QgPwKxETAIFEQEYoIuIEbwjhTy7hc8N3hg1q9fT1UTjKWmvr4+t99mQkKWk1OnTrlNxXh3hoaGbHx8XFYkg5s3b9qNGzfEsSCO0fff2UvX3P6SNy6MW\/frF91SDp4SLJMoIf27Px9y+RElGAIny8fCeCoH++KCOvvmstm2fW2DHfhGk7P\/tuVzdnLXF2zkP\/2hOxJ+5c8+7zbAsgmW\/NiXFtbZ3JlWNfeB7tvoe68U34liWxq2zFHMVRhbMLJ9jqs1PRYCBsHBPhT2pYRBEkcaecJpUefsfcFzw7ITx6g8xN11111Gvbz1l2O2+g8dOmTsscG6urrs4sWLsiIYjI6O2uXLl21sbEwcs3B847fnDfvpr85Zx3\/\/X84e\/+GAYYgS7Ev\/ud8a\/90vjSMvWWs7PGq7Xh0yhAmeEqwQUcIjw1jbP5ltPH3T8ViDYT\/ZvNDe+NdNxhEj7s+\/PNu+tbzO\/niRObv\/znH7RzffT9T46r4t3\/ee2JaOLXMUcxW2e\/duprxEWiwETCnJes8NTzK1tbWl3dfC\/pdXXnnF8PKwXLUjyx6Y\/fv3u2UmvESbN2+2+fPn17QV2\/958+bZnDlzrKGhoSY5\/n763Ya9\/WGd\/e15c\/bXZ8btL\/\/uiiE+sK91Dbu3vnLEiGs\/\/q5hP\/n1NcPwtGAjv\/so68eIfSGY3\/jKsgxLNBjLODwijLeEI\/aTJ79gP\/iXy5y1f+Pz1vZP\/z\/76pcWO\/viA4tqctxq\/b4t9nOfqbzYlm5OYY5irsK2b9+e9buhWjNUVMCw3wUPCJ6S8+fPG4KD86ARh8BgX0s+kBnA4eFhO3fuXGQxNu76OrPlpQLv0aGtTU1NVldXJyuCwYwZM2z69OmJYnjpuhn2q+Fx+9HAFWeHei\/azh+dc7bhr37tXkGPp2T1gdMu\/Kedv3GeErwlh3pHXRkECVaoKNn5yELnLTnctswQJuEnchAmiBYMEYOxv2TJ3PpEjUc5PqNJvG\/LwamQOsW2dHMKcxRzFbZq1SqmsERaRQUM+13wgLBOt2jRotRTQcQFDa\/KRPrZz1iamDZtmqHqg7nZa4N3JhhHeNasWZPyEi+rbQLsA8FeCzwa7De7sjzD8k26za6k+30l+SzhQNx7Sry3ZM\/t95cgOrKJkp2PLHJvi13dVG8IE+qiTpkIiIAIJIlARQWMB4knpLe3N\/VUkI\/P58jeF4wybNTl5XfpPDds7u3p6TG\/74X1wgceeMBoB+VlySaAIMEqIUoQE16U4PlAkGCIEox3l2B4TfCUYKTvuf3+EspIlCT7\/lTvRKCsBBJUeSwETCl4tre3G49hs\/y0fPlyVyVxBBA0bGZiQzDnPD69d+9ew71Gfsr5vKTLqo8AggSLoyhBjHhRQtiLEoQJggRDlGDVR14tFgEREIHKEKiYgMH7wdM\/CIhsRj7yZ0LE0hAblvzSE2HiKMORc4QL5xjhqLykyeJBAEGCIUowlmGmavkmm6cEIZKrKKGueBBVK0Sg4gTUABEoGYGKCRiWa1g28iIi05F85C9Zr1VRRQkgStigykbVqHeVsK\/knm\/\/rbG3BPv6fz1tWLF7ShASmZZvJEoqelvo4iIgAiKQF4GKCZi8WqnMVUMAceK9JXhMEB0YogQx4oUJ7yvhseBdEe8q4X0luXQYQYJJlORCS3kcAf0RARFIDIFYCRj\/WHVwSYm4xNBOQEeCAsUv54TFifeWIFwQMRiihLLZECBIMImSbKSULgIiIAK1TSA2AgahwpNBPFLtl5MIE0dabQ\/T1PYeoeG9KIgQBArmvSdeoPhHhHMRJ4gSzAuTnbffVXJow9K83lXCRlfqmVoiJbuaKhIBERABESgRgVgIGDboIlR4Mii414UwcaSRp0R9VjUBAogVPCR4UxApLPNgXqSQhkDBAsUmBBEUGE\/TYDxdg\/FYcLp9JTsf+eRdJRu+MEfvKplAUyciIAIiIAK5EIiFgMmlocpTAgK3qvCCBc8KQgUjjDcFkUL6rWwT\/kecYN574sUJAiX4JA7xGCIGk7dkAkadiIAIiIAIlJBALAQMnhZe7f\/ss8+mXi5HH\/G6EEcaeYiT5UcAQYIXBZHil4AIE0dasDZECob4QIhgiBS8KJh\/fwnpiBMsWF5hERABERABEZgqAlMpYDL2iZ8VQKj4l8uxkZcwcaRlLKzECQQQJggUhIr3sHA+IdOtk6BYCQoVhAsiBZNIuQVK\/4uACIiACMSOQGwEDGQQKn4Drz8SR5osOwGEC3tZ0omWoGDxSz9erEioZOerHCIgAiJQGQK6ahSBWAgYlop4266eNooaouxxCBfvbWEvS7AEomXPo02pJ328YAnmUVgEREAEREAEqo1ALAQM+1tYKnruueeMpSPM\/25RtQGdyvYiXLzHJbhEFBYtex5d7J70mcq26VoiIALJIaCeiEAcCcRCwACGpSK\/bPTYY49ZW1ubEzMrVqywgYEBsshuEwgKl6DHBeGCh4UNtxItt2HpIAIiIAIikEgCsREwQboHDhwwL2bWrVtn27Ztm\/B0UjBvrYURL7yjJZ1wYeNtrTFRf5NOQP0TAREQgckEYilgdu3a5bwvLCX19\/fbK6+8YiwzTW5+7cQgXPxyEWF6jsdlz6NNhsdFwgUiMhEQAREQgVohEBsBExQtx44dsyNHjjgvjH6J2gzB0tN\/0YJeFwQLjz7veXRxrdyrFeunLiwCIiACIhA\/ArEQMDyFhKelo6PDiZY333zTli1bFj9aFWgR4iW4ZOS9Lux1IVyBJumSIiACIiACIlBxArEQMCwP4Wlpbm4uGMi1a9estbU1tfSERyeXytggvGbNmlhuFP5EvJx2Hhj6gmCR1wUSMhEQAREQgVonEAsBU4pBaG9vt8bGRufBOXnypOHRyfZeGUTPvn377OrVq6VoQknriBIv7HVBxJT0QqpMBERABERABKqQQFYBUy194skljPbi0Vm5cqUNDg5ymtYQOsPDwzZr1qy0eSqREBYv7HdBvFSiLbqmCIiACIiACMSRQGIETBCu31Ozfv36YPSEMHk6OzvtmWeemRBf6ZN33hs33qrLkbYgXtjvQlgmAiIgAiJQNQTU0DITiIWAQUzwUwJRb98ljjTy5MKCvS\/8COSCBQuMY7oyhw8fNva+zJs3L12WCfGnTp0yPDbY0NCQjY+Pl8V4VPrE21fctRs\/e4cd\/ObislynXO3Pp96bN2\/ajRs3Etu\/fFiUOq\/YlufzyTiJrdhyH8TZmKOYq7ALFy64+SSJf2IhYEoJlmUkXoLHfhje5ss+l3D9bNw9ffq0bdq0KZyU9vzQoUNukzAbhbu6uuzixYslt\/ZXf23+JwEQLz\/4ZkPJr1GOdhdS5+joqF2+fNnGxsYS28dCuJSijNiW\/rPpx6Wq2JbhO8pzKMdRbEt33zJHMVdhu3fvTjuvVXtCRQUMm2x5WR2ekvPnz6d+PoA4b4gQ9rOwryUf2Js3bzb2t5w7d25SMQZ3w4YNVl9fPyktXcT+\/futu7vbGXXPnz\/fSmm\/n363dbz+ieeFjbov\/PPP2xcfWFTSa5SyvcXWhedrzpw51tDQkNg+Fsuo0PJiW9rPZnAcxFZsg\/dDXMPMUX6+2r59e7pprerjKypg\/O8f4eZatGiR+ffA4EEJGl6VfEnzL\/tp06YZXzjBsixF8YQSwgiR1NLS4oQOR5argnmDYb8khdhqamqyurq6ktml62Z\/2vnr1OV4Od2XP3dvyeovZVtLVdeMGTNs+vTpie5jqVjlW09M2CZybMW2dN974ftabEvHljmKuQpbtWpVam5JWqCiAsbDxLvS29trxbwHhr0vGHWybMQG3SjPjb+WF0i88XfhwoXuzb\/FXJ\/rFmq8ZTe4aXfjyoZCq1I5ERABERABEagJArEQMKUgzXtgRkZG3Ivsli9f7qokjgCChrXATB4W8lXCEC7f\/fmQuzRLR3riyKEo\/o9qEAEREAERSDSBigkYlnJ4ughR4cMs6UQZ+ciTaSTYz8Kan\/esECaOMhw5j\/Kw8JMFfX19FfnpAsQLj0zTRox9LxxlIiACIiACIiACmQlUTMD4pRxEhQ978RE+srxEnsxdiVVqTo3hcWmMzA\/dP9seXjqOXYc\/AAAQAElEQVSboEwEREAEREAERCALgYoJmCztSnwy3hfe+UJHtXQEBZkIiIAIiIAI5E4gFgKG5SGWiaKWj4gjjTy5dyv+OfG8IGJoKd4XRAxhmQiIgAiIgAiIQHYCsRAwLA+xTBReOuLx6gcffNBeeOEFI0\/27lRHDoSL3\/uCcNHG3eoYN7VSBEQg+QTUw+ohEAsBkw4XooWX8Ozbt894kihdvmqLx\/vi24z3xYd1FAEREAEREAERyI1ArAWM7wK\/5XD9+nV\/WtVHeV+qevjUeBEoMwFVLwIikCuB2AuYo0ePGm\/BnTlzZq59inU+eV9iPTxqnAiIgAiIQJUQiIWAYYMuG3XZsBu2Y8eO2dNPP53X7xbFlT3el+7XL7rmae+Lw6A\/MSOg5oiACIhAtRCIhYBhr8vPfvYz43cbnnrqKWMz75kzZ9z5E088UZGXzJVjABEw3gOjvS\/lIKw6RUAEREAEaoVALAQMsP1r\/zdt2sSp87g8\/\/zz1tPTY\/xqtYus8j\/+vS90Y+PK+RxkEwjoRAREQAREQARyIxALAcMSUn9\/v23ZssUJF990PDN79+41XvVf7U8hhb0veuuuH2UdRUAEREAERCB\/ArEQMNmaPVVPIWVrRzHpPf2f7H2hjj2PLuYgEwEREAEREAERKJBALAQMTxjxpNHg4OCkbhBHGnkmJVZRxGuDV1xr2bwr74tDoT8iIAIiIALJIFCRXsRCwNTX17vloxdffNEGBgZSIAgTF15aSmWokgDiRZt3q2Sw1EwREAEREIGqIBALAQOp5uZmO3jwoLW0tJh\/lJowcaSRp1otuHykzbvVOopqtwiIQGwJqGE1SeAzceo1QoVHqINGXJzamG9b2Lzb0z\/qimn5yGHQHxEQAREQAREomkAsBAxPGLW2ttrx48cL7pCvw3tvdu3albYunnoKvjiPa1M+bYEiEhAwvvjGlQ0+qKMIiEByCKgnIiACFSAQCwHD7xzxpFEx\/ec9Mo2Nje4leCdPnjQey456fwxCZceOHbZx40aXlxfmcV3Kcyy1Bd\/98tD9d5e6etUnAiIgAiIgAjVJIBYChve9ICg6OzsL\/tXpAwcOGMYoUt\/KlSuNJ5g4Dxobhru7u23r1q0umvM1a9bYyMhIwdd2FUX8eee9cfObd7V8FAFIUaUhoFpEQAREoAYJxELAsKTDG3fxnCxfvjy1idcvB7HcQ55cx4e8eGDWr1+fa5Gy5EPA+Iq1fORJ6CgCIiACIiACxROIhYDBY9Lb2+uWdIIbeH2YNPLk0l32vvCbSrw7hmO2MogdxBNeGLwx6fKfOnXKEFjY0NCQjY+PZ7Xe315OVffFBXVZ8+dSZwzzFNyvmzdv2o0bNwounyQWpe6L2Gb\/fBbKXGzFttB7Z6rKMUcxV2HFbs9ITWIxDMRCwJSSC8tICB\/2w7S1tWVcFvL7YRA7\/jeY0rXl0KFDxmZfrKuryy5evJjV\/u4377rqGj97h91\/53jW\/LnUmZQ8o6OjdvnyZRsbGxOXHO6lfMZdbLN\/NvPhGcwrtmIbvB\/iGmaOYq7Cdu\/e7eahJP6pmIDB88HSEE8e+bBfMgofyUeeyAFIE7l582YbHh62c+fOReZAvCBwSOzo6JjwG0zEhW3\/\/v3G3hmMuufPn2+Z7PfT77Y3Loy7atY+cG\/GvJnqSWravHnzbM6cOdbQ0CA2We6lfO8Bsc382cyXZzC\/2Ipt8H6Ia5g5irkK2759u5uHkvinYgKGJaHeW8tGvOfFh\/GcRBn5yJPPAPAv+2nTphlfOOFyXrzgpWGAMy0d+bJ4aViSwpqamqyuri6j\/WjgfV\/UNq6cnzFvtrqSmD5jxgybPn26uGS5jwoZe7HN\/NkshKkvI7Zi6++FOB+Zo5irsFWrVqXmonCg2s8rJmDC4BAVuLv8o8\/h83D+8Dl7XzDiKcsTTTyJFCV8\/CPT\/kiZUttr+u2jUiNVfSIgAiIgAiKQIhAbAePFhN+Lglfk+eefNzbYelGTanVEgPI8Cs3yE08ykYU4jggaxJFfruIJJTY3kY\/8WCHLVNQdZTx95B+fXnR3XVQWxYmACIhAjRNQ90WgOAKxEDDsb0FUhH+0Ee\/J3r17ra+vL+NmXBAgeFgO8ktQhIkLpmVaripkmYq6owwB4+MfXjrbB3UUAREQAREQAREoEYFYCJhsfeExMN7Wmy1fXNJPvP3p\/he9fTcuo6J2iMBEAjoTARGobgKxEDAzZ840NslGvTmXONLIUy2otf+lWkZK7RQBERABEahWArEQMCz1sHz04osv2sDAQIolYeJII08qIcYBlo+0\/yXGAxSbpqkhIiACIiACxRCIhYChA+xPOXjwoLW0tKR+SoAwcaSRpxoMAePbqf0vnoSOIiACIiACIlBaArERMHQLoeI34fojcaRVi1XL\/pdq4al2ioAIiIAIiEAUgVgJmKgGVluc9r9U24ipvSIgAiIgAtVIoEICphpRZW8zy0fa\/5Kdk3KIgAiIgAiIQLEEJGCKJRgoj4Dxp9r\/4knoKAIiIAIiUDICqihFQAImhaL4gPa\/FM9QNYiACIiACIhALgQkYHKhlGMe7X\/JEZSyiYAIVCsBtVsEYkMgNgKGd76sWLEi9Qg1v0\/krZS\/U1RO8uffHy9n9apbBERABERABETgNoFYCBh+bHHfvn22bt06849PB4+l\/J2i2\/0u+YH9LxgVP3S\/fv8IDjIRKDkBVSgCIiACtwnEQsDwO0f83tH69etvN6v6Dl680PKHl97NQSYCIiACIiACIlAmArEQMPzOEb93VKY+Tkm1wQ28i+6um5Jr6iJTTkAXFAEREAERiAmBWAgYfueI3zt69tln7dKlSzFBk18ztIE3P17KLQIiIAIiIALFEIiFgEG0IF7Onz9vq1evnrSRtxo28U7JC+yKGWmVFQEREAEREIEEEYiFgJk7d66xUTe4cTcYJo08ceU+cf+LNvDGdZzULhEQAREQgeQQyEfAJKbXPPXU2tqa8vTs2rWrqL4FBcx998woqi4VFgEREAEREAERyE4gVgLmpZdeSomK48ePG+cIDQRH9q7knqO9vd0aGxvdI9snT560\/v5+d63ca5iYUxt4J\/LQmQiIgAiIQJCAwuUgEBsBgxekr6\/PfvGLX9iiRYtcXzdt2uSOCA4XKNGfAwcOGEZ1LE2tXLnSBgcHOS3IXhu84srdd0+dPbxUS0gOhv6IgAiIgAiIQBkJxELAsIkXLwhPIt15552p7vqnk0gjTyqhhAHqpf5s76A5deqU4a3BhoaGbHx8PGX+DbwfffRRKi6YrvCnrIIsbt68aTdu3BCzwL0U5FNMWGyj77limPqy1cjWtz3uR7EtzX3LHMVchfGOtRJOmbGqKhYCplJE8Prw1BPvoOGYqR2HDh0ylrOwrq4uu3jxorM3fnve\/B6Y+Xfd4eJ8mo6fMIriMDo6apcvX7axsTExu30vRXEqJE5s0993hfAMlhFbsQ3eD3ENM0cxV2G7d+\/ONLVVdVosBAzLOBs3brTOzk778MMPU0DxjvB4NWnkSSWUKMAyEk87sR+mra3NMu212b9\/v3V3dzvbvHmzzZ8\/39mN\/6c+1Zovf+5eF+fTdPyEURSHefPm2Zw5c6yhoUHMbt9LUZwKiYsf2\/T3QSH9q2QZsS3fWIpt6dgyR\/n5avv27ak5KmmBWAgYoG7dutVYQnrkkUeM98EgKPCKIF5II0+5jMEeHh62c+fOpb2E99LQpqamJqurq3P2xoVPf8Bx7QNzXJxP0\/ETRlEcZsyYYdOnTxev2\/dRFKNC48Q2\/X1XKFNfTmzF1t8LcT4yRzFXYatWrUo7r1V7QmwEDCCbm5vdk0F4RbyVW7xwXZYxpk2bZvwLgPN87J33PhUwbOLNp6zyTg0BXUUEREAERCB5BGIlYKYKL3tfMK7HshFLVzyJVMgylRcwiBeMOmUiIAIiIAIiIALlJRArAcN7X5YsWZJ6Fwxh3gdTagQ8lj0yMuKus3z5clc9cS6Q558Tb3\/yCHX6H3DMs0JlFwEREAEREAERyEogNgIG8dLT0+MeVfbLRzwCxiZe0rL2JI8MPJ7NBid\/HcLE5VGFy+q9L5zo\/S9QkImACIiACIhAiQhkqSYWAoanjRAve\/futeAyDmHiSCNPlr5MeXJQwNynnxCYcv66oAiIgAiIQO0SiIWAqVb8+gmBah05tVsEREAEshJQhpgTiIWA8Z6WnTt32sDAQAoZXheWkHiUmjyphJgEgh4YLSHFZFDUDBEQAREQgZogEAsB44XKBx98YC0tLW5zLRt4eYadd8I899xzqbi1a9fGZmC8gLnvnrrYtEkNEQERSAgBdUMERCAjgVgIGLwrvb29k94B4zfZBo\/ky9ijKUzUE0hTCFuXEgEREAEREIEAgVgImEB7qibovS80WB4YKMgSRkDdEQEREIFYE4iVgOFxaZaOgkZcHAlKwMRxVNQmERABERCBWiEQGwGDUOFxad794peMCBNHWtwGJPgE0kP33x235lV\/e9QDERABERABEchAIBYChk28CBXe+cJ+GN9ewsSRRh4fH7ejlpDiNiJqjwiIgAiIQNIJxELAxBBy1ia9NvjJTwggXrCsBZRBBERABERABESgZARiIWDwtPCuF975EvS0ECaONPKUrNeqSAREQAREQAREoAwEpq7KWAgYurt161ZDqPDuF7+JlzBxpJEnTqZHqOM0GmqLCIiACIhArRGIjYABPELFb+D1R+JIi5MFn0DSG3jjNDJqiwiIQK0TUP9rh0CsBEy1YA8KmPv0I47VMmxqpwiIgAiIQIIISMAUMJjBR6gX3a2fESgAoYqIQEIJqFsiIAJTRUACpkjS9+l3kIokqOIiIAIiIAIikD+BxAgYnljihx79BuDW1la7du1aWiK8HC\/XvOFK9Ah1mIjO40JA7RABERCBWiGQCAGDUNmxY4d7ionNv2fOnHHj197e7o7hP8ePHzdejsebfrPlDZfVuQiIgAiIgAiIQOUJJELA1NfXW3d3t\/knljhfs2aNjYyMRHphBgcHbcGCBTZz5kzLljdqiPQIdRQV4mQiIAIiIAIiMDUEEiFg8kW1dOlSu3Dhgl2\/ft0JnL6+PkPwIGay1RV8AkmPUGejpXQREAEREAERKA+BRAkYj4j9MCwRpRMlzc3N9sILL9i6dets+fLltmXLlpT3xtcRPp46dcpYcvrlwGAq6aOPPrLx8XFZgQxu3rxpN27cEL8C+WW698S2fJ9LsRXbTJ+9OKQNDQ25+Yo5i3+spyathAUSJ2D8fhiWiDZt2hQ5XGzg3bZtmx07dszYM3P06FHbtWtXZF4feejQIWNj8O7du32UPTDrI7t48aKsAAajo6N2+fJlGxsbE78C+GW678S2fJ9JsRXbTJ+9uKR1dXW5+So8Z6Umr8mBqoxJlIBBvLS1tbmB6OjocPtb3EngD3lYMuInCvzvK23evNlef\/11GxgYCOScGNy\/f7\/bZ9PyMftODAAAEABJREFU+L9PJdx77xybP3++rAAG8+bNszlz5lhDQ4P4FcAv030ntuX7TIqt2Gb67MUljTmNfaHY9u3bU3NW0gKJETAIE8RLY2OjExq57GfJZzDx6PDbTP8w8x+nin35c\/daXV2drAAGM2bMsOnTp4tdAeyy3XNiW77PpNiWie2tz4HYlo5tU1OTMV9hq1atSs1ZSQskRsD4R6b9Md1AIWzYG8MeGfbKkA9328KFC23x4sWcZjS\/iVcvsMuISYkiIAIiIAIiUFYCiRAwCJH+\/n63aYlNuf4FdbzYjjS8M6wF8v4XaPK49cqVK51CJS+PW6dbciJ\/0M6\/Px48VVgERKD6CagHIiACVUggEQKGvSy9vb1uQy6bcr0RRxpeF9YCefrIj9GBAwdS+Ukjj0\/LdPQeGP0GUiZKShMBERABERCB8hJIhIApL6JPa\/fihRi9AwYKspIQUCUiIAIiIAJ5E5CAyQNZUMDkUUxZRUAEREAEREAESkxAAqZAoA\/df3eBJWNXTA0SAREQAREQgaojIAGTx5CdePv9PHIrqwiIgAiIgAiIQLkIVF7AlKtnZag3uISkx6jLAFhVioAIiIAIiECOBCRgcgRFNi9gEC8YcTIREAEREAERqASBWr+mBEyt3wHqvwiIgAiIgAhUIQEJmDwG7cTbV1xuvQPGYdAfERCBmiagzotAZQlIwOTIP\/gGXi0f5QhN2URABERABESgTAQkYAoAKwFTADQVEYESE1B1IiACtU1AAibH8fcbeMl+3z0zOMhEQAREQAREQAQqREACJkfwQQGjPTA5Qkt0NnVOBERABESgkgQkYHKkHxQwORZRNhEQAREQAREQgTIRkIDJEWxwE28cfsgxx2YrmwiIgAiIgAgkkoAETI7D6j0w991Tl2MJZRMBERABERABESgXgQIFTLmao3pFQAREQAREQAREIDsBCZjsjFyOj+59wB21gddh0B8REAEREIFCCKhMyQgkRsBcunTJ1q5da0uWLHHW2tpq165dSwvq+PHjLh\/5KUf5dJn\/Yea96ZIULwIiIAIiIAIiUAECiRAwCJUdO3bYxo0b7ezZs3bmzBmHsr293R3DfwYGBmznzp3W0dHh8lOO8tQTzhs+1wbeMBGdi4AIVBEBNVUEEkMgEQKmvr7euru7bevWrW5gOF+zZo2NjIxEemFOnDhh69ats+bmZpefcpSnnIsI\/fmHmf84FKNTERABERABERCBShJIhIDJByBelr6+Plu6dGk+xVJ573j3tzY0NGTj4+OyIhncvHnTbty4IY5Fcoy6F2PLtgx9jep\/OePEtnzffWJbGrbMUSdPnjTswoULqfkraYFEChj2s\/T09BhemHRelbvuuiu1ZybbHhi\/gZfBP3TokHV1ddnFixdlRTAYHR21y5cv29jYmDgWwTHqPhTb8n02xVZsoz5zcYtjjmIfKLZ7926mrkRa4gQMHhb2syxYsMA2bdqUdtDY\/\/LKK6+4PTArV640ylA2bYHbCQf\/wx7bvHmzzZ8\/X1YEg3nz5tmcOXOsoaFhKjnWxLXEtnyfTbEV22r47meOYlsEtn379tuzV\/IOiRIwCJC2tjY3SgiUdN4XMrBxd+7cuQSdIBkeHrZz58658\/Cf4FNIG\/7Zl62pqcnq6upkRTCYMWOGTZ8+XQyLYJjuHhTb8n02xVZs033u4hTPHLV69WrDVq1aFZ7SEnOeGAHjxUtjY6Pb0JtOvBBPnvAIzpo1y\/jXVTiecy9gin4LL5XJREAEREAEREAEiiaQGAHjH5n2x0xk1q9fb+yRYa8M+VgvfOCBB8x7ZIgLmp5CCtJQWAREQAREQASmlkDU1RIhYBAi\/f39bsf18uXLJ72gDu8Mm5l4eR0QeHx67969zr3Gi+x43DqT8PEeGL2FF3oyERABERABEag8gUQIGDwnvb29bkMuL7LzRhxpLBuxmQnh4pET9vlII49PCx69eCFOS0hQkImACIhArRFQf+NIIBECZqrASsBMFWldRwREQAREQAQyE5CAyczHgh6YLFmVLAIiIAJlIaBKRUAEJhOQgJnMJG3MfffMSJumBBEQAREQAREQgakjIAGThfWJt99P5dAm3hQKBWqKgDorAiIgAvEjIAETvzFRi0RABERABERABLIQkIDJAuid98ZTOR5eOjsVVmDqCOhKIiACIiACIhAmIAETJhI69wLmvnvqQik6FQEREAEREAERqBQBCZis5JVBBERABERABEQgbgQkYLKMyPn3P1lC0gbeLKCULAIiIAIiIAJBAmUOS8BkAeyXkLJkU7IIiIAIiIAIiMAUEpCAyQA7KF60ByYDKCWJgAiIQPwIqEUJJyABk+MAS8DkCErZREAEREAERGAKCEjAZIAc9MBkyKYkERABEZhMQDEiIAJlJSABkwEvXpd\/8eA\/sv\/3nRP20P13Z8ipJBEQAREQAREQgakkIAGTgfYnAuYOm\/k\/Ou2Od3+TIaeSRCB2BNQgERABEUg0AQmYRA+vOicCIiACIiACySSQGAFz6dIlW7t2rS1ZssRZa2urXbt2LeuoDQwM2Jo1a4xj1szKkDuBLDlHR0ftr\/\/6r41jlqxKzpMATMU2T2g5ZhfbHEEVkE1sC4BW40USIWAQKjt27LCNGzfa2bNn7cyZM25Y29vb3THdH8rt27fPrl69mi6L4stEgC+rrq4uCZgy8BXbMkC9XaXY3gZRhoPYlgFqwqtMhICpr6+37u5u27p1qxuu+vp651UZGRnJ6IU5efKkDQ8P26xZs1w5\/REBERABERABEagOAokQMIWgZsmps7PTnnnmmZyKnzp1yhA8spMl4XDhwgXHXVxLwzN4X4pt6Zl6vmIrtv5eqJajv2fdF25Of6onUyIFDOKkp6fHeWHwzkQNx+HDh136vHnzopJTcQsXLrRVq1bZoUOHjH01staScNi9e7djLK6l4Rm8L8W29Ew9X7EVW38vVMuRe5Y5jLnMfekm6E\/iBAz7WtgPs2DBAtu0aVPkULFh9\/Tp02nTg4UY9P3797slKpapZN1icWu5UveB7gPdA+W5B8S19FyZw5jLgnNbEsKJEjCIl7a2NjcuHR0dls77wubRDRs2pE13FQT+MPCrV682mRjoHtA9oHtA90C13QPMYYEpLTHBxAgYL14aGxudhyCdeGF5qb+\/3xA6PHLd0tLiNvJyPH78eGIGVh0RAREohIDKiIAIVAuBxAgY\/8i0P6YbgLlz51pvb6973JpHro8cOWKoU47Nzc3piileBERABERABEQgRgQSIWC8V4Vd4cuXL3cvssO7wovtSMM7w4YreVhidOepKZEEFCkCIiACIpAbgUQImLBXBc8KhqeFNJaT2BgW5WFZtmyZ9fX1GcfckCmXCIiACIiACIhApQkkQsBUGmJyrq+eiIAIiIAIiEB1EJCAyTBOu3btSi1HafkpA6gMSTyyvmLFCseRZTyW89JlD\/KmDGXT5VW8ud\/vghPLpdnYel7wJ+9LL73ko3QMEeC+y5UrS9QsVTMGmL4nQjBDp\/mwDeZlPDgPVafTHAn4z33S7s9YCZgcx2JKsjHQPK3EvhoeyX722WeNL6spuXhCLsKHht+aeuKJJ1K\/T\/Xyyy9b1H9MqPz0A79jxfIfZbZt2ybmUbBuxeXD9lb21P\/w555ORSgwgUA+XMnLO6dWrlzpHgrgQYDvfOc7TlhOqFQnjgC8cv0+4LuWz\/\/BgwcdW30fOIQF\/YE7T90m8XMvAZPmljh69KjxxcQeGp7558V4TK5psis6gsC5c+fcI+oPPfSQe+fOli1b3H4jPlDh7PyOFfuU2K9EGmU+\/vhjGxsb41QWIpAPW1+USeFnP\/uZe+rOx+k4kUA+XMn7wQcf2FNPPeUqYR+d9tM5FJF\/4MVvz\/HZ5nOe6fuAzz2ff\/+mdMpwTnxk5YqMJIDXCnYkLlq0iEOiTAImYjiZYPEGLF26dELq4ODghHOdZCbAl820adPMfwmRm9\/luH79OkFZEQQKYfvcc8\/Zn\/3Zn0nAZOCeD9cTJ07YXXfdZTNnzsxQo5I8gXzY8p0xbdq01D9gYM3rLhYvXuyr0zEHAgjFV1991Z5\/\/vkccldfFgmYDGPmBQw3AS\/Iy5BVSWkI4LnyX\/B8KX32s59Nk3NiNG9L1hfWRCbhs3zY8i8xvAV\/9Ed\/FK5G5yEC+XDle4F3T7H\/BWPpOVRdbZzm2Mtc2eL5xlvY2dnp9s\/xj8eghzbHy9V8NgQfllQQEjBJHdkq7hf7YY4dO2ZPP\/20W3qq4q7Eoul4FF944QVjT4EXk7FoWAIawY\/Crl+\/3u3TYK\/czp07tQemBOOK4Gbpg2Um9sTBmM3SLIOWoHpVkRACEjAZBhLVTzITAEtKhGX5EQguGeFC\/t3vfpexAsTLiy++aGw2ZU9Bxsw1npgrWzbvsdSRYJ4lvRNy5cpF2R+H+fCDDz5oLHdwLptMIFe2MIRlkC3eGwTj5FoVU6sEJGAiRj7dkpFfUooooqgIAlFLRnwJpfMCIF56enoM74sm2wiggah82LIhnS9+ljh4UzWChv0wPLYeqFLBWwTy4Zru+yBd\/K3qa\/r\/fNjWNCh1PmcCEjBpUOGyZDLFZckXPv9y4Ms\/TXZFRxBg7ZV\/+TN54sViPXvNmjWRy0LsHcDzwlIH698R1cU3qgIty4ftgQMH3BIHrniepONftTw5Q3wFmh7rS+bDle8Dvhf4fqBTHDknnnPZRAL5sGX56K233jKYUgtHzonnXCYCEJCAgUKE8bMDPEbNlz3P0O\/du9c0sUaAyhCFJ4t9LAgT\/6W+adOmVAk8Lt4LgJeATaYtLS1u0x7eAgxhkyqgQIpAPmxThRTISiAfrnwfvPLKK8Y7orhX2f8iAZ4ecT5s8cDyDhi+ez1bLSunZ1urKRIwGUaef6Hyr1YMQZMhayWTYn1tvojefPNN5wEIP0XAu19gTAc4wjls4g6daMuVbbA0kwjjAPtgvMKfEsiHKyKG31zjvuU+p+ynNSkUJgAfOMGL+5D70efhnuR7wJ\/z2ScfRhnK+jQd8yPg71OY5lcy3rklYOI9PmqdCIiACIiACIhABIHiBUxEpYoSAREQAREQAREQgXISkIApJ13VLQIiIAIiIAJpCCi6OAISMMXxU2kREAEREAEREIEKEJCAqQB0XVIEREAEKk9ALRCB6iYgAVPd46fWi4AIiIAIiEBNEpCAqclhV6erhcDf\/\/3fGy9TzLW95KVMrvkLyce7e3g3R76\/TcPv2\/AiQ45cN67m+7dixYop+V2jqb5eXLmrXSKQLwEJmHyJKb8ITBEBXuL35JNP5nw1xMuGDRtsdHQ05zL5ZkR8vP7663bkyBHj\/Se8XyLfOqoh\/2OPPWZT9e4R3n0Cz1mzZlUDGrVRBGJDQAImNkOhhkwtAV2tEAJjY2M2bdo043dtCimvMiIgAiJQKgISMKUiqXpEoAACeE1YimFJBiNMHN4XXqN+\/vx54+csOLZDEGkAAAXuSURBVKd6v9xAXswvc1AG7wv5KUc+8vMbVK2tramfZ\/D1k5bOKEvdmK+fvPz0A3VzDdrEOfFhI56y3jgP5vmbv\/mbVHuC9ZOHfvpy\/ujL08evfe1rxivmSfN9wStEPcRhpIeXqtL1iWtmM8o+\/vjjFuRIXLpytJe8sPd5ouJ8mo4iIAKFEZCAKYxb0aVUgQgwwe3YscM2btzofmqBV6bz+1vPPfec8crvjo4OW7RokftBO86ZBEdGRowfZCQvxwcffND27dtnM2fONH6Xh\/yUY1mCCf8rX\/mKMZmTH+NaCB3SwiNAe5h4g9d44oknjN+vQiTwqnfq5hr8uB7n4TpoI799xZII1+PIOcKEvFevXrU33ngj1Qfq37Ztm9vnwzW+853vuOUpymL86CTlSaP87373u1R5lrCIozz1kJ92\/fjHPzauQ5rvE2HSMQSO7xPxudixY8dSHLlGf3+\/0ddcyiqPCIhAeQhIwJSHq2oVgawErl+\/bvx6cTAjwgMLxvkwgiH4+zH8jgzixKeHjwicBQsWOAHi05i4iTt8+LCPSh3PnTtnw8PDxg9wUjcJ5EcknThxgtOMhljo6+szxIT\/3RqO7CVBgPnCW7ZsMV8\/vy788ccfG0tT5KU8R5+X9PDeEPrsy9MP+kM7KcOeHH54lTBGn\/iRUIQQ5xhtWbdunXV1dXGak+FxCl+jp6fHCa+cKlAmERCBUhFI1SMBk0KhgAhMLQEmWzwieFxY+vBLItlagTeD\/Bhl0+UfHBx03pvly5enlmwI40GIKoOImDZt4v4WhAKCgbqiygTjvCBbunRpMHpCGDGSbf8M3iFY0L+WlpaUN8VXFKyfdjU2NqYEEXmon+sQpk9vvfWWW4ajPm8IH9JztahreOGVax3KJwIiUFoCEjCl5anaRCAvAnhVWNbwooJ\/6TN5M4mHK2LJggl4586dqWWWoGchnJ\/JnfrwxHCNoHHdcP5059STLq2U8SwTsZeFNiPsaC9LUF6MFHIt2u6XvKgvaOk8XYVcR2VqiIC6GhsCEjCxGQo1pJYJ4I3p7e11HhM4IDo4evPLMwgWlmT8MgsTtM8TPuKpYIkKz0g4Leocz0XYq8B12RNDXVFlgnHsw2E5J1ObgvnDYZapWK6i715g4UHx+1nC+TmnXbSPdnKOBcuQfuXKFbdERVqhFnWNadMmeqsy1V0ok0x1Kk0Eap2ABEyt3wHqf8UI4GXB24JnxTeCyZswSz1RgiI4EVIuuBQSFhC8y4S6gstM3svBMhRpQVu8eLEtXLjQbQr2guDll182lmDYixLMGxX2y03BvSHUw8Zg2hpVJhwXFFy0FW9TOE\/wnD5ShnYSD9Nnn32WoDO8OYgiNjrTFiLJE+ZOfCbDQxa+Bl4ihGe4HKKJ\/Bhp9INNwIRLYKpCBETgNgEJmNsgdBCBqSbA5PfCCy8YT9mwNIQxYRNHmhcU7ANh8nz++eeNp1\/Ih7Hh9Xvf+54TGGxW9QICwYJoQNDwZFKwDHXxFA4bWcP9pTybhNnvgYDiGrSNa3uPT7hM+BzPCRM7woHy1MMeGuLDecPn5OEpLF+WTbO0dfbs2YZ3JpyfczjBi3ZyPcp+\/etfN7\/sRJ94coq8tMXnoY1cj\/hcjE2\/8I4qj0ChjxypC7Z4ynjknPyIp29961skOUNIMT65ijpXSH9EQAQmEZCAmYREESIwdQQQBiwJ+b0ZhImjBUy+CArSmGyZrFlm4hwj7Rvf+MaEN8aSz6dRPlyGNCZY6k9n7A0hHxZsD\/mbm5uzvoHXt4HyGOeUpV+IAI6cY4SDceFr01b6TB2+L8RR1ht10E6uhf3Jn\/yJEzB4sMgDB1iR5o36SMvV7rrrLgvWESzP9YN9oE7S\/bUohzDlSFswwuQhr0wERKAwAhIwhXFTKREQgRgQwIvBchDLQjQH7wYejwceeMAQPMTJREAEkklAAiaZ45rUXqlfIjCBAF6M4LITy0QsgeHJmZAxzxP2FvFElF8WyrN4Xtl5qy9Le5k2K+dVoTKLQI0Q+L8AAAD\/\/1J\/h+AAAAAGSURBVAMATK55KpEA9+gAAAAASUVORK5CYII=","height":337,"width":560}}
+%---
+%[output:67f10649]
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjAAAAFRCAYAAABqsZcNAAAQAElEQVR4Aey9DWxV553n\/6P\/7B9DnEKyAYyByBD+SqsM8K9aFmYSQWdjJqz64jYSo8XLFomRHLJhBVsgbHaHjLeZXbYBqqBNN6mlseRpZEsbiYa+SHSgO2MrqBA3ywZP1FbrgDcYY0M2gYaAUaPJ8nnCc3N8fO77vb7nnvuN8vN5zvN2nufznHufL7\/nOed+5mP9JwIiIAIiIAIiIAJVRuAzpv9EQAREQAREQATyJKDslSYgAVPpEdD1RUAEREAEREAE8iYgAZM3MhUQAREQgcoTUAtEoNYJSMDU+h2g\/ouACIiACIhAFRKQgKnCQVOTRaDyBNQCERABEagsAQmYyvLX1UVABERABERABAogIAFTADQVqTwBtUAEREAERKC2CUjA1Pb4q\/clJHDp0iVbu3atM8IlrHpSVQMDA7ZixQprbW21a9euTUovVwT9mqo+5tIHz+Gll17KJXvs8+zatcuWLFnijHC+DYYD5TnmW3Yq8tMn7h\/uo6m4nq6RbAKfSXb3ytU71SsC8STABHH8+PEpb1ylrtvV1WWzZ8+2xx57LOc+w4f25lzgVsZCytwqltf\/XOPw4cN5lam2zJs3b7YrV65Y0vtZbeNSre2VgKnWkVO7Y0dg7ty51tvb64xwORu4bNkye\/PNN627u9vq6+udFwZvzFRPDHh\/KnFd2OJ9OXbsmK1cudJy5Y1noq2tjeI5WyFlcq48IiNi7OzZs3bgwIGI1OqOWrx4sT344IPW09Nj8sJU91gW3PoSFpSAKSFMVVU6AvwLGVe4NyYRXzsTl18+OXjwoHO3k4+JlAnV5+MLEnc1aVgwPVjHq6++mqqDeknzdYSP1E891IcF8\/vrcU3CGGHsL\/7iL9w1CBOfTz20wef316ONhGnL2NiYMSmfPHmSrC5MPGVcxO0\/nin\/0r8dZYTpRzA\/rInzRjmfP3i8fv26u1bUdX37fB0cqdeXp21ck3j6QR2cE6Ys+YJ5yOfZkYadOHHCPvjgA1u6dCmnzihLHeT3Rh9J5PrPPfccQecBIB\/5w9ehHG0hPl0ZKiGNvN78dUiLMsadPvj8\/vrkpS7GkDAiNJhGXNC4jq+DY7rxoU7SsXAezon3RrtoH9fx5bhniScPccE0H0e8D5OO+TjiMdpLPIbYbmxstPPnz9uZM2eIkolAwQQkYApGp4LlIMCkweTBl3iwfiYevnSDcUx63\/\/+91NRnDMJUAdfxhs2bHBflD5DMD0Y9+1vf9ufuglx3759zqORirwdoF7qp57bUS7\/pk2bjInQx4WPfFn\/8Ic\/dNELFiywjz\/+eMLETwITcbZ6yFeMrV+\/3hU\/evSoO\/LHh7ds2eI8OTCGNWneGAvGhP77uEzHd99917Zt2+bYBPO9+OKLjhP1BDnS98cff9yGh4dT2cN5SIAjY8rYcj44OMghJWAYAxhSn0u4\/Wfnzp3uurdPJx3a29stOKZk4Pzll18mGGlM0mFO9Ck4WQcL0rZ169ZNuB9pZ0tLixORwbyZwtTPdYJ5GB\/GLRj305\/+1ILtIw9tJg9Hzgl7g20wP\/Hcs8QTRiRSLpiHMNch3Vs4D\/G0l3YTxqiLox8\/wlNoulSCCEjAJGgwk9AVJg7srrvusiNHjhiudI6cs1zARBDsZ0dHx4Q8lMX4gubL17vjqYcwaVhUHdRF\/IULFwzvAuGgUQ5btGiRm\/Co86mnnnITNd6AYN5wmHzkZ8mHPhRaT7hezu+8806j7atXr+bUhbkO\/9p1Ebf\/LF++3Gh7f3+\/c98jBAgTRxrtgjHZqY\/2BttJmDRvM2fOdNcKX7epqckto1Ee41\/a5GHCxlt07tw5e+utt4wxZWzJgyctKGC4FkY5ypMHhowpY4vAGRkZcXXMmzfPN8kdg2Uox1IbS25bt2416iAT94KPZ6mGfN58HibYqDJcjyWQYPvpB+ednZ2R4pe9OvQ\/2DZ\/HcogvGAebhvn3ugzeTmnLO2FEePHODKepGFcizTykJc4+sORPhHvzV8XnlyDPBj1+jpod19fH9GOIWVJ4zou8tYfrp8LFwmYW7D0f0kISMCUBKMqKRUB\/yX7xBNPGJMO9XLkX698WQaFAl+qWDAPYerACDPZ4cbGCBPn0wjzJc3kTZgj54SjzJfbuHFjas+Fnww4RpUhjontoYceIuis0Hpc4SL+sE+EtiMCEAUYYb+HBHEBYyb35uZmdyVfhhPvrSGcizEZ4rmBK5OdL+Ovw5gytsQzjhhhzDOiHOUZP\/7F79MQmAhNzr35\/RXBMlyfdvg8mY54D4LXSZeX9rMRFVZ4UCjDkXPaRNuCZbk+4oD74Omnn3aeLtLhzP2GmEPUEZfJqJf6KUNZ8jI+Ufuu\/JiSxwsGwkHDK0Lb8ZAE4304WEe6a3M\/+fz5coEJbHx5HUUgXwISMPkSU\/5EEWBJB09COTvFUzL8qz3fazBJMilQzk8ghIsxhBQTKWIEoy6\/tES4FMa\/xNk78ZWvfMWef\/55t9chKE5KcY2oOvA44XlCmPnreTHDZB1VhjiWX5jImejxLHiPBWnVavQlXdu9UEMk0l\/vgQnnz1RHOK\/ORaASBCRgKkFd10xLwH9p+v0SZPRLG0y8TMDEYUxOGGEmTdzohKkDI8y\/VPmSDlombwll0pmvEzc51yOfnwyYBDnPxXKth3\/RewHDpIy3JF39TN5sjkyXfjvevJcCbxTGRI+RjsiCMfF+wqef9Jf0KKETdV3K01b\/L\/iw+PLXYbmKsaVuxhEjjHlGtI2+B8ePJR9EJ+KTvGGjTQgZyngx4sWar9eX4fq0A68Gnh7imdg5eguXof2IUlixdMR1vOENwSviy3KkPYwN4xncX+U58VQO40LeTOb7DFvKkpfxQSxm2vRLPm\/kZzxpu\/8shfvr8waP6a5NXT5fvlxgAhtfXkcRyJeABEy+xJS\/rASYsDC+7HHL8y9jjpwHlxx8I3B\/k4cyfLFzxBAuTEp80ZPuLdcvel9\/8Ei9mL8OdfpljajJPVg2GKYOLF09frKgjO8fR85zMfKmWzphwlizZk2qGsLEEcFyDowJUwf9C7aTMGnpjDJcF+7k8ewpR1+Jw5ismbQZU8aW67DRduHChSQ7owyGqEFYkMcb4oo2MwFShxd5xPs8\/phufGgb98J7773n3iND+7ge5UhzjQj9IZ4yXI+lE67t2085LJ2Q5f0niIZgf3zb\/Abq0OUmndJn8pJAWa5Hm2k7POFKWibz91aw7dSVqQxpXJt7hTD5\/bXpE3EYwi0XLl4whYUhdchEIB8CEjD50FLe4gjkUJovSv71jAAJZudf0vzLOxjHl\/f3vve9VBTnuMOpgy\/TV155xW1a9Rn4suXJEiZqH5fPkXqpn+sEyxHn94wE49OFs9VDOksvXghQz5NPPmnh6xIftKCIYq8Eno9gug\/Dlrrh4f8V7tNgDGt\/zpH8jAnt4jxs4evieaGMz0cYRpzjCaEezn1\/aMcPfvADCwqYcB7KYpTzrP0E6CdE4vGIUB95vdEf0jhHDNF3wkziv\/\/9723v3r2cOiPtxz\/+sbtv8OjhsQiXQcDgxaNeV+j2H\/oJv9unEw7cc97T4xNoJ+31bfPxmY7khUEwDxyJg1kwPipMnqefftptfiadNjC21JFtL064z\/T\/q1\/9KtWkLJyHhDAXP15+\/MgjE4FCCEjAFEJNZcpOgInAu+U58sUYdVG+0EnH+CLmC9rnQ8Tg0icN80+dkM6EwnmwjM9PGcLkCxv1U4b6vNEG8lGGshhhjDBGmDzeMtVDHvJTzl8DDwXXpc20HSNMHHVRhnb4\/JSlDuLDRjzplKeecDqsfT0cGQufx5elPGHio65LGcpihH0ewizbIJzwRjDx0g6epGICpT5v9Iv+UYc36vHp1MEE7CdE4ukP9fn8HOkPaRhtpu3EY9SHEcZI+4M\/+AP3FBVh8mOEScfIT13Uy7k3+kZ8OgvXQztpr89PvdSVrR6fj7wYjGBFPb5NHDnHfH5fL9fk2pTliHihDsKkUZY0jpTH2GyLdw3vC4KEdJ6c8k8mkccb5Uj35q9LOvWweRehiDAkTiYChRJIpIDhCxJ3J8cAmMggeXLNG1mBIkVABPIiwFIHSx4UYtmJ5QiWYvCIEE86admMyZYlL+8pyZZf6YUTQCDxPUkNLKUxZggQRCgiEjFJWjbjaSuEKktNCLps+ZUuApkIJE7AoPDZKHf16tVM\/XZp+eR1BfRHBESgaAJMhuElMirFE4BHhnTOczH2lvC0FpNqLvmVp3ACeFbwvgRrQLzksyzb1ZX\/b1cFr6dwpQjE87qJEzD8i4AXYs2aNSsr8XzyZq1MGaaMAP\/yxt2N2zufyW7KGqgLZSXAv757e3vdSwj9UkMh4+nvBSbXrBdVhqIJsBzkx4sjn0PGINeKKc+4M\/65llE+EUhHIFEChg13vKnymWeeSdffVHw+eVOFFBABERABEZhyArqgCEQRSJSAwY3MOi3vI4jqbDAun7x4dPDWyE66V+iLgzjoHtA9oHugeu4B5rDg\/JeUcGIEDJtxT58+beyMzzY4+eRl4Hfv3m3swJe1ikOrGNTe50BjrjGv7nuAOYy5LNvcWG3piREwbA7bsGFD6ndGMg1EPnkZ9FOnTtn+\/fuNNXpZd0k4bN++3Q2RuJaGZ\/C+FNvSM\/V8xVZs\/b1QLUfuWeYw5jL3pZugP4kQMOxn4VHK4COZDBaPZvJ2zuB45ZM3WI7XlvOUhGy1e6FasRxWrVrl8Iprdp75shbb0jP1YyC2YuvvhWo5+nvWfeEm7E8iBAw72tnZzq54jLdb8lZPjrzEKThm+eQNllNYBERABERABEQgPgQSIWCy4eR9L6zhhr0x2copHQLlsYaGBuMdHhzLc4XarRWmYlue8Rfb8nClVrGFgiwfAokUMLyXgFdccwQG7wphvTLsjSGNPMG8xMnKT4Avq29961vGsfxXq60rwFRsyzPmYlsertQqtlCQ5UMg9gImn84orwiIgAiIgAiIQG0QkICpjXFWL0VABERABGqLQOJ7KwGT+CFWB0VABERABEQgeQQkYJI3puqRCIiACFSegFogAmUmIAFTZsCqXgREQAREQAREoPQEJGBKz1Q1ioAIVJ6AWiACIpBwAhIwCR9gdU8EREAEREAEkkhAAiaJo6o+VZ6AWiACIiACIlBWAhIwZcWrykVABERABERABMpBQAKmHFQrX6daIAIiIAIiIAKJJiABk+jhVedEQAREQAREIJkEyiNgkslKvRIBERABERABEYgJAQmYmAyEmiECIiACIiACIpA7AQmY3FkppwiIgAiIgAiIQEwISMDEZCDUDBEQARGoPAG1QASqh4AETPWMlVoqAiIgAiIgAiJwm0AiBczAwICtWbPGON7u54TDpUuXbO3atbZkyRJnra2tdu3atQl5dCICIjD1BHRFERABEciVQOIEDEJk3759dvXq1UgGpO\/YscM2btxoZ8+etTNnzrh87e3tWLwetQAAEABJREFU7qg\/IiACIiACIiAC8SeQOAFz8uRJGx4etlmzZkXSr6+vt+7ubtu6datL5xxvzcjIiLwwjkgt\/1HfRUAEREAEqoVAogQMS0OdnZ32zDPPVAt\/tVMEREAEREAERKAAAokSMIcPH3Z7X+bNm5czCkRPT0+PK4c3Jl3BU6dOGd4dbGhoyMbHx0tutVbnzZs37caNG+JYhntJbMv3+RRbsY37dzVzFHMVdv79cfvo3gfsxNtX7J33xtNNcVUZnxgBw4bd06dP26ZNm3IeCL8fZsGCBVnLHTp0yNjsi3V1ddnFixdlRTAYHR21y5cv29jYmDgWwTHqPhTb8n02xVZsoz5zcYtjjmKuwv7Nd\/\/Krj38lP3HN6YnWcDkPO\/HMiMDtmHDBquvr8+pfYiXtrY2l7ejoyNruf3797u9M+yf2bx5s82fP19WBAO8ZHPmzLGGhgZxLIJj1H0otuX7bIqt2EZ95uIWxxzFXIVt377dzXNJ\/JMIDwzLQP39\/YYg4dHolpYWt5GX4\/HjxyeNmxcvjY2NTpTkInrw0qxevdqwpqYmq6urkxXBYMaMGTZ9+nQxLIJhuntQbMv32RRbsY383JXhc1zMdZijmKuwhQsXTpoDkxKRCAEzd+5c6+3tdY9F82j0kSNHjEHj2NzcPGms\/CPT\/jgpgyJEQAREQAREQARiTSARAiYbYTwurAXijfHeGjY3LV++3L3IDq8NL7YjLVtdShcBERCBmBFQc0SgJgkkUsAsW7bM+vr6jCOjyhIRa4F4Y8LeGjw2GB4c0sgvEwEREAEREIEkEHjnvRtJ6EZkHxIpYCJ7qkgREIHyEFCtIiACIlABAhIwFYCuS4qACIiACIjAVBO47566qb5kWa8nAVNWvKp8CgjoEiIgAiIgAjVIQAKmBgddXRYBERABERCBaicgAVPsCKq8CIiACIiACIjAlBOQgJly5LqgCIiACIiACIhAsQQkYIolqPIiIAIiIAIiEFMCSfsBxyBmCZggDYVFQAREQARqhEDtdVNPIdXemKvHIiACIiACIiACMSMgD0zMBkTNEQERqA0C6qUIiEBxBCRgiuOn0iIgAiIgAiIgAhUgIAFTAei6pAhUnoBaIAIiUAsEtIm3FkZZfRQBERABERABEagaAvLAVM1QJauh6o0IiIAIiMDUEUjaE0iQk4CBgkwEREAEREAERKCqCNSogKmqMVJjRUAEREAEREAEQgQkYEJAdCoCIiACIiACIpCGQIyia17ADAwM2Jo1a4xjjMZFTREBERABERCBogmcf3\/c1bHo7jp3TNKfmhYw165ds3379tnVq1eTNKbqiwiIgAgklYD6lQcBHqHG8ihSVVlrWsCcPHnShoeHbdasWVU1aGqsCIiACIiACORD4OGls\/PJXhV5a1bAXLp0yTo7O+2ZZ57JaaBOnTplCB5saGjIxsfHZUUyuHnzpt24cUMci+QYdS+KbZk+n7fGSmzFNuozF6c45ijmql8ODOY0v1VrppoVMIcPH3Z7X+bNm5fT2B06dMhaW1uddXV12cWLF2VFMBgdHbXLly\/b2NiYOBbBMeo+FNvyfTbFVmyjPnNxi2OOYr7a+RffTc1vD91\/dyqclEBNChg27J4+fdo2bdqU8zju37\/furu7nW3evNnmz58vK4IBwnHOnDnW0NAgjrlzzImV2Jbvsym2YlsN3\/3MUcxX3\/yXj+c8x1VjxpoUMKjTDRs2WH19fc5jtmDBAlu9erWzpqYmq6urkxXBYMaMGTZ9+nQxLIJhuntQbMv32RRbsU33uYtTPHMU89XQ+J1ujvvM9Xftjnd\/48JJ+lNzAoa9L\/39\/dbW1mZLliyxlpYWt5GX4\/Hjx5M0tqXvi2oUAREQARGoGgIn3r7i2vqZ6\/\/HHZP2p+YEzNy5c623t9fOnj3r7MiRI7Zw4ULj2NzcnLTxVX9EQAREQARqkMBrg5+IF7qeRO8L\/aomAUN7ZSIgAiIgAiIgAlkInHj7\/VSOO979bSqcpEDNC5hly5ZZX1+fcUzSwKovIiACIiACtUvAe2A+4\/a\/SMDU7p2gnouACIiACIhAlRBAvPj9L011H1ZJq\/NvZs17YPJHphIiIAIiIAL5EFDeqSXw3Z+fS11w48qGVDhpAQmYpI2o+iMCIiACIlCzBILel4fun21YUmFUTMDwOPPatWvdo8w8zpyrUSapg6F+iYAIlIOA6hSB2iDwznvjFvS+7Hl0caI7XjEB46l2dHS4x5n9Y82ZjuT15XQUAREQAREQARH4lEBP\/0Xze19YOkriDzh+2luziguYYGMUFoEkElCfREAERKDcBHr6R295X4bcZe67p86S7n2hoxUTMP6Fcvm8PI68vISOhstEQAREQAREQATMEC9P9vzaoUC8vPDPP28cXUSC\/1RMwAT3wOzatSvBiCvdNV1fBERABEQgqQTY8+LFC32shaUj+olVTMB4D8xjjz1mhw8fdpt5V6xYYQMDA7RLJgIiIAIiIAIikIaA37D73Z9\/smxEtj2PNtXE0hF9xcouYLhIJjtw4IDbxHvy5EmbPXu2tbS0ODEjr0wmakoTAREQARGoVQKIl6\/\/19OhPS+1JV4Y+4oLGBqBeY8MTyHxw4rHjh1zQkZeGejIREAEREAEaozApO4iXFgy+v\/\/8pdGmAzsdfnxv\/pCTXle6DcWGwFDY7zxu0Rvvvmm88wcPHjQtm3bZuyZ8ek6ioAIiIAIiECtEECseOESXDJivwviBRFTKyyC\/YylgGEfDJ4XXm7X1tZme\/fuNTw0wYYrLAIiIAIiUEYCqrriBLxwCS4X0SgEC\/tdvr+xNp42os9RFhsBc+3aNWttbXXLRuyDefDBB+3MmTPOC8Pj01GNV5wIiIAIiIAIJI2AFy4sFeFx4Zw+euHyP\/\/8D2tyyQgGQftM8KQSYTbr4mlZvny5sZGXt+2yD6a7u9vq6+sr0SRdUwREoPIE1AIRqCkCiBTe5\/K17582L1w8AC9cWC7ak\/CfB\/B9zuVYMQHDnhZ+14hHqFevXi1vSy6jpTwiIAIiIAKJIYBo4ccXeY8LooWj\/ykAOumFi\/e4cE687BMCFRMwly9ftps3bxoel1y9LcePHzdEzydNn\/g3uASFRwfPzsQcE89eeuklt1xFXpauKD8xh85qmoA6LwIiIAJlIBAWLexvwfMSvBRChf0tXrgE0xT+lEDFBMycOXNs+vTpn7akyFB7e7s1Nja6PTMsRfX39xsiJapahFBPT49bsmKfDXkoz1EmAiIgAiIgAqUkgGhBpOBhwdOSTrTsebTJEC0YTxiVsg1JrKtiAsbD5CkjvCC5GHl9ufCRF+JhxPPE0sqVK21wcJDTSUb8ggULbObMmW6fzZo1a2xkZMRi5IWZ1GZFiIAIiIAIVAcBBMtrg1cMweL3tBBGxAR7gKcFocLeFkTLnkcX18RvGAUZFBOumIBBZPDDjGzYzccok63D7K\/BA7N+\/frIrEuXLrULFy7Y9evXnWjp6+szRIw2DUfiUqQIiIAIiEAGAl6w8K4WL1i8lyW4p4UqEC17bnlavGhhqejhpbNJkuVJIFrA5FlJnLKz94VNwXhYOEa1jceyX3jhBVu3bp3x9NOWLVts69atUVlTcadOnXJLTixPDQ0N2fj4uKxIBuyBunHjhjgWyTHqXhTb8n0+xVZsz166ZnhT8KoEBct3fz5kYcHS+Nk77JvLZtuBbzTZyH\/6Qzu56wu2fe18+9LCurJ99zFHMVdh\/GM9NZElLJA4AcMyEh4d9sOw5BS1LMTeGN7uy88VkPfo0aOG8Mk0tocOHXLvqWHDb1dXl128eFFWBIPR0VFjI\/fY2Jg4FsEx6j4U2\/J9NsW29ti+8dvz9tNfnbOO\/\/6\/7PEfDljjv\/ulfek\/97vlIURMWLAgWL64oM7a\/sls63iswX6yeaH9+Zdn2x8vsin7rmOOYq7Cdu\/enWlqq+q0xAkYPxqbN2+24eFhO3funI9yRwQNS0YbN25Mvd2XvK+\/\/rrxBmCXKeLP\/v37jaelMPLPnz\/fZIUzmDdvnrGRu6GhQRxLfC+JbeH3ZbbPtNgmm+3vp99tb39YZ3973uwv\/+6KtR0eta91Dbtj+\/F37Se\/vjZpdmBJiH0sflnoV\/92pf3kyS9Y+zc+b1\/90uKKfL8xRzFXYdu3b5\/U5qREJFbA8C\/7adOmGV84pRgsvyTFslRTU5PV1dXJimAwY8YM9xSaOJb+PhLb0jP192n82Zav755BuY5TzfbSdbNfDY\/bjwau2M4fnbMNf\/VrW33gtP1p529s16tDLv6NC+OTpg8vWNi7EtzHsufRxcZelnLxyade5ijmKmzVqlWT+pCUiMQIGJaAMAYGL0tnZ6fxJBKbhYnzxkZdNuzyGDWbfYnH3bZw4UJbvHgxpzIREAEREIGEEHjnvXH3y80s9\/g9K\/d8+2\/NP85MHGnhpSC6HxYr733vj91jzogXvC4IFvLJKkMgVgKGvSn+cWre1cI5a3gIkmx42tvb3aPQlGdjLvmJ40h56qFOztmwi7hBnZKfR6h5oR7ihnSZCIhAYQRUSgQqRSAsVBAmfoMtYoXzdEKFNnuxsuf2E0ISK1CJt8VGwOA9YW\/KL37xC1u0aJGjtmnTJnf0QsSdpPmD+GC9j025GGHiyM6R8+bmZk6d+c2+4bwuUX9EQAREQARiSSBXoZJOrCBUMDwoeFJYBgqKlT23l4Ji2Xk1agKBWAgYlnJ4bwuPM995552pBiI8iCONPKkEBUQgkoAiRUAEkkIAofLa4JVJjyvjTcG8RyWdUIGDFypBscIL4zDEC\/FaBoJUdVosBEx1olOrRUAEREAEiiEQFClspOVJn2\/+YMDS7VEhf9T1ooRK0KsisRJFrfrjYiFg2GjLY81svP3www9TVPG6PPvss0YaeVIJMQ2oWSIgAiIgAhMJIDqCnhQ8J+xNiRIpPKZ86n9PflSZGhEpGF4TBAkWXv4hjnR5VSCWfIuFgAEzG2tZLnrkkUfs\/Pnzxkvo2GSLeCGNPDIREAEREIF4EUCgYEGRgkDBokRKpiUfeoZIeej+2YYQQZAgUljy8UYcaZiECsQSYQV1IjYChtazyZZNtUGTeIGMTAREQAQqRyAoUPi9H+9FYS+KN377h3gvUE68fSVtg6NEyn\/b8jl74183uVft8yI4L1QQKeRPW5kSapZArARMzY6COi4CIiACFSQQFCgIEIQIHhTESdiLwu\/9kAeBQrmoZiM4sLAnBW+K35sSFikPL707qqqpidNVqpJALAQMe13Wrl1rvJMlk\/GodVVSVqNFQAREoIIEEBp+iQfxkUmgkEaeTAKFriBQMJZyMDwmCBS\/1MNxskiZTVGZCJSEQCwEDBt02evC+1\/49Uy\/hESYuKeeesrOnDnjXlQnEVOScVclIiAC8SFQVEsQJ5gXKOElnrAHJV+BEvSieJHivSiIFOIwRMzDS2cboqaoDqmwCORIIBYCBg8Mrw6DuBwAABAASURBVPbfu3dv6gcWaT\/ChjjSrl+\/bmzy5Z0wpMlEQAREoBYIBMUJnhEECMYSjxcnLPX4PSi5LPHADaGBZRMoQS+KFymUl4lApQnEQsBUGoKuLwI1TUCdrxgBxAmGMMEQJhjiBFHiBYoXJ6SRD2OJJ1PDEScYogPDS4KxzBP0oEigZKKotDgTiIWAwdPCEhLvfMEb44ERJo408gwODtqCBQt8so4iIAIiEFsCCBMs29IOQgVhgiFMMMQJZTN1DnHivSdeoCBOsKBAQbRg5MFY5slUr9JEoFoIxELAAIvHpVku4t0vfiMvYeJI44cdX3zxRXv66afJLksOAfVEBKqOAOLCCxMEB+IDC3tOECfee5Lr0g4wECcYggNDgGCIE\/adeIHivSekkQ9xglGHTASSTiA2AgbQUe+BIY40RMybb75py5Yt41QmAiIgAiUngDDB0omT1QdO2xf\/y5Bx9MIE4YKIwXL1nCBOvPdkz6NNhgAJixOECvEY4gRDnFC25B1XhSJQhQRiJWAqwk8XFQERqAkCCBPMi5Pg0zp4Tvx+k6DXpJTiBIHiPSeIE+892fPoYvfWWYmTmrgN1ckSEoiNgBkYGLAVK1ZEvguGd8SwH6aE\/VZVIiACCSGAKMG8MMETgvDAECYIkihxElzSwXOSDQeej8bP3mFf+3y9Exx7MnhOosQJAiXbNZQuAtVEoNJtjYWAuXbtmu3bt8+eeOIJ974X9r50dHSYfw8M+2DYxGv6TwREoGYIIEqwfIUJwgURgyFMqCMTNIQJ5pd0WKph2QbDa4K3xHtOfvVvV1p787128JuLbY88J5mwKk0Eyk4gFgKGd7xcuHDBli5davX19dbY2Gg8cYRoQbx0dnYaIqfsNHQBERCBshN4571xw8otTOgIwgRDlGB7Al4TxIkXJogU7zVBuJAXw2tCeeqSxY2A2lPrBGIhYMKDgJBBwPh4xA0ix59HHRE4ra2tqSWobG\/sPX78eCqvlqiiiCpOBPIjgCjBXhu8Yng\/MLwhWKalHNLJi+XiMaFViArMe028MEF8IEwQJEFxQjy2J+A1QZxQl0wERKA6CcRCwOBpWblypR09etRRRMDwxl32vSBkePfLzJkzXVq6P+3t7c5zw88QsPREeR69jsrPfpudO3cay1Tk5z0zO3bskJcnCpbiap4AogTzwsRvfkV4lFuY4AVBeGBRwsR7TbwwIT\/CBHFT7oFT\/SIgApUlEAsBAwIEyMjIiCE6eHQaQcNeGP\/uF5aWyJfODhw4YBjpXhAhfjgP24kTJ2zdunXGdUjbunWrdXd3u+UrzmUikHQCCBLMixK8H16YIEqwbJtfKVOoxwShgSjBMgkT0smLSZgk\/a5U\/0QgPwKxETAIFEQEYoIuIEbwjhTy7hc8N3hg1q9fT1UTjKWmvr4+t99mQkKWk1OnTrlNxXh3hoaGbHx8XFYkg5s3b9qNGzfEsSCO0fff2UvX3P6SNy6MW\/frF91SDp4SLJMoIf27Px9y+RElGAIny8fCeCoH++KCOvvmstm2fW2DHfhGk7P\/tuVzdnLXF2zkP\/2hOxJ+5c8+7zbAsgmW\/NiXFtbZ3JlWNfeB7tvoe68U34liWxq2zFHMVRhbMLJ9jqs1PRYCBsHBPhT2pYRBEkcaecJpUefsfcFzw7ITx6g8xN11111Gvbz1l2O2+g8dOmTsscG6urrs4sWLsiIYjI6O2uXLl21sbEwcs3B847fnDfvpr85Zx3\/\/X84e\/+GAYYgS7Ev\/ud8a\/90vjSMvWWs7PGq7Xh0yhAmeEqwQUcIjw1jbP5ltPH3T8ViDYT\/ZvNDe+NdNxhEj7s+\/PNu+tbzO\/niRObv\/znH7RzffT9T46r4t3\/ee2JaOLXMUcxW2e\/duprxEWiwETCnJes8NTzK1tbWl3dfC\/pdXXnnF8PKwXLUjyx6Y\/fv3u2UmvESbN2+2+fPn17QV2\/958+bZnDlzrKGhoSY5\/n763Ya9\/WGd\/e15c\/bXZ8btL\/\/uiiE+sK91Dbu3vnLEiGs\/\/q5hP\/n1NcPwtGAjv\/so68eIfSGY3\/jKsgxLNBjLODwijLeEI\/aTJ79gP\/iXy5y1f+Pz1vZP\/z\/76pcWO\/viA4tqctxq\/b4t9nOfqbzYlm5OYY5irsK2b9+e9buhWjNUVMCw3wUPCJ6S8+fPG4KD86ARh8BgX0s+kBnA4eFhO3fuXGQxNu76OrPlpQLv0aGtTU1NVldXJyuCwYwZM2z69OmJYnjpuhn2q+Fx+9HAFWeHei\/azh+dc7bhr37tXkGPp2T1gdMu\/Kedv3GeErwlh3pHXRkECVaoKNn5yELnLTnctswQJuEnchAmiBYMEYOxv2TJ3PpEjUc5PqNJvG\/LwamQOsW2dHMKcxRzFbZq1SqmsERaRQUM+13wgLBOt2jRotRTQcQFDa\/KRPrZz1iamDZtmqHqg7nZa4N3JhhHeNasWZPyEi+rbQLsA8FeCzwa7De7sjzD8k26za6k+30l+SzhQNx7Sry3ZM\/t95cgOrKJkp2PLHJvi13dVG8IE+qiTpkIiIAIJIlARQWMB4knpLe3N\/VUkI\/P58jeF4wybNTl5XfpPDds7u3p6TG\/74X1wgceeMBoB+VlySaAIMEqIUoQE16U4PlAkGCIEox3l2B4TfCUYKTvuf3+EspIlCT7\/lTvRKCsBBJUeSwETCl4tre3G49hs\/y0fPlyVyVxBBA0bGZiQzDnPD69d+9ew71Gfsr5vKTLqo8AggSLoyhBjHhRQtiLEoQJggRDlGDVR14tFgEREIHKEKiYgMH7wdM\/CIhsRj7yZ0LE0hAblvzSE2HiKMORc4QL5xjhqLykyeJBAEGCIUowlmGmavkmm6cEIZKrKKGueBBVK0Sg4gTUABEoGYGKCRiWa1g28iIi05F85C9Zr1VRRQkgStigykbVqHeVsK\/knm\/\/rbG3BPv6fz1tWLF7ShASmZZvJEoqelvo4iIgAiKQF4GKCZi8WqnMVUMAceK9JXhMEB0YogQx4oUJ7yvhseBdEe8q4X0luXQYQYJJlORCS3kcAf0RARFIDIFYCRj\/WHVwSYm4xNBOQEeCAsUv54TFifeWIFwQMRiihLLZECBIMImSbKSULgIiIAK1TSA2AgahwpNBPFLtl5MIE0dabQ\/T1PYeoeG9KIgQBArmvSdeoPhHhHMRJ4gSzAuTnbffVXJow9K83lXCRlfqmVoiJbuaKhIBERABESgRgVgIGDboIlR4Mii414UwcaSRp0R9VjUBAogVPCR4UxApLPNgXqSQhkDBAsUmBBEUGE\/TYDxdg\/FYcLp9JTsf+eRdJRu+MEfvKplAUyciIAIiIAK5EIiFgMmlocpTAgK3qvCCBc8KQgUjjDcFkUL6rWwT\/kecYN574sUJAiX4JA7xGCIGk7dkAkadiIAIiIAIlJBALAQMnhZe7f\/ss8+mXi5HH\/G6EEcaeYiT5UcAQYIXBZHil4AIE0dasDZECob4QIhgiBS8KJh\/fwnpiBMsWF5hERABERABEZgqAlMpYDL2iZ8VQKj4l8uxkZcwcaRlLKzECQQQJggUhIr3sHA+IdOtk6BYCQoVhAsiBZNIuQVK\/4uACIiACMSOQGwEDGQQKn4Drz8SR5osOwGEC3tZ0omWoGDxSz9erEioZOerHCIgAiJQGQK6ahSBWAgYlop4266eNooaouxxCBfvbWEvS7AEomXPo02pJ328YAnmUVgEREAEREAEqo1ALAQM+1tYKnruueeMpSPM\/25RtQGdyvYiXLzHJbhEFBYtex5d7J70mcq26VoiIALJIaCeiEAcCcRCwACGpSK\/bPTYY49ZW1ubEzMrVqywgYEBsshuEwgKl6DHBeGCh4UNtxItt2HpIAIiIAIikEgCsREwQboHDhwwL2bWrVtn27Ztm\/B0UjBvrYURL7yjJZ1wYeNtrTFRf5NOQP0TAREQgckEYilgdu3a5bwvLCX19\/fbK6+8YiwzTW5+7cQgXPxyEWF6jsdlz6NNhsdFwgUiMhEQAREQgVohEBsBExQtx44dsyNHjjgvjH6J2gzB0tN\/0YJeFwQLjz7veXRxrdyrFeunLiwCIiACIhA\/ArEQMDyFhKelo6PDiZY333zTli1bFj9aFWgR4iW4ZOS9Lux1IVyBJumSIiACIiACIlBxArEQMCwP4Wlpbm4uGMi1a9estbU1tfSERyeXytggvGbNmlhuFP5EvJx2Hhj6gmCR1wUSMhEQAREQgVonEAsBU4pBaG9vt8bGRufBOXnypOHRyfZeGUTPvn377OrVq6VoQknriBIv7HVBxJT0QqpMBERABERABKqQQFYBUy194skljPbi0Vm5cqUNDg5ymtYQOsPDwzZr1qy0eSqREBYv7HdBvFSiLbqmCIiACIiACMSRQGIETBCu31Ozfv36YPSEMHk6OzvtmWeemRBf6ZN33hs33qrLkbYgXtjvQlgmAiIgAiJQNQTU0DITiIWAQUzwUwJRb98ljjTy5MKCvS\/8COSCBQuMY7oyhw8fNva+zJs3L12WCfGnTp0yPDbY0NCQjY+Pl8V4VPrE21fctRs\/e4cd\/ObislynXO3Pp96bN2\/ajRs3Etu\/fFiUOq\/YlufzyTiJrdhyH8TZmKOYq7ALFy64+SSJf2IhYEoJlmUkXoLHfhje5ss+l3D9bNw9ffq0bdq0KZyU9vzQoUNukzAbhbu6uuzixYslt\/ZXf23+JwEQLz\/4ZkPJr1GOdhdS5+joqF2+fNnGxsYS28dCuJSijNiW\/rPpx6Wq2JbhO8pzKMdRbEt33zJHMVdhu3fvTjuvVXtCRQUMm2x5WR2ekvPnz6d+PoA4b4gQ9rOwryUf2Js3bzb2t5w7d25SMQZ3w4YNVl9fPyktXcT+\/futu7vbGXXPnz\/fSmm\/n363dbz+ieeFjbov\/PPP2xcfWFTSa5SyvcXWhedrzpw51tDQkNg+Fsuo0PJiW9rPZnAcxFZsg\/dDXMPMUX6+2r59e7pprerjKypg\/O8f4eZatGiR+ffA4EEJGl6VfEnzL\/tp06YZXzjBsixF8YQSwgiR1NLS4oQOR5argnmDYb8khdhqamqyurq6ktml62Z\/2vnr1OV4Od2XP3dvyeovZVtLVdeMGTNs+vTpie5jqVjlW09M2CZybMW2dN974ftabEvHljmKuQpbtWpVam5JWqCiAsbDxLvS29trxbwHhr0vGHWybMQG3SjPjb+WF0i88XfhwoXuzb\/FXJ\/rFmq8ZTe4aXfjyoZCq1I5ERABERABEagJArEQMKUgzXtgRkZG3Ivsli9f7qokjgCChrXATB4W8lXCEC7f\/fmQuzRLR3riyKEo\/o9qEAEREAERSDSBigkYlnJ4ughR4cMs6UQZ+ciTaSTYz8Kan\/esECaOMhw5j\/Kw8JMFfX19FfnpAsQLj0zTRox9LxxlIiACIiACIiACmQlUTMD4pRxEhQ978RE+srxEnsxdiVVqTo3hcWmMzA\/dP9seXjqOXYc\/AAAQAElEQVSboEwEREAEREAERCALgYoJmCztSnwy3hfe+UJHtXQEBZkIiIAIiIAI5E4gFgKG5SGWiaKWj4gjjTy5dyv+OfG8IGJoKd4XRAxhmQiIgAiIgAiIQHYCsRAwLA+xTBReOuLx6gcffNBeeOEFI0\/27lRHDoSL3\/uCcNHG3eoYN7VSBEQg+QTUw+ohEAsBkw4XooWX8Ozbt894kihdvmqLx\/vi24z3xYd1FAEREAEREAERyI1ArAWM7wK\/5XD9+nV\/WtVHeV+qevjUeBEoMwFVLwIikCuB2AuYo0ePGm\/BnTlzZq59inU+eV9iPTxqnAiIgAiIQJUQiIWAYYMuG3XZsBu2Y8eO2dNPP53X7xbFlT3el+7XL7rmae+Lw6A\/MSOg5oiACIhAtRCIhYBhr8vPfvYz43cbnnrqKWMz75kzZ9z5E088UZGXzJVjABEw3gOjvS\/lIKw6RUAEREAEaoVALAQMsP1r\/zdt2sSp87g8\/\/zz1tPTY\/xqtYus8j\/+vS90Y+PK+RxkEwjoRAREQAREQARyIxALAcMSUn9\/v23ZssUJF990PDN79+41XvVf7U8hhb0veuuuH2UdRUAEREAERCB\/ArEQMNmaPVVPIWVrRzHpPf2f7H2hjj2PLuYgEwEREAEREAERKJBALAQMTxjxpNHg4OCkbhBHGnkmJVZRxGuDV1xr2bwr74tDoT8iIAIiIALJIFCRXsRCwNTX17vloxdffNEGBgZSIAgTF15aSmWokgDiRZt3q2Sw1EwREAEREIGqIBALAQOp5uZmO3jwoLW0tJh\/lJowcaSRp1otuHykzbvVOopqtwiIQGwJqGE1SeAzceo1QoVHqINGXJzamG9b2Lzb0z\/qimn5yGHQHxEQAREQAREomkAsBAxPGLW2ttrx48cL7pCvw3tvdu3albYunnoKvjiPa1M+bYEiEhAwvvjGlQ0+qKMIiEByCKgnIiACFSAQCwHD7xzxpFEx\/ec9Mo2Nje4leCdPnjQey456fwxCZceOHbZx40aXlxfmcV3Kcyy1Bd\/98tD9d5e6etUnAiIgAiIgAjVJIBYChve9ICg6OzsL\/tXpAwcOGMYoUt\/KlSuNJ5g4Dxobhru7u23r1q0umvM1a9bYyMhIwdd2FUX8eee9cfObd7V8FAFIUaUhoFpEQAREoAYJxELAsKTDG3fxnCxfvjy1idcvB7HcQ55cx4e8eGDWr1+fa5Gy5EPA+Iq1fORJ6CgCIiACIiACxROIhYDBY9Lb2+uWdIIbeH2YNPLk0l32vvCbSrw7hmO2MogdxBNeGLwx6fKfOnXKEFjY0NCQjY+PZ7Xe315OVffFBXVZ8+dSZwzzFNyvmzdv2o0bNwounyQWpe6L2Gb\/fBbKXGzFttB7Z6rKMUcxV2HFbs9ITWIxDMRCwJSSC8tICB\/2w7S1tWVcFvL7YRA7\/jeY0rXl0KFDxmZfrKuryy5evJjV\/u4377rqGj97h91\/53jW\/LnUmZQ8o6OjdvnyZRsbGxOXHO6lfMZdbLN\/NvPhGcwrtmIbvB\/iGmaOYq7Cdu\/e7eahJP6pmIDB88HSEE8e+bBfMgofyUeeyAFIE7l582YbHh62c+fOReZAvCBwSOzo6JjwG0zEhW3\/\/v3G3hmMuufPn2+Z7PfT77Y3Loy7atY+cG\/GvJnqSWravHnzbM6cOdbQ0CA2We6lfO8Bsc382cyXZzC\/2Ipt8H6Ia5g5irkK2759u5uHkvinYgKGJaHeW8tGvOfFh\/GcRBn5yJPPAPAv+2nTphlfOOFyXrzgpWGAMy0d+bJ4aViSwpqamqyuri6j\/WjgfV\/UNq6cnzFvtrqSmD5jxgybPn26uGS5jwoZe7HN\/NkshKkvI7Zi6++FOB+Zo5irsFWrVqXmonCg2s8rJmDC4BAVuLv8o8\/h83D+8Dl7XzDiKcsTTTyJFCV8\/CPT\/kiZUttr+u2jUiNVfSIgAiIgAiKQIhAbAePFhN+Lglfk+eefNzbYelGTanVEgPI8Cs3yE08ykYU4jggaxJFfruIJJTY3kY\/8WCHLVNQdZTx95B+fXnR3XVQWxYmACIhAjRNQ90WgOAKxEDDsb0FUhH+0Ee\/J3r17ra+vL+NmXBAgeFgO8ktQhIkLpmVaripkmYq6owwB4+MfXjrbB3UUAREQAREQAREoEYFYCJhsfeExMN7Wmy1fXNJPvP3p\/he9fTcuo6J2iMBEAjoTARGobgKxEDAzZ840NslGvTmXONLIUy2otf+lWkZK7RQBERABEahWArEQMCz1sHz04osv2sDAQIolYeJII08qIcYBlo+0\/yXGAxSbpqkhIiACIiACxRCIhYChA+xPOXjwoLW0tKR+SoAwcaSRpxoMAePbqf0vnoSOIiACIiACIlBaArERMHQLoeI34fojcaRVi1XL\/pdq4al2ioAIiIAIiEAUgVgJmKgGVluc9r9U24ipvSIgAiIgAtVIoEICphpRZW8zy0fa\/5Kdk3KIgAiIgAiIQLEEJGCKJRgoj4Dxp9r\/4knoKAIiIAIiUDICqihFQAImhaL4gPa\/FM9QNYiACIiACIhALgQkYHKhlGMe7X\/JEZSyiYAIVCsBtVsEYkMgNgKGd76sWLEi9Qg1v0\/krZS\/U1RO8uffHy9n9apbBERABERABETgNoFYCBh+bHHfvn22bt06849PB4+l\/J2i2\/0u+YH9LxgVP3S\/fv8IDjIRKDkBVSgCIiACtwnEQsDwO0f83tH69etvN6v6Dl680PKHl97NQSYCIiACIiACIlAmArEQMPzOEb93VKY+Tkm1wQ28i+6um5Jr6iJTTkAXFAEREAERiAmBWAgYfueI3zt69tln7dKlSzFBk18ztIE3P17KLQIiIAIiIALFEIiFgEG0IF7Onz9vq1evnrSRtxo28U7JC+yKGWmVFQEREAEREIEEEYiFgJk7d66xUTe4cTcYJo08ceU+cf+LNvDGdZzULhEQAREQgeQQyEfAJKbXPPXU2tqa8vTs2rWrqL4FBcx998woqi4VFgEREAEREAERyE4gVgLmpZdeSomK48ePG+cIDQRH9q7knqO9vd0aGxvdI9snT560\/v5+d63ca5iYUxt4J\/LQmQiIgAiIQJCAwuUgEBsBgxekr6\/PfvGLX9iiRYtcXzdt2uSOCA4XKNGfAwcOGEZ1LE2tXLnSBgcHOS3IXhu84srdd0+dPbxUS0gOhv6IgAiIgAiIQBkJxELAsIkXLwhPIt15552p7vqnk0gjTyqhhAHqpf5s76A5deqU4a3BhoaGbHx8PGX+DbwfffRRKi6YrvCnrIIsbt68aTdu3BCzwL0U5FNMWGyj77limPqy1cjWtz3uR7EtzX3LHMVchfGOtRJOmbGqKhYCplJE8Prw1BPvoOGYqR2HDh0ylrOwrq4uu3jxorM3fnve\/B6Y+Xfd4eJ8mo6fMIriMDo6apcvX7axsTExu30vRXEqJE5s0993hfAMlhFbsQ3eD3ENM0cxV2G7d+\/ONLVVdVosBAzLOBs3brTOzk778MMPU0DxjvB4NWnkSSWUKMAyEk87sR+mra3NMu212b9\/v3V3dzvbvHmzzZ8\/39mN\/6c+1Zovf+5eF+fTdPyEURSHefPm2Zw5c6yhoUHMbt9LUZwKiYsf2\/T3QSH9q2QZsS3fWIpt6dgyR\/n5avv27ak5KmmBWAgYoG7dutVYQnrkkUeM98EgKPCKIF5II0+5jMEeHh62c+fOpb2E99LQpqamJqurq3P2xoVPf8Bx7QNzXJxP0\/ETRlEcZsyYYdOnTxev2\/dRFKNC48Q2\/X1XKFNfTmzF1t8LcT4yRzFXYatWrUo7r1V7QmwEDCCbm5vdk0F4RbyVW7xwXZYxpk2bZvwLgPN87J33PhUwbOLNp6zyTg0BXUUEREAERCB5BGIlYKYKL3tfMK7HshFLVzyJVMgylRcwiBeMOmUiIAIiIAIiIALlJRArAcN7X5YsWZJ6Fwxh3gdTagQ8lj0yMuKus3z5clc9cS6Q558Tb3\/yCHX6H3DMs0JlFwEREAEREAERyEogNgIG8dLT0+MeVfbLRzwCxiZe0rL2JI8MPJ7NBid\/HcLE5VGFy+q9L5zo\/S9QkImACIiACIhAiQhkqSYWAoanjRAve\/futeAyDmHiSCNPlr5MeXJQwNynnxCYcv66oAiIgAiIQO0SiIWAqVb8+gmBah05tVsEREAEshJQhpgTiIWA8Z6WnTt32sDAQAoZXheWkHiUmjyphJgEgh4YLSHFZFDUDBEQAREQgZogEAsB44XKBx98YC0tLW5zLRt4eYadd8I899xzqbi1a9fGZmC8gLnvnrrYtEkNEQERSAgBdUMERCAjgVgIGLwrvb29k94B4zfZBo\/ky9ijKUzUE0hTCFuXEgEREAEREIEAgVgImEB7qibovS80WB4YKMgSRkDdEQEREIFYE4iVgOFxaZaOgkZcHAlKwMRxVNQmERABERCBWiEQGwGDUOFxad794peMCBNHWtwGJPgE0kP33x235lV\/e9QDERABERABEchAIBYChk28CBXe+cJ+GN9ewsSRRh4fH7ejlpDiNiJqjwiIgAiIQNIJxELAxBBy1ia9NvjJTwggXrCsBZRBBERABERABESgZARiIWDwtPCuF975EvS0ECaONPKUrNeqSAREQAREQAREoAwEpq7KWAgYurt161ZDqPDuF7+JlzBxpJEnTqZHqOM0GmqLCIiACIhArRGIjYABPELFb+D1R+JIi5MFn0DSG3jjNDJqiwiIQK0TUP9rh0CsBEy1YA8KmPv0I47VMmxqpwiIgAiIQIIISMAUMJjBR6gX3a2fESgAoYqIQEIJqFsiIAJTRUACpkjS9+l3kIokqOIiIAIiIAIikD+BxAgYnljihx79BuDW1la7du1aWiK8HC\/XvOFK9Ah1mIjO40JA7RABERCBWiGQCAGDUNmxY4d7ionNv2fOnHHj197e7o7hP8ePHzdejsebfrPlDZfVuQiIgAiIgAiIQOUJJELA1NfXW3d3t\/knljhfs2aNjYyMRHphBgcHbcGCBTZz5kzLljdqiPQIdRQV4mQiIAIiIAIiMDUEEiFg8kW1dOlSu3Dhgl2\/ft0JnL6+PkPwIGay1RV8AkmPUGejpXQREAEREAERKA+BRAkYj4j9MCwRpRMlzc3N9sILL9i6dets+fLltmXLlpT3xtcRPp46dcpYcvrlwGAq6aOPPrLx8XFZgQxu3rxpN27cEL8C+WW698S2fJ9LsRXbTJ+9OKQNDQ25+Yo5i3+spyathAUSJ2D8fhiWiDZt2hQ5XGzg3bZtmx07dszYM3P06FHbtWtXZF4feejQIWNj8O7du32UPTDrI7t48aKsAAajo6N2+fJlGxsbE78C+GW678S2fJ9JsRXbTJ+9uKR1dXW5+So8Z6Umr8mBqoxJlIBBvLS1tbmB6OjocPtb3EngD3lYMuInCvzvK23evNlef\/11GxgYCOScGNy\/f7\/bZ9PyMftODAAAEABJREFU+L9PJdx77xybP3++rAAG8+bNszlz5lhDQ4P4FcAv030ntuX7TIqt2Gb67MUljTmNfaHY9u3bU3NW0gKJETAIE8RLY2OjExq57GfJZzDx6PDbTP8w8x+nin35c\/daXV2drAAGM2bMsOnTp4tdAeyy3XNiW77PpNiWie2tz4HYlo5tU1OTMV9hq1atSs1ZSQskRsD4R6b9Md1AIWzYG8MeGfbKkA9328KFC23x4sWcZjS\/iVcvsMuISYkiIAIiIAIiUFYCiRAwCJH+\/n63aYlNuf4FdbzYjjS8M6wF8v4XaPK49cqVK51CJS+PW6dbciJ\/0M6\/Px48VVgERKD6CagHIiACVUggEQKGvSy9vb1uQy6bcr0RRxpeF9YCefrIj9GBAwdS+Ukjj0\/LdPQeGP0GUiZKShMBERABERCB8hJIhIApL6JPa\/fihRi9AwYKspIQUCUiIAIiIAJ5E5CAyQNZUMDkUUxZRUAEREAEREAESkxAAqZAoA\/df3eBJWNXTA0SAREQAREQgaojIAGTx5CdePv9PHIrqwiIgAiIgAiIQLkIVF7AlKtnZag3uISkx6jLAFhVioAIiIAIiECOBCRgcgRFNi9gEC8YcTIREAEREAERqASBWr+mBEyt3wHqvwiIgAiIgAhUIQEJmDwG7cTbV1xuvQPGYdAfERCBmiagzotAZQlIwOTIP\/gGXi0f5QhN2URABERABESgTAQkYAoAKwFTADQVEYESE1B1IiACtU1AAibH8fcbeMl+3z0zOMhEQAREQAREQAQqREACJkfwQQGjPTA5Qkt0NnVOBERABESgkgQkYHKkHxQwORZRNhEQAREQAREQgTIRkIDJEWxwE28cfsgxx2YrmwiIgAiIgAgkkoAETI7D6j0w991Tl2MJZRMBERABERABESgXgQIFTLmao3pFQAREQAREQAREIDsBCZjsjFyOj+59wB21gddh0B8REAEREIFCCKhMyQgkRsBcunTJ1q5da0uWLHHW2tpq165dSwvq+PHjLh\/5KUf5dJn\/Yea96ZIULwIiIAIiIAIiUAECiRAwCJUdO3bYxo0b7ezZs3bmzBmHsr293R3DfwYGBmznzp3W0dHh8lOO8tQTzhs+1wbeMBGdi4AIVBEBNVUEEkMgEQKmvr7euru7bevWrW5gOF+zZo2NjIxEemFOnDhh69ats+bmZpefcpSnnIsI\/fmHmf84FKNTERABERABERCBShJIhIDJByBelr6+Plu6dGk+xVJ573j3tzY0NGTj4+OyIhncvHnTbty4IY5Fcoy6F2PLtgx9jep\/OePEtnzffWJbGrbMUSdPnjTswoULqfkraYFEChj2s\/T09BhemHRelbvuuiu1ZybbHhi\/gZfBP3TokHV1ddnFixdlRTAYHR21y5cv29jYmDgWwTHqPhTb8n02xVZsoz5zcYtjjmIfKLZ7926mrkRa4gQMHhb2syxYsMA2bdqUdtDY\/\/LKK6+4PTArV640ylA2bYHbCQf\/wx7bvHmzzZ8\/X1YEg3nz5tmcOXOsoaFhKjnWxLXEtnyfTbEV22r47meOYlsEtn379tuzV\/IOiRIwCJC2tjY3SgiUdN4XMrBxd+7cuQSdIBkeHrZz58658\/Cf4FNIG\/7Zl62pqcnq6upkRTCYMWOGTZ8+XQyLYJjuHhTb8n02xVZs033u4hTPHLV69WrDVq1aFZ7SEnOeGAHjxUtjY6Pb0JtOvBBPnvAIzpo1y\/jXVTiecy9gin4LL5XJREAEREAEREAEiiaQGAHjH5n2x0xk1q9fb+yRYa8M+VgvfOCBB8x7ZIgLmp5CCtJQWAREQAREQASmlkDU1RIhYBAi\/f39bsf18uXLJ72gDu8Mm5l4eR0QeHx67969zr3Gi+x43DqT8PEeGL2FF3oyERABERABEag8gUQIGDwnvb29bkMuL7LzRhxpLBuxmQnh4pET9vlII49PCx69eCFOS0hQkImACIhArRFQf+NIIBECZqrASsBMFWldRwREQAREQAQyE5CAyczHgh6YLFmVLAIiIAJlIaBKRUAEJhOQgJnMJG3MfffMSJumBBEQAREQAREQgakjIAGThfWJt99P5dAm3hQKBWqKgDorAiIgAvEjIAETvzFRi0RABERABERABLIQkIDJAuid98ZTOR5eOjsVVmDqCOhKIiACIiACIhAmIAETJhI69wLmvnvqQik6FQEREAEREAERqBQBCZis5JVBBERABERABEQgbgQkYLKMyPn3P1lC0gbeLKCULAIiIAIiIAJBAmUOS8BkAeyXkLJkU7IIiIAIiIAIiMAUEpCAyQA7KF60ByYDKCWJgAiIQPwIqEUJJyABk+MAS8DkCErZREAEREAERGAKCEjAZIAc9MBkyKYkERABEZhMQDEiIAJlJSABkwEvXpd\/8eA\/sv\/3nRP20P13Z8ipJBEQAREQAREQgakkIAGTgfYnAuYOm\/k\/Ou2Od3+TIaeSRCB2BNQgERABEUg0AQmYRA+vOicCIiACIiACySSQGAFz6dIlW7t2rS1ZssRZa2urXbt2LeuoDQwM2Jo1a4xj1szKkDuBLDlHR0ftr\/\/6r41jlqxKzpMATMU2T2g5ZhfbHEEVkE1sC4BW40USIWAQKjt27LCNGzfa2bNn7cyZM25Y29vb3THdH8rt27fPrl69mi6L4stEgC+rrq4uCZgy8BXbMkC9XaXY3gZRhoPYlgFqwqtMhICpr6+37u5u27p1qxuu+vp651UZGRnJ6IU5efKkDQ8P26xZs1w5\/REBERABERABEagOAokQMIWgZsmps7PTnnnmmZyKnzp1yhA8spMl4XDhwgXHXVxLwzN4X4pt6Zl6vmIrtv5eqJajv2fdF25Of6onUyIFDOKkp6fHeWHwzkQNx+HDh136vHnzopJTcQsXLrRVq1bZoUOHjH01staScNi9e7djLK6l4Rm8L8W29Ew9X7EVW38vVMuRe5Y5jLnMfekm6E\/iBAz7WtgPs2DBAtu0aVPkULFh9\/Tp02nTg4UY9P3797slKpapZN1icWu5UveB7gPdA+W5B8S19FyZw5jLgnNbEsKJEjCIl7a2NjcuHR0dls77wubRDRs2pE13FQT+MPCrV682mRjoHtA9oHtA90C13QPMYYEpLTHBxAgYL14aGxudhyCdeGF5qb+\/3xA6PHLd0tLiNvJyPH78eGIGVh0RAREohIDKiIAIVAuBxAgY\/8i0P6YbgLlz51pvb6973JpHro8cOWKoU47Nzc3piileBERABERABEQgRgQSIWC8V4Vd4cuXL3cvssO7wovtSMM7w4YreVhidOepKZEEFCkCIiACIpAbgUQImLBXBc8KhqeFNJaT2BgW5WFZtmyZ9fX1GcfckCmXCIiACIiACIhApQkkQsBUGmJyrq+eiIAIiIAIiEB1EJCAyTBOu3btSi1HafkpA6gMSTyyvmLFCseRZTyW89JlD\/KmDGXT5VW8ud\/vghPLpdnYel7wJ+9LL73ko3QMEeC+y5UrS9QsVTMGmL4nQjBDp\/mwDeZlPDgPVafTHAn4z33S7s9YCZgcx2JKsjHQPK3EvhoeyX722WeNL6spuXhCLsKHht+aeuKJJ1K\/T\/Xyyy9b1H9MqPz0A79jxfIfZbZt2ybmUbBuxeXD9lb21P\/w555ORSgwgUA+XMnLO6dWrlzpHgrgQYDvfOc7TlhOqFQnjgC8cv0+4LuWz\/\/BgwcdW30fOIQF\/YE7T90m8XMvAZPmljh69KjxxcQeGp7558V4TK5psis6gsC5c+fcI+oPPfSQe+fOli1b3H4jPlDh7PyOFfuU2K9EGmU+\/vhjGxsb41QWIpAPW1+USeFnP\/uZe+rOx+k4kUA+XMn7wQcf2FNPPeUqYR+d9tM5FJF\/4MVvz\/HZ5nOe6fuAzz2ff\/+mdMpwTnxk5YqMJIDXCnYkLlq0iEOiTAImYjiZYPEGLF26dELq4ODghHOdZCbAl820adPMfwmRm9\/luH79OkFZEQQKYfvcc8\/Zn\/3Zn0nAZOCeD9cTJ07YXXfdZTNnzsxQo5I8gXzY8p0xbdq01D9gYM3rLhYvXuyr0zEHAgjFV1991Z5\/\/vkccldfFgmYDGPmBQw3AS\/Iy5BVSWkI4LnyX\/B8KX32s59Nk3NiNG9L1hfWRCbhs3zY8i8xvAV\/9Ed\/FK5G5yEC+XDle4F3T7H\/BWPpOVRdbZzm2Mtc2eL5xlvY2dnp9s\/xj8eghzbHy9V8NgQfllQQEjBJHdkq7hf7YY4dO2ZPP\/20W3qq4q7Eoul4FF944QVjT4EXk7FoWAIawY\/Crl+\/3u3TYK\/czp07tQemBOOK4Gbpg2Um9sTBmM3SLIOWoHpVkRACEjAZBhLVTzITAEtKhGX5EQguGeFC\/t3vfpexAsTLiy++aGw2ZU9Bxsw1npgrWzbvsdSRYJ4lvRNy5cpF2R+H+fCDDz5oLHdwLptMIFe2MIRlkC3eGwTj5FoVU6sEJGAiRj7dkpFfUooooqgIAlFLRnwJpfMCIF56enoM74sm2wiggah82LIhnS9+ljh4UzWChv0wPLYeqFLBWwTy4Zru+yBd\/K3qa\/r\/fNjWNCh1PmcCEjBpUOGyZDLFZckXPv9y4Ms\/TXZFRxBg7ZV\/+TN54sViPXvNmjWRy0LsHcDzwlIH698R1cU3qgIty4ftgQMH3BIHrniepONftTw5Q3wFmh7rS+bDle8Dvhf4fqBTHDknnnPZRAL5sGX56K233jKYUgtHzonnXCYCEJCAgUKE8bMDPEbNlz3P0O\/du9c0sUaAyhCFJ4t9LAgT\/6W+adOmVAk8Lt4LgJeATaYtLS1u0x7eAgxhkyqgQIpAPmxThRTISiAfrnwfvPLKK8Y7orhX2f8iAZ4ecT5s8cDyDhi+ez1bLSunZ1urKRIwGUaef6Hyr1YMQZMhayWTYn1tvojefPNN5wEIP0XAu19gTAc4wjls4g6daMuVbbA0kwjjAPtgvMKfEsiHKyKG31zjvuU+p+ynNSkUJgAfOMGL+5D70efhnuR7wJ\/z2ScfRhnK+jQd8yPg71OY5lcy3rklYOI9PmqdCIiACIiACIhABIHiBUxEpYoSAREQAREQAREQgXISkIApJ13VLQIiIAIiIAJpCCi6OAISMMXxU2kREAEREAEREIEKEJCAqQB0XVIEREAEKk9ALRCB6iYgAVPd46fWi4AIiIAIiEBNEpCAqclhV6erhcDf\/\/3fGy9TzLW95KVMrvkLyce7e3g3R76\/TcPv2\/AiQ45cN67m+7dixYop+V2jqb5eXLmrXSKQLwEJmHyJKb8ITBEBXuL35JNP5nw1xMuGDRtsdHQ05zL5ZkR8vP7663bkyBHj\/Se8XyLfOqoh\/2OPPWZT9e4R3n0Cz1mzZlUDGrVRBGJDQAImNkOhhkwtAV2tEAJjY2M2bdo043dtCimvMiIgAiJQKgISMKUiqXpEoAACeE1YimFJBiNMHN4XXqN+\/vx54+csOLZDEGkAAAXuSURBVKd6v9xAXswvc1AG7wv5KUc+8vMbVK2tramfZ\/D1k5bOKEvdmK+fvPz0A3VzDdrEOfFhI56y3jgP5vmbv\/mbVHuC9ZOHfvpy\/ujL08evfe1rxivmSfN9wStEPcRhpIeXqtL1iWtmM8o+\/vjjFuRIXLpytJe8sPd5ouJ8mo4iIAKFEZCAKYxb0aVUgQgwwe3YscM2btzofmqBV6bz+1vPPfec8crvjo4OW7RokftBO86ZBEdGRowfZCQvxwcffND27dtnM2fONH6Xh\/yUY1mCCf8rX\/mKMZmTH+NaCB3SwiNAe5h4g9d44oknjN+vQiTwqnfq5hr8uB7n4TpoI799xZII1+PIOcKEvFevXrU33ngj1Qfq37Ztm9vnwzW+853vuOUpymL86CTlSaP87373u1R5lrCIozz1kJ92\/fjHPzauQ5rvE2HSMQSO7xPxudixY8dSHLlGf3+\/0ddcyiqPCIhAeQhIwJSHq2oVgawErl+\/bvx6cTAjwgMLxvkwgiH4+zH8jgzixKeHjwicBQsWOAHi05i4iTt8+LCPSh3PnTtnw8PDxg9wUjcJ5EcknThxgtOMhljo6+szxIT\/3RqO7CVBgPnCW7ZsMV8\/vy788ccfG0tT5KU8R5+X9PDeEPrsy9MP+kM7KcOeHH54lTBGn\/iRUIQQ5xhtWbdunXV1dXGak+FxCl+jp6fHCa+cKlAmERCBUhFI1SMBk0KhgAhMLQEmWzwieFxY+vBLItlagTeD\/Bhl0+UfHBx03pvly5enlmwI40GIKoOImDZt4v4WhAKCgbqiygTjvCBbunRpMHpCGDGSbf8M3iFY0L+WlpaUN8VXFKyfdjU2NqYEEXmon+sQpk9vvfWWW4ajPm8IH9JztahreOGVax3KJwIiUFoCEjCl5anaRCAvAnhVWNbwooJ\/6TN5M4mHK2LJggl4586dqWWWoGchnJ\/JnfrwxHCNoHHdcP5059STLq2U8SwTsZeFNiPsaC9LUF6MFHIt2u6XvKgvaOk8XYVcR2VqiIC6GhsCEjCxGQo1pJYJ4I3p7e11HhM4IDo4evPLMwgWlmT8MgsTtM8TPuKpYIkKz0g4Leocz0XYq8B12RNDXVFlgnHsw2E5J1ObgvnDYZapWK6i715g4UHx+1nC+TmnXbSPdnKOBcuQfuXKFbdERVqhFnWNadMmeqsy1V0ok0x1Kk0Eap2ABEyt3wHqf8UI4GXB24JnxTeCyZswSz1RgiI4EVIuuBQSFhC8y4S6gstM3svBMhRpQVu8eLEtXLjQbQr2guDll182lmDYixLMGxX2y03BvSHUw8Zg2hpVJhwXFFy0FW9TOE\/wnD5ShnYSD9Nnn32WoDO8OYgiNjrTFiLJE+ZOfCbDQxa+Bl4ihGe4HKKJ\/Bhp9INNwIRLYKpCBETgNgEJmNsgdBCBqSbA5PfCCy8YT9mwNIQxYRNHmhcU7ANh8nz++eeNp1\/Ih7Hh9Xvf+54TGGxW9QICwYJoQNDwZFKwDHXxFA4bWcP9pTybhNnvgYDiGrSNa3uPT7hM+BzPCRM7woHy1MMeGuLDecPn5OEpLF+WTbO0dfbs2YZ3JpyfczjBi3ZyPcp+\/etfN7\/sRJ94coq8tMXnoY1cj\/hcjE2\/8I4qj0ChjxypC7Z4ynjknPyIp29961skOUNIMT65ijpXSH9EQAQmEZCAmYREESIwdQQQBiwJ+b0ZhImjBUy+CArSmGyZrFlm4hwj7Rvf+MaEN8aSz6dRPlyGNCZY6k9n7A0hHxZsD\/mbm5uzvoHXt4HyGOeUpV+IAI6cY4SDceFr01b6TB2+L8RR1ht10E6uhf3Jn\/yJEzB4sMgDB1iR5o36SMvV7rrrLgvWESzP9YN9oE7S\/bUohzDlSFswwuQhr0wERKAwAhIwhXFTKREQgRgQwIvBchDLQjQH7wYejwceeMAQPMTJREAEkklAAiaZ45rUXqlfIjCBAF6M4LITy0QsgeHJmZAxzxP2FvFElF8WyrN4Xtl5qy9Le5k2K+dVoTKLQI0Q+L8AAAD\/\/1J\/h+AAAAAGSURBVAMATK55KpEA9+gAAAAASUVORK5CYII=","height":337,"width":560}}
+%---

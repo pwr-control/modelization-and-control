@@ -1,48 +1,17 @@
 function report = migrate_afe_inv_psm(varargin)
 %MIGRATE_AFE_INV_PSM  Rewrite afe_inv_psm.slx from the legacy workspace names to param.*
 %
-%   report = migrate_afe_inv_psm()
-%       Dry run on the model 'afe_inv_psm': nothing is changed, the report lists every block
-%       parameter, variant condition and configuration parameter that would be rewritten.
+%   report = migrate_afe_inv_psm()                 dry run: nothing changed, report of the changes
+%   report = migrate_afe_inv_psm('DryRun', false)  applies and saves afe_inv_psm_param.slx
 %
-%   report = migrate_afe_inv_psm('DryRun', false)
-%       Applies the changes and saves the result as afe_inv_psm_param.slx (the original file is
-%       not touched). Rename it afterwards, or pass 'SaveAs', '' to save in place.
+%   Thin wrapper: the mapping legacy name -> param.* of init_model.m (Rev. 01) is here, the work is
+%   done by tools/migrate_model_to_param (same options: 'DryRun', 'SaveAs', 'Verbose', ...).
+%   The migration was first applied on 2026-09-30 with the standalone version of this script
+%   (763 parameters rewritten, afe_inv_psm_param.slx): this wrapper gives the same result.
 %
-%   Options (name-value):
-%       'Model'    model name or path, default 'afe_inv_psm' (loaded if it is not open)
-%       'DryRun'   true (default) | false
-%       'SaveAs'   name of the migrated model, default 'afe_inv_psm_param'; '' saves in place
-%       'Verbose'  true (default) prints every change
-%
-%   The mapping legacy name -> param.* is the one of init_model.m (Rev. 01). Only whole
-%   identifiers are replaced (word boundaries, not preceded by "." or a word character), so
-%   psm.omega_bez becomes param.psm.machine.omega_bez while psm_ctrl.kp_i is matched by its own
-%   rule. Names shadowed by a mask variable of an enclosing masked subsystem are left alone.
 %   ideal_switch.* is mapped by position: blocks under an ".../inverter/..." path take
-%   param.inv.ideal_switch, all the others param.afe.ideal_switch.
-%
-%   Library-linked blocks are not entered (FollowLinks off): only their dialog parameters are
-%   rewritten, their content belongs to the library.
-%
-%   After the migration run init_model.m with export_legacy_names = false and update the model
-%   (Ctrl+D): an unresolved name means a reference this script did not see.
-%
-%   Report: table with columns Block, Parameter, Old, New, Status ('changed', 'dry-run',
-%   'failed: <message>').
+%   param.inv.ideal_switch, all the others param.afe.ideal_switch ('PathRules').
 
-%% options
-opt = struct('Model', 'afe_inv_psm', 'DryRun', true, 'SaveAs', 'afe_inv_psm_param', 'Verbose', true);
-for k = 1:2:numel(varargin)
-    opt.(varargin{k}) = varargin{k+1};
-end
-model = opt.Model;
-
-if ~bdIsLoaded(model)
-    load_system(model);
-end
-
-%% mapping: legacy name -> new name (longest first, so that dotted names win over their root)
 map = {
     % objects and structs
     'hwdata.afe',                                   'param.afe.hw'
@@ -146,220 +115,29 @@ map = {
     'tau_load_sim',                                 'param.load.tau_load_sim'
     'b_square',                                     'param.load.b_square'
     };
-[~, order] = sort(cellfun(@numel, map(:,1)), 'descend');
-map = map(order, :);
 
-% position-dependent rule
-ideal_switch_afe = 'param.afe.ideal_switch';
-ideal_switch_inv = 'param.inv.ideal_switch';
+% position-dependent rule: the first row whose pattern is in the block path wins, '' is the default
+path_rules = {
+    '/inverter/',   'ideal_switch',     'param.inv.ideal_switch'
+    '',             'ideal_switch',     'param.afe.ideal_switch'
+    };
 
-% block parameters never rewritten (names, signal labels, callbacks, graphics, big opaque strings)
-skip_params = {'Name', 'Tag', 'Description', 'PropagatedSignals', 'OutputSignals', 'IconDisplay', ...
-    'MaskDisplay', 'MaskDescription', 'MaskHelp', 'MaskPromptString', 'MaskType', 'SourceBlock', ...
-    'LinkStatus', 'Position', 'Ports', 'ZOrder', 'BackgroundColor', 'ForegroundColor', 'FontName', ...
-    'AttributesFormatString', 'BlockDescription', 'SampleTimeColors', 'VariantControl', 'VariantControls', ...
-    'MaskValueString', 'MaskVariables', 'ScopeSpecificationString', 'UserData', 'InstanceData'};
-
-% one regular expression that tells in a single pass whether a value can contain a legacy name
-roots = unique(cellfun(@(n) regexp(n, '^[A-Za-z_]\w*', 'match', 'once'), [map(:,1); {'ideal_switch'}], ...
-    'UniformOutput', false));
-quick = ['(?<![\w.])(' strjoin(roots, '|') ')(?!\w)'];
-
-%% blocks: all variants, under local masks, not inside library links
-blocks = find_system(model, 'LookUnderMasks', 'all', 'FollowLinks', 'off', ...
-    'IncludeCommented', 'on', 'MatchFilter', @Simulink.match.allVariants, 'Type', 'Block');
-
-rows = cell(0, 5);
-for ib = 1:numel(blocks)
-    blk = blocks{ib};
-    shadow = mask_variables_of_ancestors(blk, model);
-    rule = local_map(map, blk, ideal_switch_afe, ideal_switch_inv);
-
-    % dialog parameters (block and mask parameters)
-    try
-        dp = get_param(blk, 'DialogParameters');
-    catch
-        dp = [];
-    end
-    if isstruct(dp)
-        pnames = fieldnames(dp);
-        for ip = 1:numel(pnames)
-            p = pnames{ip};
-            if any(strcmp(p, skip_params)) || endsWith(p, 'Fcn')
-                continue
-            end
-            attr = dp.(p).Attributes;
-            if any(strcmp(attr, 'read-only'))
-                continue                % 'dont-eval' parameters (e.g. SampleTime) are expressions too: kept
-            end
-            try
-                old = get_param(blk, p);
-            catch
-                continue
-            end
-            if ~ischar(old) || isempty(old)
-                continue
-            end
-            new = rewrite(old, rule, shadow, quick);
-            if ~strcmp(new, old)
-                rows(end+1, :) = apply_change(blk, p, old, new, opt); %#ok<AGROW>
-            end
-        end
-    end
-
-    % variant conditions of the choices of a Variant Subsystem
-    try
-        vc = get_param(blk, 'VariantControl');
-    catch
-        vc = '';
-    end
-    if ischar(vc) && ~isempty(vc)
-        new = rewrite(vc, rule, shadow, quick);
-        if ~strcmp(new, vc)
-            rows(end+1, :) = apply_change(blk, 'VariantControl', vc, new, opt); %#ok<AGROW>
-        end
-    end
-
-    % variant conditions of Variant Source / Variant Sink blocks
-    try
-        vcs = get_param(blk, 'VariantControls');
-    catch
-        vcs = [];
-    end
-    if iscell(vcs) && ~isempty(vcs) && all(cellfun(@ischar, vcs))
-        newc = cellfun(@(c) rewrite(c, rule, shadow, quick), vcs, 'UniformOutput', false);
-        if ~isequal(newc, vcs)
-            % the report shows the conditions joined by " ; ", the block receives the cell array
-            rows(end+1, :) = apply_change(blk, 'VariantControls', strjoin(vcs, ' ; '), strjoin(newc, ' ; '), opt, newc); %#ok<AGROW>
-        end
-    end
+add_repo_tools_to_path();
+report = migrate_model_to_param('afe_inv_psm', map, 'PathRules', path_rules, varargin{:});
 end
 
-%% model configuration: StopTime and FixedStep
-cs = getActiveConfigSet(model);
-if isa(cs, 'Simulink.ConfigSetRef')
-    warning('migrate_afe_inv_psm:configRef', ...
-        'The active configuration set is a reference (%s): StopTime and FixedStep must be changed there.', cs.Name);
-else
-    for cp = {'StopTime', 'FixedStep'}
-        try
-            old = get_param(cs, cp{1});
-        catch
-            % FixedStep cannot be read while the solver is variable-step (ode23t): the stored
-            % value 'tc' is ignored by Simulink, so there is nothing to migrate
-            continue
-        end
-        if ischar(old)
-            new = rewrite(old, map, {}, quick);
-            if ~strcmp(new, old)
-                rows(end+1, :) = apply_config_change(cs, cp{1}, old, new, opt, model); %#ok<AGROW>
-            end
-        end
-    end
-end
-
-%% save
-if ~opt.DryRun
-    if isempty(opt.SaveAs)
-        save_system(model);
-        saved = get_param(model, 'FileName');
-    else
-        save_system(model, opt.SaveAs);
-        saved = get_param(opt.SaveAs, 'FileName');
-    end
-    fprintf('\nModel saved as %s\n', saved);
-else
-    fprintf('\nDry run: nothing changed. Call migrate_afe_inv_psm(''DryRun'', false) to apply.\n');
-end
-
-%% report
-report = cell2table(rows, 'VariableNames', {'Block', 'Parameter', 'Old', 'New', 'Status'});
-fprintf('%d parameter(s) affected, %d failed.\n', height(report), sum(startsWith(report.Status, 'failed')));
-end
-
-%% ---------------------------------------------------------------- local functions
-function rule = local_map(map, blk, ideal_switch_afe, ideal_switch_inv)
-% Adds the position-dependent ideal_switch rule to the mapping of this block.
-    if contains(lower(blk), '/inverter/')
-        rule = [map; {'ideal_switch', ideal_switch_inv}];
-    else
-        rule = [map; {'ideal_switch', ideal_switch_afe}];
-    end
-end
-
-function new = rewrite(old, rule, shadow, quick)
-% Replaces every legacy identifier of RULE found in OLD as a whole name, unless it is shadowed
-% by a mask variable listed in SHADOW. A name is whole when it is not preceded by a word
-% character or a dot and not followed by a word character. QUICK is the single regular
-% expression that decides in one pass whether OLD can contain any legacy name at all.
-    new = old;
-    if isempty(regexp(old, quick, 'once'))
+function add_repo_tools_to_path()
+% The generic tools live in <repo>/tools: found by walking up from this file when not on the path.
+    if exist('migrate_model_to_param', 'file') == 2
         return
     end
-    for k = 1:size(rule, 1)
-        legacy = rule{k, 1};
-        root = regexp(legacy, '^[A-Za-z_]\w*', 'match', 'once');
-        if any(strcmp(root, shadow))
-            continue
-        end
-        pattern = ['(?<![\w.])' regexptranslate('escape', legacy) '(?!\w)'];
-        new = regexprep(new, pattern, rule{k, 2});
+    here = fileparts(mfilename('fullpath'));
+    while ~isfolder(fullfile(here, 'tools')) && ~strcmp(here, fileparts(here))
+        here = fileparts(here);
     end
-end
-
-function names = mask_variables_of_ancestors(blk, model)
-% Mask variable names of every masked subsystem enclosing BLK (the block's own mask does not
-% count: its values are evaluated in the parent scope).
-    names = {};
-    parent = get_param(blk, 'Parent');
-    while ~isempty(parent) && ~strcmp(parent, model)
-        try
-            m = Simulink.Mask.get(parent);
-        catch
-            m = [];
-        end
-        if ~isempty(m) && ~isempty(m.Parameters)
-            names = [names, {m.Parameters.Name}]; %#ok<AGROW>
-        end
-        parent = get_param(parent, 'Parent');
-    end
-end
-
-function row = apply_change(blk, p, old, new, opt, value)
-% OLD and NEW are the strings shown in the report; VALUE (optional) is what the block receives
-% when it differs from NEW (the cell array of a Variant Source / Variant Sink).
-    if nargin < 6
-        value = new;
-    end
-    if opt.DryRun
-        status = 'dry-run';
+    if isfolder(fullfile(here, 'tools'))
+        addpath(fullfile(here, 'tools'));
     else
-        try
-            set_param(blk, p, value);
-            status = 'changed';
-        catch ME
-            status = ['failed: ' ME.message];
-        end
+        error('migrate_afe_inv_psm:tools', 'Folder "tools" of the repository not found: add it to the MATLAB path.');
     end
-    if opt.Verbose
-        fprintf('%-9s %s | %s\n    %s\n -> %s\n', status, blk, p, old, new);
-    end
-    row = {blk, p, old, new, status};
-end
-
-function row = apply_config_change(cs, p, old, new, opt, model)
-    if opt.DryRun
-        status = 'dry-run';
-    else
-        try
-            set_param(cs, p, new);
-            status = 'changed';
-        catch ME
-            status = ['failed: ' ME.message];
-        end
-    end
-    if opt.Verbose
-        fprintf('%-9s %s | ConfigSet.%s\n    %s\n -> %s\n', status, model, p, old, new);
-    end
-    row = {[model ' (configuration)'], p, old, new, status};
 end
