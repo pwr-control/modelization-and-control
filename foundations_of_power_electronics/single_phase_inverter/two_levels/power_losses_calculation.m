@@ -1,11 +1,12 @@
+% 2026-09-30: Nc, tc, decimation_tc, Ns_inv, ts_inv taken from param.glb_time of init_model.m (Rev. 01); the flat names were never defined by any init.
 clc
 
 Vdc_nom = 400*1.35;
 T = 0.8;
-N1 = floor(Nc) - floor(T/(tc*decimation_tc));
-N2 = floor(Nc);
-N1s = floor(Ns_inv) - floor(T/ts_inv);
-N2s = floor(Ns_inv);
+N1 = floor(param.glb_time.Nc) - floor(T/(param.glb_time.tc*param.glb_time.decimation_tc));
+N2 = floor(param.glb_time.Nc);
+N1s = floor(param.glb_time.Ns_inv) - floor(T/param.glb_time.ts_inv);
+N2s = floor(param.glb_time.Ns_inv);
 p_loss_inv_Q1 = mosfet_ploss_invQ1_sim(N1:N2);
 p_loss_inv_Q2 = mosfet_ploss_invQ2_sim(N1:N2);
 % figure; plot(p_loss_inv_Q1); grid on

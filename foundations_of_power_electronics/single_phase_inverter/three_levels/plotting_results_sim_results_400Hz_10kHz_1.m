@@ -1,3 +1,6 @@
+% 2026-10-01: reads the param structure of init_model.m (Rev. 01): param.glb_time.Nc / .tc and
+% param.spinv.frequency_set (the flat Nc and tc were never defined by any init). After the clear all below
+% they must come from the loaded sim_results .mat file, i.e. from a workspace saved after running the param init.
 close all
 clc
 
@@ -12,29 +15,29 @@ colore2b = [0.35 0.35 0.35];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 
-N1c = floor(Nc/50/(frequency_set/f_grid));
-N2c = floor(Nc);
-t1c = time_tc_sim(N2c) - N1c*tc;
+N1c = floor(param.glb_time.Nc/50/(param.spinv.frequency_set/f_grid));
+N2c = floor(param.glb_time.Nc);
+t1c = time_tc_sim(N2c) - N1c*param.glb_time.tc;
 t2c = time_tc_sim(N2c);
 
-N3c = floor(Nc/1000/(frequency_set/f_grid));
-N4c = floor(Nc);
-t3c = time_tc_sim(N4c) - N3c*tc;
+N3c = floor(param.glb_time.Nc/1000/(param.spinv.frequency_set/f_grid));
+N4c = floor(param.glb_time.Nc);
+t3c = time_tc_sim(N4c) - N3c*param.glb_time.tc;
 t4c = time_tc_sim(N4c);
 
-N1s = floor(Nc/10/(frequency_set/f_grid));
-N2s = floor(Nc);
-t1s = time_tc_sim(N2s) - N1s*tc;
+N1s = floor(param.glb_time.Nc/10/(param.spinv.frequency_set/f_grid));
+N2s = floor(param.glb_time.Nc);
+t1s = time_tc_sim(N2s) - N1s*param.glb_time.tc;
 t2s = time_tc_sim(N2s);
 
-N3s = floor(Nc/10);
-N4s = floor(Nc);
-t3s = time_tc_sim(N4s) - N3s*tc;
+N3s = floor(param.glb_time.Nc/10);
+N4s = floor(param.glb_time.Nc);
+t3s = time_tc_sim(N4s) - N3s*param.glb_time.tc;
 t4s = time_tc_sim(N4s);
 
-N5s = floor(Nc/40);
-N6s = floor(Nc);
-t5s = time_tc_sim(N6s) - N5s*tc;
+N5s = floor(param.glb_time.Nc/40);
+N6s = floor(param.glb_time.Nc);
+t5s = time_tc_sim(N6s) - N5s*param.glb_time.tc;
 t6s = time_tc_sim(N6s);
 
 fontsize_plotting = 14;
@@ -580,14 +583,14 @@ print('inverter_current_control_2','-depsc');
 movefile('inverter_current_control_2.eps', 'figures/sim_results_400Hz_10kHz_1');
 
 %% spectrum phase grid R
-N1=Nc-floor(200e-3/tc);
-N2=Nc;
+N1=param.glb_time.Nc-floor(200e-3/param.glb_time.tc);
+N2=param.glb_time.Nc;
 signal = ig_abc_sim(N1:N2,1);
 time = time_tc_sim(N1:N2);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*param.glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -620,7 +623,7 @@ signal = ig_abc_sim(N1:N2,2);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*param.glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -653,7 +656,7 @@ signal = ig_abc_sim(N1:N2,3);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*param.glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';

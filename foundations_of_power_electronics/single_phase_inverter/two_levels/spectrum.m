@@ -1,12 +1,13 @@
+% 2026-09-30: tc and Nc taken from param.glb_time of init_model.m (Rev. 01); the flat tc / Nc were never defined by any init.
 close all;
-N1=Nc-floor(200e-3/tc);
-N2=Nc;
+N1=param.glb_time.Nc-floor(200e-3/param.glb_time.tc);
+N2=param.glb_time.Nc;
 signal = ig_abc_sim(N1:N2,1);
 time = time_tc_sim(N1:N2);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*param.glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -39,7 +40,7 @@ signal = ig_abc_sim(N1:N2,2);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*param.glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -71,7 +72,7 @@ signal = ig_abc_sim(N1:N2,3);
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*param.glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
