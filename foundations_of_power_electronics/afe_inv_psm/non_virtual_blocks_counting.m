@@ -1,4 +1,4 @@
-% clc
+clc
 
 mdl = 'afe_inv_psm_param.slx';
 load_system(mdl);
