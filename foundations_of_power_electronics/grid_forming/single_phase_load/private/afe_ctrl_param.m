@@ -11,7 +11,8 @@ function ctrl = afe_ctrl_param(ts, omega_base)
 %     ixi_pos_ref_lim   [pu] saturation of the current reference of the voltage magnitude loop
 %     kp_udc_ctrl, ki_udc_ctrl
 %                       gains of the legacy |ug|^2 magnitude loop (block u_grid_mag_ctrl, commented out);
-%                       the dq voltage loop gains kp_ug_ctrl, ki_ug_ctrl are set in init_model.
+%                       the dq voltage loop gains kp_ug_ctrl, ki_ug_ctrl and the resonant term of the current
+%                       controller res_pi (private/resonant_pi_param) are set in init_model.
 %
 %   The FHT is the same observer as in the library: A = [0 1; -w^2 -delta*w], C = [1 0], discretized
 %   with forward Euler, observer poles at [-1 -4]*omega_base mapped with exp(p*ts). The gains are computed

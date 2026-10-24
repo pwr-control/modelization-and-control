@@ -2,8 +2,8 @@
 %[text] Initialization of grid_forming_dq.slx: three-phase bridge with LCL filter (AFE2 of the layout 2),
 %[text] battery on the DC link, Dyg transformer and RL load on the formed grid. All parameters are local:
 %[text] the numbers are in this script and the parameter functions are in ./private (timing_param,
-%[text] afe_hw_param, afe_ctrl_param, three_phase_transformer_param, device_igbt_param, battery_param,
-%[text] check_model_param_refs). Nothing is read from library/setup_files any more; the library is still
+%[text] afe_hw_param, afe_ctrl_param, resonant_pi_param, three_phase_transformer_param, device_igbt_param,
+%[text] battery_param, check_model_param_refs). Nothing is read from library/setup_files any more; the library is still
 %[text] needed for the Simulink/Simscape blocks and for the C sources of the C-Caller blocks.
 %[text] Run it from this folder (the functions of ./private are visible only to the files of this folder).
 
@@ -177,6 +177,31 @@ param.afe.dq_vector_pi.design = d;
 fprintf('Current loop: kp_i = %.2f, ki_i = %.0f 1/s -> crossover %.0f Hz with voltage feed-forward (PI zero at %.0f Hz); %.0f Hz would need kp_i = %.2f, ki_i = %.0f\n', ...
     param.afe.dq_vector_pi.kp_i, param.afe.dq_vector_pi.ki_i, d.f_cross_ff, d.f_zero, d.f_cross_target, d.kp_i_target, d.ki_i_target);
 clear d
+%[text] ### Resonant term of the dq current controller (negative sequence)
+% blocks current_ctrl/dq_vector_pi/pi_d/rpi_phase_d and pi_q/rpi_phase_q: per axis, in parallel with the PI,
+% R(s) = ki_rpi*s/(s^2 + 2*delta_res*w_res*s + w_res^2) as discrete state space x(k+1) = Aresd*x + Bresd*ki_rpi*e,
+% y = Cresd*x (fields read by the model: ki_rpi, Aresd, Bresd, Cresd; see private/resonant_pi_param).
+% Resonance at 2*omega_grid: the negative-sequence current reference of the negative-sequence voltage loop
+% (dq_neg_vector_pi, rotated by -2*theta into the positive frame) is a sinusoid at 2*f_grid in the positive frame.
+% The PI alone follows it with a large error (closed-loop gain 0.44 at 100 Hz with the load of the model, the
+% converter sees the load impedance: no voltage feed-forward); with the resonant term the (delayed) measured
+% current follows it exactly, the actual current leads the reference by one step (2*w_grid*ts = 4.5 deg).
+% Gain: ki_rpi = 2*ki_i, the rule of grid_forming_ctrl_ver_ii (kr = 2 ki,i = 70 1/s). Linear check (2026-10-24,
+% complex space-vector model in dq: LCL, transformer, load of the model, one-step acquisition delay, ZOH):
+% resonant closed-loop poles at -19 1/s (-100 Hz, negative sequence) and -7 1/s (+100 Hz), 2 % settling of a
+% negative-sequence current reference step 190 ms (35 1/s: 380 ms, 140 1/s: 95 ms); the LCL margins do not
+% change (min |1 + L| 0.667 versus 0.673 with the PI alone, same values up to ki_rpi = 210 1/s). With the
+% negative-sequence voltage loop (kp_ug_ctrl/ki_ug_ctrl) a 0.3 pu negative-sequence load current gives a
+% negative-sequence voltage peak of 0.14 pu, zero in 330 ms (0.15 pu permanent without that loop).
+% Damping: delta_res = 0 (ideal resonant, poles on the unit circle, as in the C implementation of the proposal).
+% A small delta_res (0.01 - 0.02) would limit the peak gain to ki_rpi/(2*delta_res*w_res) (3 - 6 pu/pu, i.e. a
+% 15 - 25 % tracking error at 100 Hz, recovered by the integrator of the voltage loop) and let the term forget
+% the error accumulated while the vector limiter clips (the rpi_phase_* subsystems have no clip handling).
+% Discretization at ts_afe, the rate of the triggered afe_control subsystem (ts_inv, used by the integrator gains
+% of the same blocks, has the same value in this model). Exact ZOH: the forward Euler form of the library gives
+% |z| = 1.0031 (+25 1/s) at 100 Hz and ts = 125 us, more than the loop damping of the +100 Hz mode: unstable.
+param.afe.ctrl.res_pi = resonant_pi_param(param.glb_time.ts_afe, 2*param.grid.emu.omega_grid_nom, ...
+    2*param.afe.dq_vector_pi.ki_i, 0);
 %[text] ### Common-mode reference
 param.afe.ref.u_cm_comp_mod1 = 0;                   % ugamma of the space vector modulator (0: standard SVPWM, k_offset = 0.5)
 %[text] ### Module behaviour (clock mismatch, PWM phase shift)
