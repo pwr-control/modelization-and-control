@@ -49,8 +49,9 @@ fprintf('%s init: local parameter functions in private/: %s\n', model, strjoin({
 clear local_functions library_path
 %[text] ## Simulation
 param.sim.simlength = 0.4;                  % [s] model StopTime
+% param.sim.tc = 1e-7;               
 param.sim.tc = 1/(2*3e3)/200;               % [s] 0.833 us: logging base, model MaxStep (ode23tb) and step of the Simscape
-                                            %     local solver (glb_time.tc): ts/200 at fpwm = 3 kHz with double update
+%     local solver (glb_time.tc): ts/200 at fpwm = 3 kHz with double update
 param.sim.use_thermal_model = 1;            % IGBT bridge with the simple two-thermal-port loss model
 param.sim.nonlinear_iterations = 3;         % Simscape Solver Configuration
 if param.sim.use_thermal_model
