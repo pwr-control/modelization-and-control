@@ -281,6 +281,20 @@ Recurring building blocks across the projects:
 
 ---
 
+## Non-isolated DC-DC converters
+
+### `interleaved_buck_converter`
+- Three-leg interleaved buck, 750 V battery to a 400 V bus, 250 kW; fPWM = 4 kHz per leg with double
+  update (control at 8 kHz, 12 kHz on the output), 1 mH per leg, 3.6 mF output capacitor, resistive
+  load; IGBT bridge with the thermal model used as three buck legs.
+- Output voltage PI → total current reference → one PI per leg (reference `i_ref/3`, inherent current
+  sharing), each leg current sampled at the extremes of its own carrier, duties of legs 2 and 3 loaded
+  at their own extremes; gains from crossover targets (`private/buck_ctrl_param.m`), linear check in
+  `claude_analysis/`.
+- Two models from one init: `interleaved_buck.slx` (discrete blocks) and `interleaved_buck_compact.slx`
+  (the compact block `interleaved_buck_3legs_mod1` of the library, built by
+  `build_interleaved_buck_compact.m`). See the README of the folder.
+
 ## Rectifiers
 
 ### `thyristor_based_models`
