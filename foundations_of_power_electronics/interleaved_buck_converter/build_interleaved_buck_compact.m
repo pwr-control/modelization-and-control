@@ -42,8 +42,7 @@ function build_interleaved_buck_compact()
         load_system(model);
     end
     set_param(model, 'StopTime', 'param.sim.simlength', 'SolverType', 'Variable-step', 'Solver', 'ode23tb', ...
-        'MaxStep', 'param.glb_time.tc', 'ZeroCrossControl', 'DisableAll', 'SaveTime', 'off', 'SaveOutput', 'off', ...
-        'SimscapeLogType', 'none');
+        'MaxStep', 'param.glb_time.tc', 'ZeroCrossControl', 'DisableAll', 'SaveTime', 'off', 'SaveOutput', 'off');
 
     % ---- converter: the compact block with param.buck as mask struct
     buck = add_once(model, 'interleaved_buck_mod1', 'interleaved_buck_3legs/interleaved_buck_3legs_mod1', 'Position', [330 95 510 215]);
@@ -71,6 +70,11 @@ function build_interleaved_buck_compact()
         'LocalSolverSampleTime', 'param.glb_time.tc', 'DoFixedCost', 'on', 'MaxNonlinIter', 'param.sim.nonlinear_iterations');
     rload = add_once(model, 'R_load', 'fl_lib/Electrical/Electrical Elements/Resistor', 'Position', [600 130 640 170], 'Orientation', 'down');
     set_param(rload, 'R', 'param.load.R_load');
+    % Simscape logging off: a model created with new_system gets its Simscape parameters (SimscapeLogType, ...)
+    % only once it holds Simscape blocks, so the parameter is set here and only if it exists
+    if isfield(get_param(model, 'ObjectParameters'), 'SimscapeLogType')
+        set_param(model, 'SimscapeLogType', 'none');
+    end
     clk  = add_once(model, 'Clock', 'simulink/Sources/Clock', 'Position', [250 160 270 180]);
     twm  = add_once(model, 'meas_buck', 'simulink/Sinks/To Workspace', 'Position', [560 220 640 250]);
     set_param(twm, 'VariableName', 'meas_buck', 'SampleTime', 'param.glb_time.tc', 'Decimation', 'param.glb_time.decimation_tc', 'SaveFormat', 'Timeseries');
