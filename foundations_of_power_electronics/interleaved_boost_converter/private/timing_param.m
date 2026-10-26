@@ -1,8 +1,8 @@
 function glb_time = timing_param(t)
-%TIMING_PARAM  Timing data of interleaved_buck (local replacement of timing_setup of the library).
+%TIMING_PARAM  Timing data of interleaved_boost (local replacement of timing_setup of the library).
 %
 %   glb_time = timing_param(t), with t = param.time:
-%     t.fpwm, t.trgo             PWM frequency of the buck legs [Hz] and double update flag (1: two control
+%     t.fpwm, t.trgo             PWM frequency of the boost legs [Hz] and double update flag (1: two control
 %                                steps per carrier period, at the bottom and at the top of carrier 1)
 %     t.fpwm_dab, t.trgo_dab     sample time ts_dab of the battery state-of-charge estimator (legacy name of
 %                                the shared template, no DAB here)
@@ -12,11 +12,11 @@ function glb_time = timing_param(t)
 %     t.delay_pwm                [s] PWM delay used by the modulator model B (0 here)
 %     t.dead_time                [s]
 %
-%   Fields read by interleaved_buck.slx: fPWM_AFE, TRGO_AFE_double_update, dead_time_AFE, ts_afe, ts_dab, tc,
+%   Fields read by interleaved_boost.slx: fPWM_AFE, TRGO_AFE_double_update, dead_time_AFE, ts_afe, ts_dab, tc,
 %   decimation_tc, Nc. The names keep the "AFE" of the library object (the clock domain of the converter) so
 %   that the blocks and the scripts written for it keep working; there is one converter clock domain only.
 
-    % converter domain (the buck legs)
+    % converter domain (the boost legs)
     glb_time.fPWM_AFE = t.fpwm;
     glb_time.tPWM_AFE = 1/t.fpwm;
     glb_time.TRGO_AFE_double_update = t.trgo;

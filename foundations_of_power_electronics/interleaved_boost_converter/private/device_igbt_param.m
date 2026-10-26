@@ -3,12 +3,12 @@ function dev = device_igbt_param(device, fpwm, udc)
 %
 %   dev = device_igbt_param(device, fpwm, udc)
 %     device : name of the data set
-%              - 'infineon_FF450R17ME4' (1700 V / 450 A EconoDUAL 3, the module of the 660 V -> 200 V, 750 A
+%              - 'infineon_FF450R17ME4' (1700 V / 450 A EconoDUAL 3, the module of the 200 V -> 660 V, 750 A
 %                version) or any other data set of library/setup_files/semiconductor_devices_data (script
 %                in devices_source_dataname or its alias, e.g. 'infineon_IGBT_FF450R17ME4'): read with
 %                device_data_load of the library, which must be on the path (init_model adds it);
 %              - 'mitsubishi_CM1200DW_34T' (1700 V, as in the legacy init) or 'infineon_FF1800R12IE5'
-%              (1200 V, the module of the 750 V -> 400 V version): the two data sets embedded below.
+%              (1200 V, the module of the 750 V -> 400 V buck): the two data sets embedded below.
 %     fpwm   : [Hz] switching frequency, used for the ZVS snubber
 %     udc    : [V]  DC-link voltage, used for the ZVS snubber
 %
@@ -18,7 +18,7 @@ function dev = device_igbt_param(device, fpwm, udc)
 %   Same names and derived quantities as the library class device_igbt_setting. The output keeps every field of
 %   the data set (the library scripts add tables, the Foster networks and an igbt_dyn_param struct in dev.extra
 %   style, here left as fields): numeric, except name and type, which the init removes before storing the struct
-%   in param.buck (mask struct of the compact block).
+%   in param.boost (mask struct of the compact block).
 
     switch lower(device)
         case {'mitsubishi_cm1200dw_34t', 'mitsubishi_igbt_cm1200dw_34t'}

@@ -284,16 +284,32 @@ Recurring building blocks across the projects:
 ## Non-isolated DC-DC converters
 
 ### `interleaved_buck_converter`
-- Three-leg interleaved buck, 750 V battery to a 400 V bus, 250 kW; fPWM = 4 kHz per leg with double
-  update (control at 8 kHz, 12 kHz on the output), 1 mH per leg, 3.6 mF output capacitor, resistive
-  load; IGBT bridge with the thermal model used as three buck legs.
+- Three-leg interleaved buck, 660 V battery to a 200 V bus, 750 A (150 kW, 250 A per leg); Infineon
+  FF450R17ME4 half bridges with the thermal model used as three buck legs, fPWM = 3 kHz per leg with
+  double update (control at 6 kHz, 9 kHz on the output), 0.8 mH per leg, 7.5 mF output capacitor,
+  7.2 mF DC link, resistive load.
 - Output voltage PI → total current reference → one PI per leg (reference `i_ref/3`, inherent current
   sharing), each leg current sampled at the extremes of its own carrier, duties of legs 2 and 3 loaded
-  at their own extremes; gains from crossover targets (`private/buck_ctrl_param.m`), linear check in
-  `claude_analysis/`.
+  at their own extremes; gains from crossover targets (`private/buck_ctrl_param.m`, 225 Hz and 60 Hz),
+  linear check in `claude_analysis/`.
 - Two models from one init: `interleaved_buck.slx` (discrete blocks) and `interleaved_buck_compact.slx`
   (the compact block `interleaved_buck_3legs_mod1` of the library, built by
   `build_interleaved_buck_compact.m`). See the README of the folder.
+
+### `interleaved_boost_converter`
+- The hardware of the interleaved buck with the power flow reversed: 200 V battery on the inductor
+  side, 660 V DC link with the load, 750 A of input current (150 kW, 250 A per leg, duty of the lower
+  switch 0.697); same FF450R17ME4 half bridges, 3 kHz per leg with double update, 0.8 mH per leg,
+  7.5 mF across the battery, 7.2 mF DC link.
+- DC-link voltage PI → total input current reference → one PI per leg on the leg current (sampled at
+  the extremes of its own carrier) → duty of the lower switch, `1 - d` to the unchanged modulator of
+  the buck; gains from crossover targets (`private/boost_ctrl_param.m`: 225 Hz for the current loops,
+  the same integrator plant as the buck; 40 Hz for the voltage loop, a quarter of the right-half-plane
+  zero of the boost at nominal load, 157 Hz), reference ramp from the precharged link; linear and
+  nonlinear check in `claude_analysis/`.
+- Two models from one init: `interleaved_boost.slx` (discrete blocks) and `interleaved_boost_compact.slx`
+  (the compact block `interleaved_boost_3legs_mod1` of the library, built by
+  `build_interleaved_boost_compact.m`). See the README of the folder.
 
 ## Rectifiers
 
