@@ -25,14 +25,17 @@ import os
 here = os.path.dirname(os.path.abspath(__file__))
 
 # ------------------------------------------------------------------ parameters (init_model.m)
-udc = 750.0; u_out = 400.0; pwr = 250e3; N = 3
+# 660 V battery -> 200 V, 750 A (150 kW), three legs at 3 kHz (double update: ts = 166.7 us, the output sees 9 kHz),
+# 0.8 mH per leg, 7.5 mF of output capacitance (2026-10-26; the 750 V -> 400 V, 250 kW, 4 kHz version had 1 mH,
+# 3.6 mF, 300 Hz current loops). Numbers of init_model.m.
+udc = 660.0; u_out = 200.0; pwr = 150e3; N = 3
 ibez = pwr/u_out; ubez = u_out; R_load = u_out**2/pwr
-fpwm = 4e3; ts = 1/(2*fpwm)
-L = 1e-3; RL = 8e-3; C = 3.6e-3; RC = 2e-3/3
-f_c_i = 300.0; f_c_u = 60.0                      # crossover targets (current loops, voltage loop at nominal load)
+fpwm = 3e3; ts = 1/(2*fpwm)
+L = 0.8e-3; RL = 6e-3; C = 7.5e-3; RC = 3e-3/3
+f_c_i = 225.0; f_c_u = 60.0                      # crossover targets (current loops, voltage loop at nominal load)
 kp_i = 2*np.pi*f_c_i*L*ibez/udc; ki_i = kp_i*2*np.pi*f_c_i/5
 k_u = ibez/(C*ubez)                              # [1/s] total current (pu) -> u_out (pu), capacitor alone
-a_load = 1/(R_load*C)                            # [1/s] corner of the resistive load at nominal power (69 Hz)
+a_load = 1/(R_load*C)                            # [1/s] corner of the resistive load at nominal power (80 Hz)
 k_i = udc/(L*ibez)                               # [1/s] duty -> leg current (pu)
 k_v = ubez/(L*ibez)                              # [1/s] output voltage (pu) -> leg current slope
 # voltage loop design (same closed form as private/buck_ctrl_param.m of the model): at s = j*w_u the plant seen by the
@@ -135,6 +138,16 @@ L_u_l = pi_u*T_i_l*Gu_l/N
 margins(pi_i*G_cm_l/z, w, "current loop, common mode, leg 1, 5 % load")
 margins(pi_i*G_cm_l/z**2, w, "current loop, common mode, legs 2-3, 5 % load")
 margins(L_u_l, w, "u_out loop, 5 % load")
+# no load: the LC resonance (f0) is damped by the current loops only; it must stay below f_c_i/2 (see buck_ctrl_param)
+Ad_n, Bdz_n, Bdl_n, Cd_n = plant(1e6*R_load)
+H_n = freq_resp_ss(Ad_n, Bdz_n, Cd_n, w)
+G_cm_n = H_n[:, 0, :].sum(axis=1)
+T_i_n = pi_i*G_cm_n/z/(1 + pi_i*G_cm_n/z)
+Gu_n = H_n[:, N, :].sum(axis=1)/G_cm_n
+L_u_n = pi_u*T_i_n*Gu_n/N
+margins(pi_i*G_cm_n/z, w, "current loop, common mode, leg 1, no load")
+margins(pi_i*G_cm_n/z**2, w, "current loop, common mode, legs 2-3, no load")
+margins(L_u_n, w, "u_out loop, no load")
 
 # ------------------------------------------------------------------ time simulation of the full discrete control
 def simulate(t_end=0.25, t_load=0.15, load_step=0.2, slew=1/0.05, mode_delay=True):
@@ -220,7 +233,7 @@ def ripple(phi, D):
     r = np.where(off, np.sign(phi)*(0.5 - (np.abs(phi) - np.pi*D)/(2*np.pi*(1-D))), r)
     return r
 print("sampling at the extremes of carrier 1 only (the first version of the model):")
-for Dx in [0.4, 0.533, 0.8]:
+for Dx in [0.303, 0.4, 0.533, 0.8]:
     e2 = ripple(2*np.pi/3, Dx); e3 = ripple(4*np.pi/3, Dx)
     print(f"  D = {Dx:.3f}: sample of leg 2 off by {e2:+.2f} dI, leg 3 by {e3:+.2f} dI ({e2*dI:+.0f} A, {e3*dI:+.0f} A), "
           f"sum of the three legs off by {e2+e3:+.2f} dI (the ripple is odd about the pulse centre: the sum is exact, "
