@@ -1,17 +1,24 @@
 function dev = device_igbt_param(device, fpwm, udc)
-%DEVICE_IGBT_PARAM  IGBT data set of the bridge (local replacement of device_igbt_setup / device_igbt_setting
-%   and of the data scripts of library/setup_files/semiconductor_devices_data).
+%DEVICE_IGBT_PARAM  IGBT data set of the bridge (local replacement of device_igbt_setup / device_igbt_setting).
 %
 %   dev = device_igbt_param(device, fpwm, udc)
-%     device : 'mitsubishi_CM1200DW_34T' (1700 V, as in the legacy init) or 'infineon_FF1800R12IE5'
-%              (1200 V, the module of the proposal)
+%     device : name of the data set
+%              - 'infineon_FF450R17ME4' (1700 V / 450 A EconoDUAL 3, the module of the 660 V -> 200 V, 750 A
+%                version) or any other data set of library/setup_files/semiconductor_devices_data (script
+%                in devices_source_dataname or its alias, e.g. 'infineon_IGBT_FF450R17ME4'): read with
+%                device_data_load of the library, which must be on the path (init_model adds it);
+%              - 'mitsubishi_CM1200DW_34T' (1700 V, as in the legacy init) or 'infineon_FF1800R12IE5'
+%              (1200 V, the module of the 750 V -> 400 V version): the two data sets embedded below.
 %     fpwm   : [Hz] switching frequency, used for the ZVS snubber
 %     udc    : [V]  DC-link voltage, used for the ZVS snubber
 %
 %   Fields read by the mask of afe_dq_mod1/afe/three_phase_inverter_with_igbt_simple_2th:
 %     Vce_sat, Vdon_diode, Vth, Eon, Eoff, Erec, Ion_sw_losses, Voff_sw_losses, Rce_on, Rdon_diode,
 %     Rth_switch_JH, Rth_diode_JH, JunctionTermalMass, Csnubber_zvs, Rsnubber_zvs
-%   Same names and derived quantities as the library class device_igbt_setting.
+%   Same names and derived quantities as the library class device_igbt_setting. The output keeps every field of
+%   the data set (the library scripts add tables, the Foster networks and an igbt_dyn_param struct in dev.extra
+%   style, here left as fields): numeric, except name and type, which the init removes before storing the struct
+%   in param.buck (mask struct of the compact block).
 
     switch lower(device)
         case {'mitsubishi_cm1200dw_34t', 'mitsubishi_igbt_cm1200dw_34t'}
@@ -19,7 +26,7 @@ function dev = device_igbt_param(device, fpwm, udc)
         case {'infineon_ff1800r12ie5', 'infineon_igbt_ff1800r12ie5', 'infineon_ff1800r12ie5p'}
             p = infineon_FF1800R12IE5();
         otherwise
-            error('device_igbt_param:unknown', 'Unknown IGBT data set "%s".', device);
+            p = library_dataset(device);
     end
 
     dev = p;
@@ -29,9 +36,33 @@ function dev = device_igbt_param(device, fpwm, udc)
     dev.Rsnubber_zvs = 1/(dev.Csnubber_zvs*fpwm)/5;                     % [Ohm]
 
     fprintf('IGBT data set: %s (%s)\n', dev.name, dev.type);
-    fprintf('Vce_sat = %.2f V | Eon+Eoff = %.0f mJ at %.0f V / %.0f A | Rth_switch_JH = %.1f mK/W\n', ...
-        dev.Vce_sat, (dev.Eon + dev.Eoff)*1e3, dev.Voff_sw_losses, dev.Ion_sw_losses, dev.Rth_switch_JH*1e3);
+    fprintf('Vce_sat = %.2f V + %.2f mOhm | Eon+Eoff = %.0f mJ, Erec = %.0f mJ at %.0f V / %.0f A | Rth_switch_JH = %.1f mK/W, Rth_diode_JH = %.1f mK/W\n', ...
+        dev.Vce_sat, dev.Rce_on*1e3, (dev.Eon + dev.Eoff)*1e3, dev.Erec*1e3, dev.Voff_sw_losses, dev.Ion_sw_losses, ...
+        dev.Rth_switch_JH*1e3, dev.Rth_diode_JH*1e3);
     fprintf('---------------------------\n');
+end
+
+function p = library_dataset(device)
+% Data set script of library/setup_files/semiconductor_devices_data, read with device_data_load (the script runs
+% in the workspace of that function and its variables become the fields of p). The names of the data set,
+% device_name and device_type, become name and type as in the embedded data sets; the fields required by the
+% bridge mask are checked here, so that a data set in another format fails at init time and not in the model.
+    if exist('device_data_load', 'file') ~= 2
+        error('device_igbt_param:library', ...
+              ['Data set "%s" is not embedded in device_igbt_param and device_data_load of the library is not on the ' ...
+               'path: add library/setup_files to the path (init_model adds C:\\github\\library).'], device);
+    end
+    p = device_data_load(device);
+    p.name = p.device_name;
+    p.type = p.device_type;
+    p = rmfield(p, {'device_name', 'device_type'});
+    required = {'Vth', 'Rce_on', 'Vce_sat', 'Vdon_diode', 'Rdon_diode', 'Eon', 'Eoff', 'Erec', 'Voff_sw_losses', ...
+                'Ion_sw_losses', 'JunctionTermalMass', 'Rtim', 'Rth_switch_JC', 'Rth_switch_CH', 'Rth_diode_JC', ...
+                'Rth_diode_CH', 'Lstray_module', 'Irr', 'Csnubber', 'Rsnubber'};
+    missing = required(~isfield(p, required));
+    if ~isempty(missing)
+        error('device_igbt_param:missingField', 'Data set %s: missing field(s) %s', p.name, strjoin(missing, ', '));
+    end
 end
 
 function p = mitsubishi_CM1200DW_34T()

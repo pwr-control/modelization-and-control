@@ -11,6 +11,14 @@ function ctrl = buck_ctrl_param(hw, ts, f_c_i, f_c_u)
 %   x(k+1) = x(k) + ki*ts*e(k), y = kp*e(k) + x(k+1), so the blocks read ki*ts) and the struct design with
 %   the figures below.
 %
+%   Sizing condition checked here (warning when violated): the LC resonance of the common mode,
+%   f0 = 1/(2*pi*sqrt(L/n_legs*Cout)), must stay below f_c_i/2. Inside the current loops the resonance is
+%   damped by the loops at any load; above them the common-mode loop gain crosses 0 dB a second time on the
+%   undamped resonance at light load (2026-10-26 check with Cout sized on the ripple only, f0 = 1.5*f_c_i:
+%   14 deg of phase margin at no load on legs 2-3). The voltage plant also needs the load corner
+%   1/(2*pi*R_load*Cout) near f_c_u, otherwise the plant gain at f_c_u changes with the load by the ratio of
+%   the two frequencies and no PI fits both no load and nominal load.
+%
 %   Per-leg current loop (blocks dcdc_ctrl/buck_control/current_ctrl/pi/PId, one PI per leg on the leg current in
 %   pu of ibez with the reference i_ref/n_legs): the plant from the duty d_k of leg k to the leg current, with the
 %   output voltage as a disturbance, is L di_k/dt = d_k*udc - u_out - RL*i_k, i.e. in pu an integrator of gain
@@ -65,16 +73,26 @@ function ctrl = buck_ctrl_param(hw, ts, f_c_i, f_c_u)
     d.pm_u = 180 + angle((ctrl.kp_u + ctrl.ki_u/s_u)*T_i*Zc)*180/pi;   % [deg] estimate at nominal load
     d.f_c_u_noload = ctrl.kp_u*k_u*abs(T_i)/2/pi;    % [Hz] estimate without load
     d.f_nyquist = 1/(2*ts);                          % [Hz]
+    d.f0 = 1/(2*pi*sqrt(hw.L/hw.n_legs*hw.Cout));    % [Hz] LC resonance of the common mode (L/n_legs with Cout)
+    d.zeta_f0 = sqrt(hw.L/hw.n_legs/hw.Cout)/(2*R_load);   % damping of the resonance by the nominal load
     ctrl.design = d;
 
     fprintf('Current loop (per leg): kp_i = %.3f pu/pu, ki_i = %.0f 1/s -> crossover %.0f Hz, PI zero %.0f Hz, phase margin about %.0f deg (leg 1, 1.5 ts) / %.0f deg (legs 2-3, 2.5 ts)\n', ...
         ctrl.kp_i, ctrl.ki_i, f_c_i, d.f_zero_i, d.pm_leg1, d.pm_leg23);
-    fprintf('Voltage loop: kp_u = %.3f pu/pu, ki_u = %.1f 1/s -> crossover %.0f Hz at nominal load (load corner %.0f Hz, inner loop gain %.2f there), phase margin about %.0f deg, PI zero %.0f Hz, about %.0f Hz without load\n', ...
-        ctrl.kp_u, ctrl.ki_u, f_c_u, d.f_load, d.T_i_at_f_c_u, d.pm_u, d.f_zero_u, d.f_c_u_noload);
+    fprintf('Voltage loop: kp_u = %.3f pu/pu, ki_u = %.1f 1/s -> crossover %.0f Hz at nominal load (load corner %.0f Hz, inner loop gain %.2f there), phase margin about %.0f deg, PI zero %.0f Hz, about %.0f Hz without load; LC resonance %.0f Hz (zeta %.2f at nominal load)\n', ...
+        ctrl.kp_u, ctrl.ki_u, f_c_u, d.f_load, d.T_i_at_f_c_u, d.pm_u, d.f_zero_u, d.f_c_u_noload, d.f0, d.zeta_f0);
     if f_c_i > d.f_nyquist/10
         warning('buck_ctrl_param: current loop crossover %.0f Hz above fs/20 = %.0f Hz, the delays leave little margin', f_c_i, d.f_nyquist/10);
     end
-    if d.f_c_u_noload > f_c_i/2.5
-        warning('buck_ctrl_param: voltage loop crossover without load (%.0f Hz) less than a factor 2.5 below the current loops (%.0f Hz)', d.f_c_u_noload, f_c_i);
+    if d.f0 > f_c_i/2
+        warning('buck_ctrl_param: LC resonance of the common mode (%.0f Hz) above f_c_i/2 = %.0f Hz: the current loops do not damp it at light load, increase Cout to %.2f mF or more', ...
+            d.f0, f_c_i/2, hw.n_legs*(2/(2*pi*f_c_i))^2/hw.L*1e3);
+    end
+    if d.f_load > 2*f_c_u
+        warning('buck_ctrl_param: load corner (%.0f Hz) more than twice the voltage loop crossover (%.0f Hz): the voltage plant gain changes with the load by about %.1fx, the loop designed at nominal load is faster without load', ...
+            d.f_load, f_c_u, d.f_load/f_c_u);
+    end
+    if d.f_c_u_noload > f_c_i/2
+        warning('buck_ctrl_param: voltage loop crossover without load (%.0f Hz, estimate) less than a factor 2 below the current loops (%.0f Hz)', d.f_c_u_noload, f_c_i);
     end
 end
