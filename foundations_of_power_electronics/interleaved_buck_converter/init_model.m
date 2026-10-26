@@ -52,7 +52,7 @@ if param.sim.use_thermal_model
 end
 param.sim.check_param_refs = true;          % at the end: check that every param.* read by the model exists
 %[text] ## Timing
-param.time.fpwm = 4e3;                              % [Hz] PWM frequency of each leg (12 kHz effective on the output)
+param.time.fpwm = 3e3;                              % [Hz] PWM frequency of each leg (12 kHz effective on the output)
 param.time.trgo = 1;                                % double update: control at 2*fpwm, at the bottom and top of carrier 1
 param.time.dead_time = 3e-6;                        % [s]
 param.time.t_measure = 0.4;                         % [s] logging window
@@ -70,9 +70,9 @@ param.glb_time = timing_param(param.time);
 % 750 V battery to a 400 V DC bus, 250 kW: 625 A total, 208 A per leg, duty 0.533. Bases of the pu signals:
 % ubez = u_out_nom (output voltage), ibez = total nominal current (a leg carries 1/3 pu).
 param.buck.hw.n_legs = 3;
-param.buck.hw.udc_nom = 750;                        % [V] DC link = battery
-param.buck.hw.u_out_nom = 400;                      % [V] output
-param.buck.hw.pwr_nom = 250e3;                      % [W]
+param.buck.hw.udc_nom = 660;                        % [V] DC link = battery
+param.buck.hw.u_out_nom = 200;                      % [V] output
+param.buck.hw.pwr_nom = 380e3;                      % [W]
 param.buck.hw.ubez = param.buck.hw.u_out_nom;       % [V] base of the output voltage
 param.buck.hw.ibez = param.buck.hw.pwr_nom/param.buck.hw.u_out_nom;    % [A] 625 A, base of all currents (total)
 
