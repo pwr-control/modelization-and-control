@@ -20,20 +20,30 @@ quantities exchanged with the grid are measured, and the basic theory behind net
   model (12 and 16 bit).
 
 ### `power_system`
-- Grid model alone, as a test bench for the network side: 690 V / 1 MVA grid emulator (library
-  block `three_phase_voltage_source_with_frt_emulator`: ideal source with FRT dip generator and
-  second-order 50 Hz filters) behind an explicit equivalent grid impedance, a Dyn11 transformer
-  built from three masked `saturable_single_phase_transformer_2` blocks (ph1 across Ua–Ub, ph2
-  Ub–Uc, ph3 Uc–Ua, secondary star with grounded neutral, `enable_sat` switchable), IEC power
-  meters on both sides and the moving-average analysis filters. The three-phase R-L load of the root
-  is commented out; no converter is in this model (the converter benches are in
-  `foundations_of_power_electronics` and `weak_grid_analysis`).
+- Grid model alone, as a test bench for the network side and for the three-phase transformer
+  components of the library: 690 V / 1 MVA grid emulator (library block
+  `three_phase_voltage_source_with_frt_emulator`: ideal source with FRT dip generator and
+  second-order 50 Hz filters) behind an explicit equivalent grid impedance, the transformer of the
+  emulator `3ph_Dyg/saturable_transformer_Dyn1/Dd/T1` (Simscape language block
+  `three_phase_transformer.transformer_Dd` of the library, `param.grid.emu.trafo.pu.*`, vector group
+  from `param.grid.connection`), a second transformer `.../Dyn/T2`
+  (`three_phase_transformer.transformer_Dyn`, `param.load.trafo.pu.*`) hung on the 690 V bus at no
+  load with its star side on the bus and the neutral as electrical reference, IEC power meters on
+  both sides and the moving-average analysis filters. Commented out in the model: the previous Dyn11
+  made of three masked `saturable_single_phase_transformer_2` blocks (ph1 across Ua–Ub, ph2 Ub–Uc,
+  ph3 Uc–Ua, secondary star with grounded neutral, `enable_sat` switchable; set
+  `param.grid.connection = 'Dyn11'` to use it again) and the three-phase R-L load of the root. No
+  converter is in this model (the converter benches are in `foundations_of_power_electronics` and
+  `weak_grid_analysis`). The library block `three_phase_transformer_lib.slx` must be built
+  (`ssc_build three_phase_transformer` from `library/foundation/electrical_machines`).
 - Local parametrization (2026-10-26): `init_model.m` builds the single struct `param`
   (`param.sim`, `param.time`, `param.glb_time`, `param.grid` with `param.grid.emu`, `.trafo`,
   `.frt`, `param.load`) with the functions of `private/` — `timing_param` (clock domain and
-  logging base `tc`), `three_phase_transformer_param` (nameplate → coil data: for the delta coil
-  `Rfe1` and the saturation flux `psi` are referred to the coil voltage, i.e. the line voltage,
-  where the library setup used the phase voltage), `grid_emulator_param` (bases, pu references,
+  logging base `tc`), `three_phase_transformer_param` (nameplate and vector group string → coil data
+  for the single-phase-transformer models and `pu` data for the library blocks: `r`, `l`, `lm`,
+  `lm0`, `rfe`, `clock`; for the delta coil `Rfe1` and the saturation flux `psi` are referred to the
+  coil voltage, i.e. the line voltage, where the library setup used the phase voltage),
+  `grid_emulator_param` (bases, pu references,
   state space of the 50 Hz filters), `grid_fault_param` (the grid-code test catalogue of the old
   `grid_fault_generator`, two-phase dips through the VDE/FGW asymmetric construction), and
   `check_model_param_refs` which lists every workspace reference of the model that is not a

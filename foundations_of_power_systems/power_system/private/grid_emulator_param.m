@@ -3,10 +3,10 @@ function emu = grid_emulator_param(g)
 %   library class grid_three_phase_emulator, same field names).
 %
 %   emu = grid_emulator_param(g), with g = param.grid:
-%     g.name, g.delta_star, g.grid_nominal_power [W], g.application_voltage [V]
+%     g.name, g.connection, g.grid_nominal_power [W], g.application_voltage [V]
 %     g.us1, g.us2 [V] transformer rated line-to-line voltages, g.fgrid [Hz]
 %     g.eq_grid_inductance [H], g.eq_grid_resistance [Ohm]   series impedance of the voltage sources
-%     g.eta, g.ucc, g.i1m, g.p_iron, g.n1, g.n2, g.core_area, g.core_length, g.mur, g.enable_sat
+%     g.eta, g.ucc, g.i1m, g.p_iron, g.lm0_pu, g.n1, g.n2, g.core_area, g.core_length, g.mur, g.enable_sat
 %                                                           transformer data (three_phase_transformer_param)
 %     g.up_xi_pu_ref, g.up_eta_pu_ref, g.un_xi_pu_ref, g.un_eta_pu_ref   [pu] positive and negative
 %                                                           sequence voltage references of the emulator
@@ -26,7 +26,6 @@ function emu = grid_emulator_param(g)
 %   model does not use).
 
     emu.name = g.name;
-    emu.delta_star = g.delta_star;
     emu.pwr_nom = g.grid_nominal_power;
     emu.application_voltage = g.application_voltage;
     emu.us_primary_nom = g.us1;                                             % [V] line-to-line
@@ -40,8 +39,12 @@ function emu = grid_emulator_param(g)
     emu.eq_grid_inductance = g.eq_grid_inductance;                          % [H]
     emu.eq_grid_resistance = g.eq_grid_resistance;                          % [Ohm]
 
-    emu.trafo = three_phase_transformer_param(g.name, g.delta_star, g.grid_nominal_power, g.us1, g.us2, ...
-        g.fgrid, g.eta, g.ucc, g.i1m, g.p_iron, g.n1, g.n2, g.core_area, g.core_length, g.mur, g.enable_sat);
+    % transformer of the emulator (block T1 of 3ph_Dyg): coil data and per-unit data from the nameplate
+    emu.trafo = three_phase_transformer_param(struct('name', g.name, 'connection', g.connection, ...
+        'pwr_nom', g.grid_nominal_power, 'u1_nom', g.us1, 'u2_nom', g.us2, 'f_nom', g.fgrid, 'eta', g.eta, ...
+        'ucc', g.ucc, 'i1m', g.i1m, 'p_iron', g.p_iron, 'lm0_pu', g.lm0_pu, 'n1', g.n1, 'n2', g.n2, ...
+        'core_area', g.core_area, 'core_length', g.core_length, 'mur', g.mur, 'enable_sat', g.enable_sat));
+    emu.delta_star = emu.trafo.delta_star;                                  % legacy flag: 1 delta primary
 
     % normalization: peak phase voltage and peak phase current of the two sides of the transformer
     emu.u1bez = emu.us_primary_nom*sqrt(2/3);                               % [V]

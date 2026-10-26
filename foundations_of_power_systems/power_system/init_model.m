@@ -1,19 +1,24 @@
-%[text] # Power system: three-phase grid emulator, FRT, Dyn11 transformer, IEC power measurement
+%[text] # Power system: three-phase grid emulator, FRT, three-phase transformers, IEC power measurement
 %[text] Initialization of power_system.slx: three controlled voltage sources driven by the FRT grid emulator
 %[text] of the library (positive/negative sequence references, grid-code dips), series grid impedance,
-%[text] 1 MVA Dyn11 transformer built with three saturable single-phase transformers (grid/grid_emulator/3ph_Dyg),
-%[text] three-phase voltage/current measurements, IEC power meters (sequence powers) and the analysis
-%[text] subsystem (moving average filters, scopes). The "load" subsystem of the root (RL load and three-phase
-%[text] inductor with saturation) is commented out in the model: the transformer runs at no load.
+%[text] the 1 MVA transformer of the emulator (block grid/grid_emulator/3ph_Dyg/saturable_transformer_Dyn1/Dd/T1,
+%[text] Simscape language component three_phase_transformer.transformer_Dd of the library, parameters
+%[text] param.grid.emu.trafo.pu.*), a second transformer hung on the 690 V bus at no load to test the library
+%[text] blocks (.../saturable_transformer_Dyn1/Dyn/T2, three_phase_transformer.transformer_Dyn, parameters
+%[text] param.load.trafo.pu.*), three-phase voltage/current measurements, IEC power meters (sequence powers)
+%[text] and the analysis subsystem (moving average filters, scopes). The previous transformer of the emulator
+%[text] (Dyn11 made of three saturable single-phase transformers, 3ph_Dyg/saturable_transformer_Dyn) and the
+%[text] "load" subsystem of the root (RL load, three-phase inductor with saturation) are commented out in the
+%[text] model; their parameters are still here.
 %[text] All parameters are local: the numbers are in this script and the parameter functions are in ./private
 %[text] (timing_param, grid_emulator_param, three_phase_transformer_param, grid_fault_param,
-%[text] check_model_param_refs). Nothing is read from library/setup_files any more; the library is still needed
-%[text] for the Simulink/Simscape blocks and for the C sources of the C-Caller moving average filter.
+%[text] check_model_param_refs). Nothing is read from library/setup_files; the library is needed for the
+%[text] Simulink/Simscape blocks (three_phase_transformer_lib.slx must be built: ssc_build three_phase_transformer
+%[text] from library/foundation/electrical_machines) and for the C sources of the C-Caller moving average filter.
 %[text] Run it from this folder (the functions of ./private are visible only to the files of this folder).
 %[text] The previous init is kept as init_model_legacy.m: it no longer runs with the current library
 %[text] (timing_setup and grid_fault_generator changed signature) and it initialized converters and machines
 %[text] that this model does not contain.
-
 clear;
 model = 'power_system';
 
@@ -65,12 +70,14 @@ param.grid.grid_nominal_power = 1000e3;             % [W] transformer rating
 param.grid.eq_grid_inductance = 75e-6;              % [H] series impedance of the voltage sources (per phase)
 param.grid.eq_grid_resistance = 2e-3;               % [Ohm]
 
-% transformer of the emulator: Dyn11, primary (delta) on the voltage sources, secondary (star, neutral to
-% ground) on the ports of the grid subsystem. Three saturable single-phase transformers, one per limb
-% (block grid/grid_emulator/3ph_Dyg/saturable_transformer_Dyn); the variants with the linear single-phase
-% transformers and with the equivalent series inductors are commented out in the model.
-param.grid.name = 'Dyn11';
-param.grid.delta_star = 1;                          % 1: Dyn (delta primary), 0: Yyn
+% transformer of the emulator (block T1 = three_phase_transformer.transformer_Dd of the library): primary on
+% the voltage sources, secondary on the 690 V bus of the grid subsystem. The connection selects the vector
+% group and must match the block in the model: T1 is a Dd block, so 'Dd0' or 'Dd6'. To use again the
+% commented subsystem 3ph_Dyg/saturable_transformer_Dyn (Dyn11 made of three saturable single-phase
+% transformers, secondary star with the neutral to ground) set 'Dyn11': the coil data below follow the
+% connection. The data set is selected by the application voltage.
+param.grid.name = 'grid emulator transformer';
+param.grid.connection = 'Dd0';                      % 'Dd0'/'Dd6' (T1), 'Dyn11' (saturable_transformer_Dyn)
 if param.grid.application_voltage == 690
     param.grid.us1 = 690; param.grid.us2 = 690; param.grid.fgrid = 50;
     param.grid.eta = 95; param.grid.ucc = 5;
@@ -84,25 +91,35 @@ else
     param.grid.eta = 95; param.grid.ucc = 4.5;
     param.grid.p_iron = 1000;
 end
+param.grid.lm0_pu = [];                             % [pu] zero-sequence magnetizing inductance of the library block:
+                                                    %      [] = lm (bank of single-phase units), 0.3 - 1 three-limb core
+
+% coil voltages of the connection (delta coil: line voltage, star coil: phase voltage) and turns of the
+% single-phase transformer blocks: n1 of the primary coil is given, n2 follows the coil ratio
+if param.grid.connection(1) == 'D'
+    param.grid.u1_coil = param.grid.us1;
+else
+    param.grid.u1_coil = param.grid.us1/sqrt(3);
+end
+if param.grid.connection(2) == 'd'
+    param.grid.u2_coil = param.grid.us2;
+else
+    param.grid.u2_coil = param.grid.us2/sqrt(3);
+end
+param.grid.n1 = 24;                                 % turns of the primary coil (Lm1 = 0.145 H with the core below)
+param.grid.n2 = round(param.grid.n1*param.grid.u2_coil/param.grid.u1_coil);     % 24 for Dd 690/690, 14 for Dyn11
 
 % core of the single-phase transformers: the blocks compute the magnetizing inductance from the geometry
 % (Lm = n1^2*mu0*mur*core_area/core_length) and, with enable_sat = 1, saturate the flux at 1.5*psi
-param.grid.n2 = 14;                                 % turns of the secondary coil
-param.grid.n1 = floor(param.grid.n2*sqrt(3));       % turns of the primary (delta) coil: 24, coil ratio sqrt(3)
 param.grid.core_area = 0.05;                        % [m^2]
 param.grid.core_length = 2.5;                       % [m]
 param.grid.mu0 = 4*pi*1e-7;
 param.grid.mur = 10e3;
 param.grid.enable_sat = 0;                          % saturation of the single-phase transformers (0: linear)
 
-% magnetizing current of the primary coil from the core geometry (i1m is the coil current at the coil
-% rated voltage: the line voltage for the delta coil, the phase voltage for a star coil)
+% magnetizing current of the primary coil from the core geometry (coil current at the coil rated voltage):
+% 15 A on the 690 V delta coil, i.e. lm = rated current / magnetizing current = 32 pu for the library block
 param.grid.Lm1 = param.grid.n1^2*param.grid.mu0*param.grid.mur*param.grid.core_area/param.grid.core_length;  % [H]
-if param.grid.delta_star == 1
-    param.grid.u1_coil = param.grid.us1;
-else
-    param.grid.u1_coil = param.grid.us1/sqrt(3);
-end
 param.grid.i1m = param.grid.u1_coil/param.grid.Lm1/(2*pi*param.grid.fgrid);     % [A]
 
 % references of the emulated voltage: positive and negative sequence [pu of the peak phase voltage]
@@ -144,6 +161,27 @@ param.load.ind.Rs = 2e-3;                           % [Ohm] positive sequence re
 param.load.ind.LFu0 = 500e-6;                       % [H] zero sequence inductance
 param.load.ind.Rs0 = 1e-3;                          % [Ohm] zero sequence resistance
 param.load.ind.isat = 360;                          % [Arms] saturation current
+%[text] ### Load transformer (block grid/grid_emulator/3ph_Dyg/saturable_transformer_Dyn1/Dyn/T2)
+% Second transformer, Simscape language component three_phase_transformer.transformer_Dyn of the library,
+% hung on the 690 V bus of the emulator at no load to test the block: in the model the bus is connected to
+% its star side (ports a, b, c; the neutral n is the electrical reference of the bus, the Dd of the emulator
+% has none) and the delta side (A, B, C) is open. Both sides are rated 690 V so that the core is at rated
+% flux whichever side is fed; set u2_nom = 400 for a 690/400 V distribution transformer (then the bus must
+% feed the delta side). i0_pu is the magnetizing current, lm = 1/i0_pu; lm0_pu empty = lm (bank of
+% single-phase units), 0.3 - 1 pu for a three-limb core, which shows with a single-phase load on the star.
+param.load.trafo_in.name = 'load transformer';
+param.load.trafo_in.connection = 'Dyn11';           % T2 is a Dyn block: 'Dyn11', 'Dyn1', 'Dyn5' or 'Dyn7'
+param.load.trafo_in.pwr_nom = 250e3;                % [VA]
+param.load.trafo_in.u1_nom = 690;                   % [V] delta side (A, B, C)
+param.load.trafo_in.u2_nom = 690;                   % [V] star side (a, b, c, n), on the bus in the model
+param.load.trafo_in.f_nom = param.grid.fgrid;       % [Hz]
+param.load.trafo_in.eta = 98;                       % [%]
+param.load.trafo_in.ucc = 5;                        % [%]
+param.load.trafo_in.p_iron = 750;                   % [W] 0.3 %
+param.load.trafo_in.i1m = [];                       % [A] magnetizing current of the delta coil: from i0_pu
+param.load.trafo_in.i0_pu = 0.01;                   % [pu] 1 % magnetizing current, lm = 100
+param.load.trafo_in.lm0_pu = [];                    % [pu] [] = lm
+param.load.trafo = three_phase_transformer_param(param.load.trafo_in);
 %[text] ## Model setup
 open_system(model);
 %[text] ### C-Caller types
