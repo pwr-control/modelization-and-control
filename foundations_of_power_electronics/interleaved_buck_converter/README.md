@@ -65,3 +65,18 @@ buck legs wired in; the review found and fixed:
   main inductance);
 - init and parameters of the AFE (LCL filter, transformer, resonant PI, 400 V grid data), PI gains not
   designed for the buck plant, an unused inverter clock domain, a scalar duty filter on a vector.
+
+## Signal dimensions in the discrete model (2026-10-26)
+
+The first run of the fixed model stopped with "'Input Port 1' of .../current_ctrl/pi/PId/Sum5 is a
+one dimensional vector with 1 elements": the three leg currents left the measurement stack as a
+virtual bus (Bus Creator) and, once that bus had to cross the sample-and-hold Switch/Unit Delay loop
+of `dcdc_ctrl`, Simulink could no longer propagate the width forward, so the per-leg PI was resolved
+as a scalar while the modulator (Demux of the three duties) asked for three. Rules now applied in the
+model: the per-leg quantities (`is_abc_dcdc_pu_mod1`, the held samples, the error of the three legs,
+the three duties) are plain 3-element vectors built with Mux blocks, never buses; the Inports of
+`buck_control`, `acquisitions`, `pi`, `PId`, `voltage_ctrl`, `pi_u` and of the modulator carry an
+explicit port dimension (3 for the per-leg vectors, 1 for the scalars), so that no width depends on the
+order of the propagation through the Unit Delay loops; the old `current_transformation` subsystem
+(a Mux between a Demux and a scoped Goto, a leftover of the abc→dq transformation of the AFE) is gone,
+the acquired vector feeds the PI directly.
