@@ -58,7 +58,7 @@ param.time.fpwm = 4e3;                              % [Hz]
 param.time.trgo = 1;                                % double update: ts_afe = 1/(2*fpwm)
 param.time.dead_time = 0;                           % [s] unused, kept for the name
 param.time.t_measure = 0.2;                         % [s] logging window of the To Workspace blocks (Ns_afe samples)
-param.time.tc_factor = 1/param.time.fpwm/param.sim.tc/2;    % ts_afe/tc, so that glb_time.tc = param.sim.tc
+param.time.tc_factor = 1/param.time.fpwm/param.sim.tc*2;    % ts_afe/tc, so that glb_time.tc = param.sim.tc
 param.time.tc_decimation = 1;
 param.time.delay_pwm = 0;
 
