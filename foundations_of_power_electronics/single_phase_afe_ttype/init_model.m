@@ -1,622 +1,291 @@
+%[text] # Single-phase three-level T-type bridge on the grid (single_phase_afe_ttype)
+%[text] Initialization of single_phase_afe_ttype.slx: single-phase three-level T-type bridge (SiC MOSFET, loss and
+%[text] thermal model) connected between two phases of a 690 V grid (three-phase emulator + Dyn11 1 MVA transformer)
+%[text] through an L filter (250 uH on each line, 200 uF across the output), split DC link (2 x 12 mF, center tap =
+%[text] neutral point of the bridge) fed by a 1200 V lithium-ion battery. Control at 8 kHz (4 kHz PWM, double update):
+%[text] FHT-PLL on the three grid voltages, current amplitude reference in three steps (1/3 pu each at 25 ms, 0.5 s, 1 s),
+%[text] in phase with the grid voltage; converter current -> virtual alpha-beta (SOGI C-Caller) -> dq -> vector PI
+%[text] (C-Caller dqvector_pi, variants: Simulink dq_vector_pi, resonant PI) -> three-level PWM. There is no DC-link
+%[text] voltage loop (the battery sets the link) and no neutral-point balancing loop (see the README).
+%[text] All parameters are local: the numbers are in this script and the parameter functions are in ./private
+%[text] (timing_param, afe_hw_param, afe_ctrl_param, grid_emulator_param, grid_fault_param, device_mosfet_param,
+%[text] battery_param, check_model_param_refs). The library is needed for the Simulink/Simscape blocks (modulator,
+%[text] T-type bridge, split DC link, grid emulator, transformer, battery, C-Caller functions) and for the MOSFET data
+%[text] sets other than the embedded one. Run it from this folder (the functions of ./private are visible only to the
+%[text] files of this folder). The legacy flat init (shared template, seven clock domains, DAB/PSFBC/CLLC/machines) is
+%[text] kept as init_model_legacy.m for reference; it no longer matches the library (grid_fault_generator and
+%[text] lithium_ion_battery_setup changed signature, the battery block reads param.battery.nominal_battery_voltage_1).
+
 clear;
-[model, options] = init_environment('single_phase_afe_ttype');
+model = 'single_phase_afe_ttype';
 
-CTRPIFF_CLIP_RELEASE = 0.001;
-s = tf('s');
-%[text] ### Global timing
-% simulation length
-simlength = 1.75;
-
-fpwm = 4e3;
-
-fpwm_afe = fpwm;
-trgo_afe = 1; % double update
-
-fpwm_inv = fpwm;
-trgo_inv = 1; % double update
-
-fpwm_single_phase_inv = fpwm;
-trgo_single_phase_inv = 1; % double update
-
-fpwm_dab = 3 * fpwm;
-trgo_dab = 1; % double update
-
-fpwm_psfbc = fpwm;
-trgo_psfbc = 1; % double update
-
-fpwm_isop_rail = fpwm;
-trgo_isop_rail = 1; % double update
-
-fpwm_cllc = 3 * fpwm;
-trgo_cllc = 0; % double update
-
-t_measure = simlength;
-tc_factor = 200; % tc is ts_afe / tc_factor
-tc_decimation = 1;
-delay_pwm = 0;
-
-dead_time_afe = 3e-6;
-dead_time_inv = 3e-6;
-dead_time_single_phase_inv = 3e-6;
-dead_time_dab = 2e-6;
-dead_time_psfbc = 3e-6;
-dead_time_isop_rail = 3e-6;
-dead_time_cllc = 2e-6;
-
-glb_time = timing_setup(fpwm_afe, trgo_afe, fpwm_inv, trgo_inv, fpwm_single_phase_inv, trgo_single_phase_inv, fpwm_dab, trgo_dab, ...
-    fpwm_psfbc, trgo_psfbc, fpwm_isop_rail, trgo_isop_rail, fpwm_cllc, trgo_cllc, t_measure, tc_factor, tc_decimation, delay_pwm, dead_time_afe, ...
-    dead_time_inv, dead_time_single_phase_inv, dead_time_dab, dead_time_psfbc, dead_time_isop_rail, dead_time_cllc);
-%[text] ## Settings for simulink model initialization and data analysis
-%[text] ### Settings Enable devices with thermal model
-use_mosfet_thermal_model = 1;
-use_thermal_model = 0;
-
-nonlinear_iterations = 3;  % for simscape solver
-if (use_mosfet_thermal_model || use_thermal_model)
-    nonlinear_iterations = 5; % for simscape solver
-end
-
-%[text] ### Enable specific settings for the simulation
-load_step_time = 1.25;
-transmission_delay = 125e-6*2;
-sst_num_of_modules = 2;
-%[text] ### Enable one/two modules
-number_of_modules = 1;
-enable_two_modules = number_of_modules;
-%[text] ### Control Mode Settings
-use_torque_curve = 1; 
-use_speed_control = 1-use_torque_curve; %
-use_mtpa = 1; %
-use_psm_encoder = 0; % 
-use_im_encoder = 1; % 
-use_load_estimator = 0; %
-use_estimator_from_mb = 0; % mb model based
-use_motor_speed_control_mode = 0; 
-
-% advanced dqPLL
-use_dq_pll_fht_pll = 1; % 
-use_dq_pll_fht_simulink_pll = 0; % 
-use_dq_pll_mod1 = 0; % 
-use_dq_pll_ccaller_mod1 = 0; % 
-use_dq_pll_ccaller_mod2 = 0; % 
-
-% dqPLL
-use_dq_pll_mode1 = use_dq_pll_mod1;
-use_dq_pll_mode2 = use_dq_pll_ccaller_mod1;
-use_dq_pll_mode3 = use_dq_pll_fht_simulink_pll;
-use_dq_pll_mode4 = use_dq_pll_fht_pll;
-
-use_dq_pll_mode1_modn = 0; % simulink dqPLL
-use_dq_pll_mode2_modn = 0; % ccaller dqPLL
-use_dq_pll_mode3_modn = 1; % fht simulink dqPLL
-use_dq_pll_mode4_modn = 0; % fht ccaller dqPLL
-
-% single phase inverter
-rpi_enable = 0; % use RPI otherwise DQ PI
-system_identification_enable = 0;
-use_current_controller_from_ccaller_mod1 = 1;
-use_phase_shift_filter_from_ccaller_mod1 = 1;
-use_sogi_from_ccaller_mod1 = 1;
-
-% four modules in parallel connected to a dc microgrid
-ixi_ref_mod1 = -0.85;
-ixi_ref_mod2 = -0.85;
-ixi_ref_mod3 = -0.85;
-ixi_ref_mod4 = -0.85;
-
-% common mode voltage control for hard parallelization
-en_parallel_mode = 1;
-   u_cm_comp_mod1 = 0;
-   u_cm_comp_mod2 = 0;
-   u_cm_comp_mod3 = 0;
-   u_cm_comp_mod4 = 0;
-
-if en_parallel_mode
-   u_cm_comp_mod2 = -1;
-   u_cm_comp_mod3 = -1;
-   u_cm_comp_mod4 = -1;
-end
-%[text] ### Settings for CCcaller versus Simulink
-use_ekf_bemf_module_1 = 1;
-use_ekf_bemf_module_2 = 1;
-use_observer_from_simulink_module_1 = 0;
-use_observer_from_ccaller_module_1 = 0;
-use_observer_from_simulink_module_2 = 0;
-use_observer_from_ccaller_module_2 = 0;
-
-% current controllers
-use_current_controller_from_simulink_module_1 = 0;
-use_current_controller_from_ccaller_module_1 = 1;
-use_current_controller_from_simulink_module_2 = 0;
-use_current_controller_from_ccaller_module_2 = 0;
-
-% moving average filters
-use_moving_average_from_ccaller_mod1 = 1;
-use_moving_average_from_ccaller_mod2 = 0;
-use_moving_average_from_ccaller_mod3 = 0;
-use_moving_average_from_ccaller_mod4 = 0;
-
-use_single_phase_inverter_based_FHT = 0;
-use_single_phase_inverter_based_SOGI = 0;
-use_single_phase_inverter_based_PHSH = 0;
-use_single_phase_inverter_based_SOGI_ccaller = 1;
-use_single_phase_inverter_based_PHSH_ccaller = 0;
-
-use_system_identification_based_FHT = 0;
-use_system_identification_based_SOGI = 0;
-use_system_identification_based_PHSH = 0;
-use_system_identification_based_SOGI_ccaller = 0;
-use_system_identification_based_PHSH_ccaller = 1;
-
-
-%[text] ### Single phase inverter control
-iph_grid_pu_ref_1 = 1/3;
-iph_grid_pu_ref_2 = 1/3.;
-iph_grid_pu_ref_3 = 1/3;
-time_step_ref_1 = 0.025;
-time_step_ref_2 = 0.5;
-time_step_ref_3 = 1;
-%[text] ### Setting global behavioural (system identification versus normal functioning) and operative frequency
-frequency_set = 50; % default
-if system_identification_enable
-    frequency_set = 300;
-end
-omega_set = frequency_set*2*pi;
-%[text] ### Settings average filters
-mavarage_filter_frequency_base_order = 2; % 2 means 100Hz, 1 means 50Hz
-dmavg_filter_enable_time = 0.025;
-%%
-%[text] ### Grid Emulator Settings
-grid_nominal_power = 1000e3;
-application_voltage = 690;
-grid_nominal_current = grid_nominal_power/application_voltage/sqrt(3);
-
-% Transformer Dyn11
-delta_star = 1;
-
-if application_voltage == 690
-    % trafo data
-    us1 = 690; us2 = 690; fgrid = 50;
-    eta = 95; ucc = 5;
-    p_iron = 1800;
-elseif application_voltage == 480
-    % trafo data
-    us1 = 480; us2 = 480; fgrid = 60;
-    eta = 95; ucc = 5;
-    p_iron = 1400;
+% Simulink/Simscape library blocks (blocks, not parameters), C-Caller sources and device data sets
+library_path = 'C:\github\library';
+if exist(library_path, 'dir')
+    addpath(genpath(library_path));
 else
-    % trafo data
-    us1 = 400; us2 = 400; fgrid = 50;
-    eta = 95; ucc = 5;
-    p_iron = 1000;
+    warning('%s init: library path %s not found, the library blocks and data sets must already be on the path', model, library_path);
 end
 
-n2 = 14; n1 = floor(n2*sqrt(3));
-core_area = 0.05; core_length = 2.5;
-mu0 = 4*pi*1e-7; mur = 10e3;
-
-% two simple calculation:
-Lm1 = (n1^2 * mu0 * mur * core_area) / core_length;
-% Lm1 = u1_nom/sqrt(3)/i1m/(2*pi*fgrid);
-i1m = us1/sqrt(3)/Lm1/(2*pi*fgrid);
-
-% reference for the voltage sequence
-up_xi_pu_ref = 1; up_eta_pu_ref = 0; un_xi_pu_ref = 0; un_eta_pu_ref = 0;
-
-% grid impedance
-Lgrid_base = us1/sqrt(3)*ucc/100/2/pi/fgrid/grid_nominal_current;
-if ~exist('ucc_factor', 'var')
-    ucc_factor = 1;
+% environment (was init_environment of the library)
+close all; clc; beep off;
+try
+    pm_addunit('percent', 0.01, '1');       % custom Simscape unit used by the library blocks
+catch ME
+    if ~contains(ME.message, 'percent')     % already registered in this session: fine
+        rethrow(ME);
+    end
 end
-eq_grid_inductance = Lgrid_base*ucc_factor; % [H]
-eq_grid_resistance = 2e-3; % [Ohm]
+options = bodeoptions;
+options.FreqUnits = 'Hz';
+s = tf('s');
+param = struct();
 
-grid_emu = grid_three_phase_emulator('Dyn11', delta_star, grid_nominal_power, application_voltage, us1, us2, fgrid, ...
-                eq_grid_inductance, eq_grid_resistance, eta, ucc, i1m, p_iron, n1, n2, core_area, core_length, mur, ...
-                up_xi_pu_ref, up_eta_pu_ref, un_xi_pu_ref, un_eta_pu_ref);
-%[text] ## Global Hardware Settings
-%[text] ### Rail Catenary Voltage Model
-catenary_nominal_power = 2*5.4e6; % per 12km
-catenary_nominal_voltage = 3000;
-catenary_maximum_voltage = 4000;
-catenary_nominal_current = catenary_nominal_power/catenary_nominal_voltage;
-
-isop_rail_pwr_nom = 250e3; % nominal per system
-number_of_systems = 4;
-full_bridge_application_voltage = catenary_maximum_voltage/number_of_systems;
-hwdata.isop_rail = isop_rail_aux_application(full_bridge_application_voltage, isop_rail_pwr_nom, glb_time.fPWM_ISOP_RAIL);
-%[text] ### Hardware Settings
-single_phase_inverter_pwr_nom = 225e3;
-afe_pwr_nom = 250e3;
-inv_pwr_nom = 250e3;
-dab_pwr_nom = 250e3;
-cllc_pwr_nom = 250e3;
-psfbc_pwr_nom = 275e3;
-fres_dab = glb_time.fPWM_DAB/5;
-fres_cllc = glb_time.fPWM_CLLC*1.2;
-
-hwdata.single_phase_inverter = single_phase_inverter_hwdata(application_voltage, single_phase_inverter_pwr_nom, glb_time.fPWM_INV);
-hwdata.afe = three_phase_afe_hwdata(application_voltage, afe_pwr_nom, glb_time.fPWM_AFE);
-hwdata.inv = three_phase_inverter_hwdata(application_voltage, inv_pwr_nom, glb_time.fPWM_INV);
-hwdata.dab = single_phase_dab_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_DAB, fres_dab);
-hwdata.psfbc = single_phase_psfbc_hwdata(application_voltage, psfbc_pwr_nom, glb_time.fPWM_PSFBC);
-hwdata.three_phase_dab = three_phase_dab_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_DAB, fres_dab);
-hwdata.cllc = single_phase_cllc_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_CLLC, fres_cllc);
-
-% modifications
-hwdata.afe.CFi = 2 * hwdata.psfbc.Cdc_dc1;
-%[text] ### Sensors endscale, and quantization
-adc_quantization = 1/2^11;
-adc12_quantization = adc_quantization;
-adc16_quantization = 1/2^15;
-
-Imax_adc = 1049.835;
-CurrentQuantization = Imax_adc/2^11;
-
-Umax_adc = 1500;
-VoltageQuantization = Umax_adc/2^11;
-%[text] ## AFE Settings and Initialization
-%[text] ### Behavioural Settings
-
-time_gain_afe_module_1 = 1.0002;
-time_gain_afe_module_2 = 1.0015;
-time_gain_afe_module_3 = 0.9988;
-time_gain_afe_module_4 = 1.0020;
-
-time_gain_inv_module_1 = 1.0005;
-time_gain_inv_module_2 = 1.001;
-wnp = 0;
-white_noise_power_afe_mod1 = wnp;
-white_noise_power_inv_mod1 = wnp;
-white_noise_power_afe_mod2 = wnp;
-white_noise_power_inv_mod2 = wnp;
-
-trgo_th_generator = 0.025;
-
-afe_pwm_phase_shift_mod1 = 0;
-white_noise_power_afe_pwm_phase_shift_mod1 = 0.0;
-inv_pwm_phase_shift_mod1 = 0;
-white_noise_power_inv_pwm_phase_shift_mod1 = 0.0;
-
-afe_pwm_phase_shift_mod2 = 0;
-white_noise_power_afe_pwm_phase_shift_mod2 = 0.0;
-inv_pwm_phase_shift_mod2 = 0;
-white_noise_power_inv_pwm_phase_shift_mod2 = 0.0;
-
-afe_pwm_phase_shift_mod3 = 0;
-white_noise_power_afe_pwm_phase_shift_mod3 = 0.0;
-inv_pwm_phase_shift_mod3 = 0;
-white_noise_power_inv_pwm_phase_shift_mod3 = 0.0;
-
-afe_pwm_phase_shift_mod4 = 0;
-white_noise_power_afe_pwm_phase_shift_mod4 = 0.0;
-inv_pwm_phase_shift_mod4 = 0;
-white_noise_power_inv_pwm_phase_shift_mod4 = 0.0;
-%[text] ### FRT Settings
-test_index = 25; % type of fault: index
-test_subindex = 4; % type of fault: subindex
-% test_subindex = 1; % type of fault: subindex
-enable_frt_1 = 0; % faults generated from abc
-enable_frt_2 = 0; % faults generated from xi_eta_pos and xi_eta_neg
-start_time_LVRT = 0.75;
-asymmetric_error_type = 1;
-deepPOSxi = 1;
-deepPOSeta = -0.4;
-deepNEGxi = 0.4;
-deepNEGeta = 0.4;
-frt_data = frt_settings(test_index, test_subindex, asymmetric_error_type, ...
-    enable_frt_1, enable_frt_2, start_time_LVRT, deepPOSxi, deepPOSeta, deepNEGxi, deepNEGeta);
-grid_fault_generator;
-%[text] ### Reactive Current References Settings
-% reactive current references 
-enable_i_react_pos_steps = 1;
-    time_i_react_pos_ref_1 = 0; % default
-    time_i_react_pos_ref_2 = 0; % default
-    i_react_pos_ref_1 = 0; % default
-    i_react_pos_ref_2 = 0; % default
-    i_react_pos_ref_3 = 0; % default
-
-if enable_i_react_pos_steps
-    time_i_react_pos_ref_1 = start_time_LVRT + error_length + 0.335;
-    time_i_react_pos_ref_2 = time_i_react_pos_ref_1 + 0.5;
-    i_react_pos_ref_2 = -ixi_ref_mod1*tan(acos(0.95));  % cos(phi) = 0.9
-    i_react_pos_ref_3 = ixi_ref_mod1*tan(acos(0.95)); % cos(phi) = 0.9
+% local parameter functions of this model (./private)
+local_functions = dir(fullfile(fileparts(mfilename('fullpath')), 'private', '*.m'));
+fprintf('%s init: local parameter functions in private/: %s\n', model, strjoin({local_functions.name}, ', '));
+clear local_functions library_path
+%[text] ## Simulation
+param.sim.simlength = 1.75;                 % [s] model StopTime
+param.sim.tc = 0.625e-6;                    % [s] logging base, model MaxStep (ode23tb) and step of the Simscape
+                                            %     local solver (glb_time.tc): ts/200 at fpwm = 4 kHz, double update
+param.sim.use_mosfet_thermal_model = 1;     % the active bridge is the SiC MOSFET T-type with the loss and thermal
+                                            % model (the ideal-switch bridge is commented out in the model): the
+                                            % flag only sets the Simscape nonlinear iterations, as the legacy init
+param.sim.nonlinear_iterations = 3;         % Simscape Solver Configuration
+if param.sim.use_mosfet_thermal_model
+    param.sim.nonlinear_iterations = 5;
 end
-%[text] #### UPQC Series Transformer
-name = 'UPQC Series Transformer';
-pwr_nom = 3*125e3;
-u1_nom = 400;
-u2_nom = 690;
-f_nom = 50;
-eta = 98;
-ucc = 4;
-p_iron = 5e3;
-n12 = u1_nom/u2_nom;
-n2 = 8;
-n1 = n12*n2;
-core_area = 0.04;
-core_length = 0.25;
-mur = 35e3;
+param.sim.check_param_refs = true;          % at the end: check that every param.* read by the model exists
+%[text] ## Timing
+% one converter clock domain (bridge and control): 4 kHz PWM, double update -> ts = 125 us
+param.time.fpwm = 4e3;                              % [Hz] switching frequency of the T-type bridge
+param.time.trgo = 1;                                % double update: control at 2*fpwm = 8 kHz
+param.time.dead_time = 3e-6;                        % [s] legacy dead_time_inv read by the modulator
+param.time.t_measure = param.sim.simlength;         % [s] logging window
+param.time.tc_factor = 1/param.time.fpwm/param.sim.tc/2;    % ts/tc = 200, so that glb_time.tc = param.sim.tc
+param.time.tc_decimation = 1;
+param.time.delay_pwm = 0;
 
-Lm1 = (n1^2 * mu0 * mur * core_area) / core_length;
-i1m = u1_nom/sqrt(3)/Lm1/f_nom/2/pi;
+% sample time of the battery state-of-charge estimator (legacy ts_dab of the shared template: 3*fpwm, double update)
+param.time.fpwm_dab = 3*param.time.fpwm;            % [Hz]
+param.time.trgo_dab = 1;
 
-delta_star = 0;
+param.glb_time = timing_param(param.time);
+%[text] ## Grid
+% three-phase grid emulator (ideal voltage sources) feeding a Dyn11 1 MVA 690/690 V transformer made of three
+% single-phase transformer blocks; the bridge is connected between phases a and b of the secondary, the PLL reads
+% the three secondary voltages. No fault applied (both enables at 0): the fault data are those of the legacy test
+% 25.4 (75 % dip on two phases, variant D, from 0.75 s for 915 ms)
+param.grid.application_voltage = 690;               % [V] rms line-to-line, primary and secondary of the transformer
+param.grid.f_nom = 50;                              % [Hz]
+param.grid.omega_nom = 2*pi*param.grid.f_nom;       % [rad/s]
+param.grid.pwr_nom = 1000e3;                        % [VA] rated power of the transformer (bases of the grid currents)
+param.grid.ucc = 5;                                 % [%] short-circuit voltage of the transformer
+param.grid.eta = 95;                                % [%] efficiency of the transformer (copper losses)
+param.grid.p_iron = 1800;                           % [W] iron losses of the transformer
+param.grid.n2 = 14;                                 % turns of the secondary (star) coils of the transformer blocks
+param.grid.n1 = floor(param.grid.n2*sqrt(3));       % turns of the primary (delta) coils: 24
+param.grid.core_area = 0.05;                        % [m^2] core of the transformer blocks
+param.grid.core_length = 2.5;                       % [m]
+param.grid.mur = 10e3;                              % [-] relative permeability: Lm1 = 145 mH, i1m = 8.8 A
+param.grid.R_eq = 2e-3;                             % [Ohm] equivalent grid resistance (informative, not in the model)
+param.grid.frt = grid_fault_param('two_phase_D', 0.75, 0.915, 0.75, 0, 0);
+param.grid.emu = grid_emulator_param(param.grid, param.grid.frt);
+%[text] ## Single-phase T-type bridge
+%[text] ### Hardware
+% 225 kW nominal; the legacy per-unit bases of the library single-phase data set are kept (ubez 838.4 V, ibez 536.8 A,
+% udc_nom 1239.4 V): the 690 V grid is 1.164 pu of ubez at the bridge terminals and 1 pu of current reference is
+% 262 kW at 690 V. Split DC link 2 x 12 mF (6 mF in series), filter 250 uH + 250 uH with 200 uF across the output.
+param.afe.hw = afe_hw_param(param.grid.application_voltage, 225e3, param.time.fpwm);
+%[text] ### PWM
+% three-level modulator of the library (single_phase_three_levels_PWM_generator_with_global_TRGO): input -1..1 =
+% -udc..udc, carriers at fpwm, control trigger at the bottom and at the top of the carrier (double update), gates
+% +15/-10 V, polarity 1 and limits -1..1 are the defaults of the block mask
+param.afe.pwm.fpwm = param.glb_time.fPWM_AFE;       % [Hz]
+param.afe.pwm.double_update = param.glb_time.TRGO_AFE_double_update;
+param.afe.pwm.dead_time = param.glb_time.dead_time_AFE;    % [s]
+param.afe.pwm.tc = param.glb_time.tc;               % [s]
+%[text] ### Variants of the model
+% current controller (Simulink dq_vector_pi, C-Caller dqvector_pi, or resonant PI rpi), virtual beta of the current
+% (first harmonic tracker, SOGI, phase-shift filter, Simulink or C-Caller) and the identification subsystem (open
+% loop u/f test, legacy system_identification_enable). Legacy flags: rpi_enable 0, use_current_controller_from_ccaller_mod1 1,
+% use_single_phase_inverter_based_SOGI_ccaller 1, the others 0.
+param.afe.variant.rpi_enable = 0;                   % 1: resonant PI on the alpha current instead of the dq vector PI
+param.afe.variant.current_ctrl_ccaller = 1;         % 1: C-Caller dqvector_pi, 0: Simulink dq_vector_pi (read when rpi_enable = 0)
+param.afe.variant.system_identification = 0;        % 1: open-loop u/f identification instead of the current control
+param.afe.variant.beta_fht = 0;
+param.afe.variant.beta_sogi = 0;
+param.afe.variant.beta_phsh = 0;
+param.afe.variant.beta_sogi_ccaller = 1;
+param.afe.variant.beta_phsh_ccaller = 0;
+if sum([param.afe.variant.beta_fht param.afe.variant.beta_sogi param.afe.variant.beta_phsh ...
+        param.afe.variant.beta_sogi_ccaller param.afe.variant.beta_phsh_ccaller]) ~= 1
+    error('%s init: exactly one virtual-beta variant must be active', model);
+end
+%[text] ### Control
+% all the gains are in private/afe_ctrl_param (legacy values: current vector PI 0.5/45 with u_lim 1, resonant PI
+% 0.75/45 with delta 0.025, FHT delta 0.05 with observer poles [-1 -4] w, PLL 1/80, SOGI delta 1 and kepsilon 2).
+% The working frequency of the SOGI, phase-shift filters, resonant PI and impedance measure is the grid frequency
+% (legacy frequency_set), 300 Hz in the identification test.
+f_set = param.grid.f_nom;                           % [Hz]
+if param.afe.variant.system_identification
+    f_set = 300;
+end
+param.afe.ctrl = afe_ctrl_param(param.glb_time.ts_afe, param.grid.omega_nom, f_set);
+clear f_set
 
-upqc_st = three_phase_transformer_setup(name, delta_star, pwr_nom, u1_nom, u2_nom, f_nom, eta, ucc, ...
-    i1m, p_iron, n1, n2, core_area, core_length, mur);
-upqc_st.Lm1;
-upqc_st.Ld1;
-upqc_ctrl.kp_p = 1;
-upqc_ctrl.ki_p = 35;
-upqc_ctrl.kp_n = 1;
-upqc_ctrl.ki_n = 35;
-upqc_ctrl.lim = 4;
-%[text] #### DClink Lstray model (partial loop inductance)
-parasitic_dclink_data;
-%%
-%[text] ## INVERTER Settings and Initialization
-%[text] ### Mode of operation
-motor_torque_mode = 1 - use_motor_speed_control_mode; % system uses torque curve for wind application
-time_start_motor_control = 0.25;
-%[text] ### IM Machine settings
-im = im_calculus();
-%[text] ### PSM Machine settings
-psm = psm_calculus();
-n_sys = psm.number_of_systems;
+% current amplitude reference: three steps (legacy iph_grid_pu_ref_1..3 at time_step_ref_1..3), summed and rate
+% limited, the d axis reference of the vector PI (in phase with the grid voltage); the q reference is the Constant 0
+% of the model. 1 pu = ibez = 536.8 A peak = 262 kW at 690 V.
+param.afe.ref.i_pu_1 = 1/3;                         % [pu] of ibez
+param.afe.ref.t_1 = 0.025;                          % [s]
+param.afe.ref.i_pu_2 = 1/3;
+param.afe.ref.t_2 = 0.5;
+param.afe.ref.i_pu_3 = 1/3;
+param.afe.ref.t_3 = 1;
+param.afe.ref.slew = param.grid.omega_nom;          % [pu/s] rate limiter (the legacy block read grid_emu.omega_grid_nom)
+param.afe.ref.i_pu_tot = param.afe.ref.i_pu_1 + param.afe.ref.i_pu_2 + param.afe.ref.i_pu_3;
+param.afe.ref.p_tot = param.afe.ref.i_pu_tot*param.afe.hw.grid.p_1pu;   % [W] power at the final reference, unity power factor
+%[text] ### Design figures (informative)
+% three-level T-type between two phases: the output spans -udc..udc in steps of udc/2, each commutation is at udc/2;
+% single-phase power pulsation p(t) = P*(1 - cos(2wt)) at unity power factor: the 100 Hz current P/udc splits between
+% the series DC-link capacitance and the battery (no decoupling in this model, the battery sees most of it, see the
+% README); the neutral point sees +-i_ac pulses of equal duration at each switching period (zero average with
+% symmetric carriers), there is no balancing loop.
+hw = param.afe.hw; w = param.grid.omega_nom; tr = param.grid.emu.trafo;
+P = param.afe.ref.p_tot;
+d.P = P;
+d.i_peak = P/hw.grid.u_nom*sqrt(2);                             % [A] peak grid current at P
+d.m = sqrt(hw.grid.u_peak^2 + (w*hw.LFu*d.i_peak)^2)/hw.udc_nom; % [-] modulation index at P and udc_nom
+d.i_ripple_dc = P/hw.udc_nom;                                   % [A] amplitude of the 100 Hz current into the DC side
+d.u_ripple_dc = d.i_ripple_dc/(2*w*hw.CFi);                     % [V] amplitude of the 100 Hz ripple of udc, series capacitance alone
+d.u_ripple_dc_pu = d.u_ripple_dc/hw.udc_nom;                    % [pu]
+d.e_ripple = P/w;                                               % [J] peak-to-peak energy pulsation at 2f
+d.dq_np_sw = d.i_peak*0.5*hw.udc_nom/hw.udc_nom/param.time.fpwm;    % [C] worst-case charge pulse into the neutral point in one
+                                                                %     switching period (duty 0.5 of the leg at the peak current)
+d.du_np_sw = d.dq_np_sw/(hw.CFi1 + hw.CFi2);                    % [V] neutral-point voltage step of that pulse (C1 and C2 in parallel)
+d.di_sw_max = (hw.udc_nom/2)/(4*param.time.fpwm*hw.LFu);        % [A] worst-case pk-pk switching ripple of the current (udc/2 steps)
+d.L_grid = 2*tr.Ld2;                                            % [H] leakage of the two secondary coils between phases a and b
+d.R_grid = 2*tr.Rd2;                                            % [Ohm]
+d.f_res = sqrt((hw.LFu + d.L_grid)/(hw.LFu*d.L_grid*hw.CFu))/2/pi;  % [Hz] resonance of the L - CFu - transformer filter
+d.k_i = hw.udc_nom/(hw.ibez*hw.LFu);                            % [1/s] plant gain of the current loop (pu/pu), LC seen as LFu
+d.f_c_i = param.afe.ctrl.kp_i*d.k_i/2/pi;                       % [Hz] crossover estimate of the current loop
+d.f_nyquist = 1/(2*param.glb_time.ts_afe);                      % [Hz]
+param.afe.design = d;
+fprintf('Design at %.0f kW (reference %.2f pu): %.0f A peak, m = %.2f, 100 Hz ripple %.0f A on the DC side -> %.0f V (%.1f %%) on udc with the 6 mF alone\n', ...
+    P/1e3, param.afe.ref.i_pu_tot, d.i_peak, d.m, d.i_ripple_dc, d.u_ripple_dc, d.u_ripple_dc_pu*100);
+fprintf('Neutral point: %.1f mC per switching period at the current peak -> %.2f V step on 2 x %.0f mF, no balancing loop | switching ripple %.0f A pk-pk\n', ...
+    d.dq_np_sw*1e3, d.du_np_sw, hw.CFi1*1e3, d.di_sw_max);
+fprintf('Filter: LFu %.0f uH + CFu %.0f uF + transformer %.0f uH: resonance %.0f Hz | current loop: crossover estimate %.0f Hz, Nyquist %.0f Hz\n', ...
+    hw.LFu*1e6, hw.CFu*1e6, d.L_grid*1e6, d.f_res, d.f_c_i, d.f_nyquist);
+clear hw w tr P d
+%[text] ## Power semiconductors
+% SiC MOSFET module Danfoss/Semikron SKM1700MB20R4S2I4 (1700 A, energies at 1300 V / 1000 A, 125 degC) for the eight
+% switches of the T-type bridge (four per leg: two vertical, two in the bidirectional middle path). The data set
+% is embedded in private/device_mosfet_param; any other data set of the library is read through device_data_load.
+param.dev.used_device_mosfet = 'danfoss_SKM1700MB20R4S2I4';
+dev = device_mosfet_param(param.dev.used_device_mosfet, param.glb_time.fPWM_AFE, param.afe.hw.udc_nom);
+param.dev.mosfet_name = dev.name;
+param.dev.mosfet_type = dev.type;
+param.afe.mosfet = rmfield(dev, {'name', 'type'});
+clear dev
+%[text] ## Sensors end scale and quantization
+param.meas.adc_quantization = 1/2^11;               % [pu] quantizer of the acquisitions (pu signals, 12 bit)
+param.meas.adc16_quantization = 1/2^15;
+param.meas.Imax_adc = 1049.835;                     % [A]
+param.meas.CurrentQuantization = param.meas.Imax_adc/2^11;
+param.meas.Umax_adc = 1500;                         % [V]
+param.meas.VoltageQuantization = param.meas.Umax_adc/2^11;
+% bases of the grid-side logging (ug_pu_mod1, ig_pu_mod1 of vi_measures_grid): the legacy init used the bases of the
+% three-phase AFE data set, 250 kW at 690 V (ubez = 690*sqrt(2/3) = 563.4 V, ibez = 250e3/sqrt(3)/690/0.9*sqrt(2) = 328.7 A)
+param.meas.ugrid_bez = param.grid.application_voltage*sqrt(2/3);                            % [V] peak phase-to-neutral
+param.meas.igrid_bez = 250e3/sqrt(3)/param.grid.application_voltage/0.9*sqrt(2);            % [A] peak
+%[text] ## Thermal model
+% aluminium plate, liquid cooled, sized for PrimePACK2; liquid flow > 28 l/min. "A" (ambient) is the water:
+% HA is the temperature rise from water to heatsink surface; water in/out rise max 5 K with 2 kW total losses
+param.thermal.weight = 0.150;                                   % [kg]
+param.thermal.no_weight = 0.150/10;                             % [kg] /10: thermal inertia not accounted
+param.thermal.cp_al = 900;                                      % [J/(kg K)] specific heat, aluminium
+param.thermal.heat_capacity_hs = param.thermal.cp_al*param.thermal.weight;   % [J/K]
+param.thermal.thermal_conductivity_al = 160;                    % [W/(m K)] aluminium
+param.thermal.Rth_switch_HA = 15/1000;                          % [K/W]
+param.thermal.Rth_mosfet_HA = param.thermal.Rth_switch_HA;      % [K/W] read by the bridge mask
+param.thermal.Rth_diode_HA = param.thermal.Rth_switch_HA;       % [K/W]
+param.thermal.Tambient = 40;                                    % [degC] water temperature
+param.thermal.DThs_init = 0;                                    % [K] initial heatsink rise, read by the bridge mask
 
-% load
-b = psm.load_friction_m;
-% external_load_inertia = 6*psm.Jm_m;
-external_load_inertia = 1;
-%[text] ### Motor Voltage to Udc Scaling
-u_psm_scale = 2/3*hwdata.inv.udc_nom/psm.ubez;
-u_im_scale = 2/3*hwdata.inv.udc_nom/im.ubez;
+% heatsink object read by the bridge mask (fields cp, no_weight, Tambient)
+param.thermal.heatsink.name = 'liquid_cooled_plate_2kw';
+param.thermal.heatsink.weight = param.thermal.weight;
+param.thermal.heatsink.no_weight = param.thermal.no_weight;
+param.thermal.heatsink.cp = param.thermal.cp_al;
+param.thermal.heatsink.heat_capacity = param.thermal.heat_capacity_hs;
+param.thermal.heatsink.thermal_conductivity = param.thermal.thermal_conductivity_al;
+param.thermal.heatsink.Rth_switch_HA = param.thermal.Rth_switch_HA;
+param.thermal.heatsink.Rth_mosfet_HA = param.thermal.Rth_mosfet_HA;
+param.thermal.heatsink.Rth_diode_HA = param.thermal.Rth_diode_HA;
+param.thermal.heatsink.Tambient = param.thermal.Tambient;
+param.thermal.heatsink.DThs_init = param.thermal.DThs_init;
 
-u_psm_scale_ekf = sqrt(3)/2 * 2/3 * hwdata.inv.udc_nom/psm.ubez;
-u_im_scale_ekf = (2/3)^2 * hwdata.inv.udc_nom/im.ubez;
-%[text] ## **CONTROL Settings and Initialization**
-%[text] #### Permanent magnet synchronous motor control with EKF based observer
-psm_ctrl = ctrl_pmsm_setup(glb_time.ts_inv, psm.omega_bez, u_psm_scale, psm.Jm_norm);
-% psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, psm.Jm_norm, glb_time.ts_inv);
-psm_ctrl.ekf = ekf_pmsm_setup(psm.Rs_norm, psm.Ls_norm, 1e6, glb_time.ts_inv);
-psm_ctrl.kp_i = 0.25;
-psm_ctrl.ki_i = 35;
-%[text] #### Induction Motor Control
-im_ctrl = ctrl_im_setup(glb_time.ts_inv, im.omega_bez, u_im_scale, im.Jm_norm);
-im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_norm, ...
-        im.mu_norm, im.Lm_norm, im.Jm_norm, glb_time.ts_inv);
-%[text] #### AFE control (with sequences)
-afe_ctrl = ctrl_afe_setup(glb_time.ts_afe, grid_emu.omega_grid_nom);
-
-afe_ctrl.kp_udc_ctrl = 2;
-
-kp_udc = 0.5;
-ki_udc = 18.0;
-kp_idc = 0.5;
-ki_idc = 18.0;
-
-%% gain for weak grids
-afe_ctrl.res_pi.kp_rpi = 0.5;
-afe_ctrl.res_pi.ki_rpi = 18;
-
-%% gains for LVRT
-afe_ctrl.res_pi.kp_rpi = 0.6;
-afe_ctrl.res_pi.ki_rpi = 35;
-
-%[text] #### DCDC Control
-dab_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
-psfbc_ctrl = ctrl_dab_setup(kp_udc, ki_udc, kp_idc, ki_idc);
-cllc_ctrl = ctrl_cllc_setup(kp_udc, ki_udc, kp_idc, ki_idc);
-
-psfbc_ctrl.kp_idc = 1;
-dab_ctrl.ki_udc = 35;
-
-isop_rail_ctrl = ctrl_isop_rail_setup(kp_udc, ki_udc, kp_idc, ki_idc);
-%[text] ### 
-%[text] #### Resonant PI settings
-pres_ctrl.kp_rpi = 0.75;
-pres_ctrl.ki_rpi = 45;
-pres_ctrl.delta_rpi = 0.025;
-pres_ctrl.omega_set = omega_set;
-pres_ctrl.res_nom = s/(s^2 + 2*pres_ctrl.delta_rpi*pres_ctrl.omega_set*s + (pres_ctrl.omega_set)^2);
-
-pres_ctrl.Ares_nom = [0 1; -omega_set^2 -2*pres_ctrl.delta_rpi*pres_ctrl.omega_set];
-pres_ctrl.Aresd_nom = eye(2) + pres_ctrl.Ares_nom*glb_time.ts_inv;
-pres_ctrl.a11d = 1;
-pres_ctrl.a12d = glb_time.ts_inv;
-pres_ctrl.a21d = -pres_ctrl.omega_set^2*glb_time.ts_inv;
-apres_ctrl.a22d = 1 -2*pres_ctrl.delta_rpi*pres_ctrl.omega_set*glb_time.ts_inv;
-
-pres_ctrl.Bres = [0; 1];
-pres_ctrl.Cres = [0 1];
-pres_ctrl.Bresd = pres_ctrl.Bres*glb_time.ts_inv;
-pres_ctrl.Cresd = pres_ctrl.Cres;
-%[text] #### Sogi
-sogi_delta = 1;
-kepsilon = 2;
-sogi = sogi_filter(omega_set, sogi_delta, kepsilon, glb_time.ts_afe);
-%[text] #### Current control parameters DQ PI
-dqvector_pi.kp_inv = 0.5;
-dqvector_pi.ki_inv = 45;
-dqvector_pi.pi_ctrl = dqvector_pi.kp_inv + dqvector_pi.ki_inv/s;
-dqvector_pi.pid_ctrl = c2d(dqvector_pi.pi_ctrl, glb_time.ts_inv);
-dqvector_pi.plant = 1/(s*grid_emu.trafo.Ld1 + 1);
-dqvector_pi.plantd = c2d(dqvector_pi.plant, glb_time.ts_inv);
-
-G = sogi.fltd.alpha * dqvector_pi.pid_ctrl * dqvector_pi.plantd;
-figure; margin(G, options); 
-grid on
-%[text] #### Single phase inverter - with resonant PI and virtual DQ
-single_phase_inverter_ctrl = ctrl_single_phase_inverter_setup(glb_time.ts_inv, pres_ctrl.omega_set, ...
-    dqvector_pi.kp_inv, dqvector_pi.ki_inv, pres_ctrl.kp_rpi, pres_ctrl.ki_rpi, pres_ctrl.delta_rpi);
-%[text] #### 
-%[text] ### Local time alignment to master time
-kp_align = 0.25;
-ki_align = 18;
-lim_up_align = 0.05;
-lim_down_align = -0.05;
-%[text] ### Simulation parameters: speed reference, load torque for energy production application
-run('n_sys_generic_1M5W_torque_curve');
-torque_overload_factor = 1;
-%[text] ### Simulation parameters: speed reference, load torque for driver application
-% rpm_sim = 3000;
-rpm_sim = 17.8;
-% rpm_sim = 15.2;
-omega_m_sim = psm.omega_m_bez;
-omega_sim = omega_m_sim*psm.number_poles/2;
-tau_load_sim = psm.tau_bez/5; %N*m
-b_square = 0;
-%[text] ### Settings Global Filters
-filters = setup_global_filters(glb_time.ts_afe, glb_time.ts_inv, glb_time.ts_dab, glb_time.tc);
-%[text] ## Power semiconductors modelization, IGBT, MOSFET,  and snubber data
-%[text] ### Diode rectifier
-% ABB 5SDF 0131Z0401
-diode.rectifier.Vf = 0.977;
-diode.rectifier.Rdon = 22e-6;
-diode.rectifier.Cj = 0;             % F
-diode.rectifier.Irm = -75;          % A
-diode.rectifier.didt = -30;         % A/us
-diode.rectifier.trr = 5;            % us
-diode.rectifier.Qrr = 325e-6;       % C
-diode.rectifier.Ifm = 2000;         % A
-diode.rectifier.Vr = -50;           % V
-diode.rectifier.Err = 15e-3;        % J
-diode.rectifier.Rth_JC = 0.004;     % W/K
-diode.rectifier.Rth_CH = 0.003;     % W/K
-
-diode.rectifier.Rsnubber = 1e4;     % Ohm
-diode.rectifier.Csnubber = 1e-12;     % F
-%[text] ### HeatSink settings
-% Aluminum plate liquid cooled with a size fit for primepack2
-% heat exchange made by an aluminum plate with a liquid flow > 28 l/min
-% "A" as "ambient" here means water: so HA means delta temperature between water and
-% heatsink surface
-% moreover the delta temperature between water in and water out is maximum
-% 5K assuming a overall power losses of 2kW 
-
-weight = 0.150;                         % kg
-no_weight = 0.150/10;                   % kg - when /10 is applied thermal inertia is not accounted 
-cp_al = 900;                            % specific heat_capacity J/K/kg - aluminum
-heat_capacity_hs = cp_al * weight;      % J/K
-thermal_conductivity_al = 160;          % W/(m K) - aluminum
-Rth_switch_HA = 15/1000;                % K/W 
-Rth_mosfet_HA = Rth_switch_HA;          % K/W
-Rth_diode_HA = Rth_switch_HA;           % K/W
-Tambient = 40;                          % degC - water temperature
-DThs_init = 0;                          % degC
-
-heatsink = liquid_cooled_plate_2kw_setup(weight, no_weight, cp_al, heat_capacity_hs, thermal_conductivity_al, ...
-    Rth_switch_HA, Rth_mosfet_HA, Rth_diode_HA, Tambient, DThs_init);
-%[text] ### DEVICES settings (IGBT)
-used_device = 'mitsubishi_CM1200DW_34T';
-
-igbt.inv = device_igbt_setup(used_device, glb_time.fPWM_INV, hwdata.inv.udc_nom);
-igbt.afe = device_igbt_setup(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_nom);
-igbt.dab = device_igbt_setup(used_device, glb_time.fPWM_DAB, hwdata.dab.udc1_nom);
-igbt.psfbc = device_igbt_setup(used_device, glb_time.fPWM_PSFBC, hwdata.psfbc.udc1_nom);
-igbt.cllc = device_igbt_setup(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_nom);
-igbt.isop_rail = device_igbt_setup(used_device, glb_time.fPWM_ISOP_RAIL, hwdata.isop_rail.udc1_nom);
-
-%[text] ### DEVICES settings (MOSFET)
-used_device = 'danfoss_SKM1700MB20R4S2I4';
-
-mosfet.inv = device_mosfet_setup(used_device, glb_time.fPWM_INV, hwdata.inv.udc_nom);
-mosfet.afe = device_mosfet_setup(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_nom);
-mosfet.dab = device_mosfet_setup(used_device, glb_time.fPWM_DAB, hwdata.dab.udc1_nom);
-mosfet.psfbc = device_mosfet_setup(used_device, glb_time.fPWM_PSFBC, hwdata.psfbc.udc1_nom);
-mosfet.cllc = device_mosfet_setup(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_nom);
-mosfet.isop_rail = device_mosfet_setup(used_device, glb_time.fPWM_ISOP_RAIL, hwdata.isop_rail.udc1_nom);
-%[text] ### 
-%[text] ### DEVICES settings (Ideal switch)
-used_device = 'silicon_high_power_ideal_switch';
-ideal_switch = device_ideal_switch_setting(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_nom);
-ideal_switch.afe = device_ideal_switch_setting(used_device, glb_time.fPWM_AFE, hwdata.afe.udc_nom);
-ideal_switch.inv = device_ideal_switch_setting(used_device, glb_time.fPWM_INV, hwdata.inv.udc_nom);
-ideal_switch.dab = device_ideal_switch_setting(used_device, glb_time.fPWM_DAB, hwdata.dab.udc1_nom);
-ideal_switch.psfbc = device_ideal_switch_setting(used_device, glb_time.fPWM_PSFBC, hwdata.psfbc.udc1_nom);
-ideal_switch.cllc = device_ideal_switch_setting(used_device, glb_time.fPWM_CLLC, hwdata.cllc.udc1_nom);
-ideal_switch.isop_rail = device_ideal_switch_setting(used_device, glb_time.fPWM_ISOP_RAIL, hwdata.isop_rail.udc1_nom);
-%[text] ### 
-%[text] ### Setting Global Faults
-time_aux_power_supply_fault = 1e3;
-%[text] ### Lithium Ion Battery
-% nominal_battery_voltage_1 = hwdata.cllc.udc1_bez;
-nominal_battery_voltage_1 = hwdata.dab.udc1_bez;
-% nominal_battery_voltage_1 = hwdata.afe.udc_nom;
-% nominal_battery_voltage_2 = hwdata.cllc.udc2_bez;
-nominal_battery_voltage_2 = hwdata.dab.udc2_bez;
-% nominal_battery_voltage_2 = hwdata.afe.udc_nom;
-nominal_battery_power = 250e3;
-
-% nominal_battery_voltage_1 = catenary_nominal_voltage * 1.5;
-% nominal_battery_voltage_2 = catenary_nominal_voltage * 1.5;
-% nominal_battery_power = catenary_nominal_power;
-
-initial_battery_soc = 0.85;
-lithium_ion_battery_1 = lithium_ion_battery_setup(nominal_battery_voltage_1, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
-lithium_ion_battery_2 = lithium_ion_battery_setup(nominal_battery_voltage_2, nominal_battery_power, initial_battery_soc, glb_time.ts_dab);
-lithium_ion_battery_1.R0 = lithium_ion_battery_1.R0/2;
-lithium_ion_battery_1.R1 = lithium_ion_battery_1.R1/2;
-lithium_ion_battery_2.R0 = lithium_ion_battery_2.R0/2;
-lithium_ion_battery_2.R1 = lithium_ion_battery_2.R1/2;
-lithium_ion_battery_1.C1 = lithium_ion_battery_1.C1/50;
-lithium_ion_battery_2.C1 = lithium_ion_battery_2.C1/50;
-
-%[text] ### Load
-trafo_load_name = 'Load Single Phase Transformer';
-trafo_load_pwr_nom = 225e3;
-trafo_load_u1_nom = 400;
-trafo_load_n1 = 50;
-trafo_load_n2 = 1;
-trafo_load_u2_nom = trafo_load_u1_nom/trafo_load_n1*trafo_load_n2;
-% trafo_load_f_nom = 50;
-trafo_load_f_nom = frequency_set;
-trafo_load_eta = 98;
-trafo_load_ucc = 5;
-trafo_load_i1m = 10;
-trafo_load_p_iron = 2e3;
-output_transformer = single_phase_transformer_setup(trafo_load_name, trafo_load_pwr_nom, trafo_load_u1_nom, ...
-    trafo_load_u2_nom, trafo_load_n1, trafo_load_n2, trafo_load_f_nom, trafo_load_eta, trafo_load_ucc, ...
-    trafo_load_i1m, trafo_load_p_iron);
-
-uload = 2;
-rload = uload / output_transformer.i2_nom;
-lload = 250e-6 / output_transformer.n12^2;
-
-% rload = 0.86/m12_load_trafo^2;
-% lload = 3e-3/m12_load_trafo^2;
-%[text] ### C-Caller Settings
+% loss and junction temperature estimate of the T-type bridge at the final reference (informative, averaged model:
+% sinusoidal current of amplitude I, modulation index m, unity power factor, synchronous conduction of the channels
+% (v = Rds_on*i, the body diode only in the dead time); each commutation at udc/2, energies scaled linearly from the
+% data set point. Vertical switch: conducts with duty m*sin, switches during its half period -> I/pi average;
+% middle switch: conducts the zero state (1 - m*sin) in both half periods, its diode recovers at each vertical turn-on)
+g = param.afe.mosfet; hw = param.afe.hw; I = param.afe.design.i_peak; m = param.afe.design.m; fsw = param.time.fpwm;
+ksw = (hw.udc_nom/2)/g.Voff_sw_losses*(I/pi)/g.Ion_sw_losses;                       % [-] energy scaling, average over the half period
+p.vert_cond = g.Rds_on*I^2*2*m/(3*pi);                                                % [W] per vertical switch
+p.vert_sw = (g.Eon + g.Eoff)*ksw*fsw;                                                 % [W] per vertical switch
+p.mid_cond = g.Rds_on*I^2*(1/2 - 4*m/(3*pi));                                         % [W] per middle switch (both half periods)
+p.mid_rec = g.Err*ksw*fsw;                                                            % [W] per middle switch (body diode recovery)
+p.leg = 2*(p.vert_cond + p.vert_sw) + 2*(p.mid_cond + p.mid_rec);                     % [W]
+p.bridge = 2*p.leg;                                                                   % [W]
+p.Tj_vert = param.thermal.Tambient + (p.vert_cond + p.vert_sw)*(g.Rth_mosfet_JH + param.thermal.Rth_mosfet_HA);   % [degC]
+p.Tj_mid = param.thermal.Tambient + (p.mid_cond + p.mid_rec)*(g.Rth_mosfet_JH + param.thermal.Rth_mosfet_HA);
+p.efficiency = param.afe.design.P/(param.afe.design.P + p.bridge + hw.RLFu*(I/sqrt(2))^2);
+param.thermal.loss_estimate = p;
+fprintf('T-type bridge losses at %.0f A peak, %.0f V, %.0f kHz: vertical switch %.0f W conduction + %.0f W switching, middle switch %.0f W + %.0f W; bridge %.0f W; Tj %.0f / %.0f degC; efficiency %.2f %% with the filter\n', ...
+    I, hw.udc_nom, fsw/1e3, p.vert_cond, p.vert_sw, p.mid_cond, p.mid_rec, p.bridge, p.Tj_vert, p.Tj_mid, p.efficiency*100);
+clear g hw I m fsw ksw p
+%[text] ## Battery on the DC link (block battery_1)
+% lithium-ion pack across the whole DC link: 1200 V nominal (the legacy init took hwdata.dab.udc1_bez of the 1200 V
+% DAB data set selected at 690 V), 250 kW, initial state of charge 0.85; the legacy init halved R0 and R1 and
+% divided C1 by 50 after the setup. The library block reads battery_voltage_init_m = param.battery.nominal_battery_voltage_1
+% from its mask default (same name as in the other migrated models).
+param.battery.nominal_battery_voltage_1 = 1200;                 % [V]
+param.battery.nominal_battery_power = 250e3;                    % [W]
+param.battery.initial_battery_soc = 0.85;
+param.battery.charge_capacity_1 = param.battery.nominal_battery_power/param.battery.nominal_battery_voltage_1;   % [Ah] ASSUMPTION: 1C rating
+param.battery.plot_ocv = false;
+b = param.battery;
+param.battery.pack_1 = battery_param(b.nominal_battery_voltage_1, b.nominal_battery_power, b.charge_capacity_1, ...
+    b.initial_battery_soc, param.glb_time.ts_dab, b.plot_ocv);
+param.battery.pack_1.R0 = param.battery.pack_1.R0/2;            % legacy modifications of the model
+param.battery.pack_1.R1 = param.battery.pack_1.R1/2;
+param.battery.pack_1.C1 = param.battery.pack_1.C1/50;
+clear b
+%[text] ## Model setup
 open_system(model);
-Simulink.importExternalCTypes(model,'Names',{'mavgflt_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'dsmavgflt_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'mavgflts_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'bemf_obsv_load_est_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'dqvector_pi_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'sv_pwm_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'sv_pwm_cm_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'global_state_machine_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'first_harmonic_tracker_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'dqpll_thyr_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'dqpll_grid_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'rpi_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'phase_shift_flt_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'sogi_flt_output_t'});
-Simulink.importExternalCTypes(model,'Names',{'linear_double_integrator_observer_output_t'});
-
-%[text] ### **Remove Scopes Opening Automatically**
+Simulink.importExternalCTypes(model, 'Names', {'dqvector_pi_output_t'});
+Simulink.importExternalCTypes(model, 'Names', {'first_harmonic_tracker_output_t'});
+Simulink.importExternalCTypes(model, 'Names', {'sogi_flt_output_t'});
+Simulink.importExternalCTypes(model, 'Names', {'rpi_output_t'});
+Simulink.importExternalCTypes(model, 'Names', {'phase_shift_flt_output_t'});
+%[text] ### Scopes closed at start
 open_scopes = find_system(model, 'BlockType', 'Scope');
-for i = 1:length(open_scopes)
-    set_param(open_scopes{i}, 'Open', 'off');
+for k = 1:numel(open_scopes)
+    set_param(open_scopes{k}, 'Open', 'off');
 end
-
-%[text] ### Enable/Disable Subsystems
-
-
-
-%[appendix]{"version":"1.0"}
-%---
-%[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":38.2}
-%---
+clear open_scopes k
+%[text] ### Check of the param.* references of the model
+if param.sim.check_param_refs
+    [missing_refs, model_refs] = check_model_param_refs(model, param);
+    if isempty(missing_refs)
+        fprintf('%s init: all %d param.* references of the model blocks resolve\n', model, numel(model_refs));
+    else
+        warning('%s init: %d param.* references of the model blocks do not exist in param:', model, numel(missing_refs));
+        disp(missing_refs);
+    end
+    clear missing_refs model_refs
+end
