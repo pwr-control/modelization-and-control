@@ -13,6 +13,7 @@ the grid voltage: the model is a battery inverter feeding the grid, there is no 
 | `private/` | the parameter functions of this model (table below) |
 | `single_phase_afe_ttype.slx` | the model: three-phase grid emulator and Dyn11 transformer, L filter, T-type bridge with the MOSFET loss and thermal model, split DC link, battery, the whole control, identification and impedance-measure subsystems |
 | `plotting_results.m` | post-processing of the logged results (reads `param.glb_time.*`) |
+| `non_virtual_blocks_counting.m` | counts the non-virtual blocks of the model and of its referenced models (Simulink Home licence block limit) |
 | `init_model_legacy.m` | the old flat init (shared template with seven clock domains and the DAB/PSFBC/CLLC/machine sections), kept for reference only: it no longer runs against the current library (see below) |
 | `figures/` | EPS figures of the post-processing (git-ignored) |
 
@@ -42,7 +43,7 @@ battery (library block `lithium_ion_battery`, 1200 V, 250 kW, SOC 0.85, `R0` and
   first harmonic tracker, phase-shift filter, Simulink or C-Caller), αβ→dq at the PLL angle, dq vector
   PI (C-Caller `dqvector_pi`, 0.5/45, limit 1 with the vector clamp; variants: Simulink
   `dq_vector_pi`, resonant PI 0.75/45 on the α current), dq→αβ, α to the three-level modulator
-  (input −1..1 = −udc..udc, dead time 3 µs);
+  (input −1..1 = −udc..udc, dead time 0.3 µs);
 - the division of the modulating signal by `udc_pu` uses the Constant 1 of the model, not the measured
   DC voltage;
 - the neutral-point voltage is only measured (`idc1`, `idc2`, `udc_p_gnd`, `udc_n_gnd` are logged):
@@ -68,7 +69,7 @@ The identification subsystem (open-loop u/f test at 300 Hz) and the impedance-me
 | Group | Content |
 |---|---|
 | `param.sim` | `simlength`, `tc` (0.625 µs: `FixedStep`, Simscape local solver step and logging base), `use_mosfet_thermal_model` (only sets `nonlinear_iterations` 3 → 5 as in the legacy init: the ideal bridge is commented out in the model), `check_param_refs` |
-| `param.time`, `param.glb_time` | `fpwm` 4 kHz, `trgo` 1 (double update), `dead_time` 3 µs, `tc_factor` 200, the battery estimator domain `fpwm_dab`; `glb_time = timing_param(param.time)` gives `fPWM_AFE`, `TRGO_AFE_double_update`, `dead_time_AFE`, `ts_afe` 125 µs, `ts_dab`, `tc`, `Nc`, `Ns_afe` (the names the blocks read). The legacy `ts_inv`, `Ns_inv` and `dead_time_INV` read by the control blocks had the same values and are mapped to the AFE names. |
+| `param.time`, `param.glb_time` | `fpwm` 4 kHz, `trgo` 1 (double update), `dead_time` 0.3 µs (3 µs in the legacy init), `tc_factor` 200, the battery estimator domain `fpwm_dab`; `glb_time = timing_param(param.time)` gives `fPWM_AFE`, `TRGO_AFE_double_update`, `dead_time_AFE`, `ts_afe` 125 µs, `ts_dab`, `tc`, `Nc`, `Ns_afe` (the names the blocks read). The legacy `ts_inv`, `Ns_inv` and `dead_time_INV` read by the control blocks had the same values and are mapped to the AFE names. |
 | `param.grid` | 690 V, 50 Hz, transformer data (`pwr_nom` 1 MVA, `ucc` 5 %, `eta` 95 %, `p_iron` 1.8 kW, turns, core geometry, `mur`); `frt = grid_fault_param('two_phase_D', 0.75, 0.915, 0.75, 0, 0)` (legacy test 25.4, both enables at 0); `emu = grid_emulator_param(param.grid, param.grid.frt)` (bases `u2bez` 563.4 V, `i2bez`, references, `sof_50Hz` state space of the amplitude ramps, `trafo` = the transformer fields read by the three blocks) |
 | `param.afe.hw` | `afe_hw_param(690, 225e3, fpwm)`: the legacy single-phase data set (bases `ubez` 838.4 V, `ibez` 536.8 A, `udc_nom` 1239.4 V, `norm.Xbez`), split DC link (`CFi1`, `CFi2` 12 mF, `Rudc_measure` 107 kΩ, `udc1_init`, `udc2_init`), L filter (`LFu1`, `LFu2`, `RLFu1`, `RLFu2`, `CFu`, `RCFu`) and the grid figures (`grid.u_pu` 1.164, `grid.i_pu`, `grid.p_1pu` 262 kW, `grid.m_nom`, ...) |
 | `param.afe.pwm` | `fpwm`, `double_update`, `dead_time`, `tc` read by the three-level modulator |
@@ -151,8 +152,9 @@ The control was not changed; these are the points to look at.
    about 1.4 kHz with only `RCFu` = 50 mΩ and the transformer resistance as damping: the margins at
    the resonance were not computed in this migration (an averaged check as in
    `single_phase_afe_with_active_power_decoupling/claude_analysis` can be added).
-5. **Dead time** 3 µs (1.2 % of the 250 µs period) is large for a SiC module and gives the usual
-   voltage distortion at the current zero crossings (about 2.4 % of `udc/2`); the legacy value is kept.
+5. **Dead time.** The legacy 3 µs (1.2 % of the 250 µs period, large for a SiC module, about 2.4 %
+   of `udc/2` of voltage distortion at the current zero crossings) was reduced to 0.3 µs right after
+   the migration (`param.time.dead_time`), which brings the distortion down to about 0.24 %.
 6. **Initial conditions.** The two halves of the DC link start at `udc_nom/2` = 619.7 V while the
    battery open-circuit voltage at SOC 0.85 is close to 1200 V: the first milliseconds are a
    precharge transient through `R0`.
