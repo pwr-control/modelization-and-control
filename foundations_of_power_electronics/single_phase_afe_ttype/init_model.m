@@ -61,7 +61,7 @@ param.sim.check_param_refs = true;          % at the end: check that every param
 % one converter clock domain (bridge and control): 4 kHz PWM, double update -> ts = 125 us
 param.time.fpwm = 4e3;                              % [Hz] switching frequency of the T-type bridge
 param.time.trgo = 1;                                % double update: control at 2*fpwm = 8 kHz
-param.time.dead_time = 3e-6;                        % [s] legacy dead_time_inv read by the modulator
+param.time.dead_time = 3e-7;                        % [s] legacy dead_time_inv read by the modulator
 param.time.t_measure = param.sim.simlength;         % [s] logging window
 param.time.tc_factor = 1/param.time.fpwm/param.sim.tc/2;    % ts/tc = 200, so that glb_time.tc = param.sim.tc
 param.time.tc_decimation = 1;
