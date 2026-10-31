@@ -144,12 +144,19 @@ Recurring building blocks across the projects:
 ## Single-phase converters
 
 ### `single_phase_afe`
-- Single-phase full-bridge active front end, fPWM = 5 kHz, 690 V, 225 kVA class.
-- DC-link voltage PI over dq vector PI or resonant PI current control; three orthogonal-signal
-  generators compared (SOGI, phase-shift filter, first-harmonic tracker), each in Simulink and
-  C-Caller form.
-- Dedicated DC-link power decoupling / buffer branch (`dcdc_buffer.slx`) to handle the pulsating
-  single-phase power, with a resonant-PI ripple controller.
+- Single-phase full-bridge active front end, fPWM = 5 kHz, 690 V, 225 kVA class, with a second
+  full bridge (ripple port: buffer capacitor 3.6 mF at 2000 V through two 250 µH inductors) that
+  takes the 100 Hz power pulsation away from the DC link. See the folder `README.md`.
+- DC-link voltage PI over dq vector PI current control on the measured current and a virtual β;
+  three orthogonal-signal generators compared (SOGI, phase-shift filter, first-harmonic tracker),
+  each in Simulink and C-Caller form; FHT-PLL on the grid voltages.
+- Active power decoupling: double-integrator observer of the DC-link voltage → phase-shift filter
+  at 100 Hz → dq at 2θ → vector PI → 100 Hz reference of the buffer current loop (method described
+  in the note `single_phase_afe_power_decoupling` of `repositories-documentation`, copy in the
+  `library` documentation).
+- `init_model.m` migrated (October 2026) to the `param` structure with the parameter functions in
+  `private/`; the legacy flat init is kept as `init_model_legacy.m` for `single_phase_afe_ideal.slx`
+  and `dcdc_buffer.slx`. `claude_analysis/` holds the dimensioning check (Python).
 - `plant_estimator.m` identifies R and L of the load from dq-projected signals.
 
 ### `single_phase_afe_ttype`

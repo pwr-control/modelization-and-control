@@ -1,0 +1,38 @@
+====================================================================================================
+single_phase_afe: design check (numbers of init_model.m)
+====================================================================================================
+grid 690 V rms between phases a and b (975.8 V peak), 50 Hz; PWM 5 kHz double update, ts = 100 us
+bases: ubez = 838.4 V, ibez = 536.8 A, udc_nom = 1239.4 V  ->  grid voltage 1.164 pu, udc_nom/U_pk = 1.270
+rating 225 kW: 326.1 A rms = 461.2 A peak = 0.859 pu; model load 275 kW: 563.6 A peak = 1.050 pu (122 % of the rating)
+converter voltage at 225 kW: 978 V peak -> modulation index 0.789 (limit u_lim = 1.0); at 275 kW: 0.791
+LCL: L1 = 250 uH, Cf = 200 uF (13.3 % of Pnom), L2 = 250 uH; f_res = 1007 Hz (fs/6 = 1667 Hz), f(L1,Cf) = 712 Hz; X_Lt = 10.1 % of Zbez
+converter-side switching ripple (unipolar, 2 fpwm): 124 A pk-pk worst case = 27 % of the peak current
+dead time 1.0 us vs FF1200R17IP5 td_off + tf = 1.74 us; dead-time voltage error 12 V (unipolar, 2 commutations per period per leg)
+power pulsation at 2f: 182 A amplitude into the DC link, udc ripple 120 V = 9.7 % (capacitor alone, 2.4 mF), Cdc rms current 128 A
+at 275 kW: 222 A, 147 V = 11.9 %
+energy to buffer: 716 J pk-pk (875 J at 275 kW); buffer 3.6 mF at 2000 V = 7200 J -> swing 1950-2049 V (5.0 %)
+buffer current 182 A peak at 100 Hz = 0.24 pu of 750 A; modulation index of the ripple port 0.62; 57 V on the 500 uH at 100 Hz; switching ripple 100 A pk-pk worst case
+buffer capacitor for a +-5 % swing: 1.79 mF at 2000 V, 3.18 mF at 1500 V
+1700 V class module (FF1200R17IP5) on the ripple port at 2000 V: 118 % of the blocking voltage
+----------------------------------------------------------------------------------------------------
+grid current loop (kp 0.5, ki 45.0, delay 1.5 ts): crossover 325 Hz, 887 Hz, 1290 Hz, phase margin 70 deg, 201 deg, 25 deg with the LCL; 367 Hz / 68 deg with L only; gain margin -56.1 dB at 50 Hz, -52.1 dB at 50 Hz, 5.2 dB at 1695 Hz
+  loop gain at the LCL resonance 1007 Hz: 15.1 dB
+  static estimate kp*udc_nom/(ibez*Lt)/2pi = 368 Hz; PI zero ki/kp = 90 rad/s (14.3 Hz) vs R/L = 7.9 rad/s
+DC-link voltage loop (kp 2.0, ki 35.0): plant gain 71.0 1/s, crossover 22.7 Hz, phase margin 79 deg; reference filter 20 ms; PI zero 17.5 rad/s
+  100 Hz ripple through the PI: |PI(j2w)| = 2.00 -> with 9.7 % of udc ripple the current amplitude reference carries 0.194 pu at 100 Hz = 23 % of the fundamental -> 3rd harmonic about 11 % (and a 50 Hz negative sequence of the same size)
+buffer current loop (kp 1.0, ki 18.0, V_buf 2000 V, L 500 uH, base 750 A): crossover 848 Hz, phase margin 44 deg, gain margin 5.9 dB at 1666 Hz
+  closed loop at 100 Hz: gain 1.005, phase -6.8 deg; feed-forward udc_pu = udc/udc_nom while the bridge needs udc/V_buf = 0.62: the PI holds -0.38
+buffer voltage loop (kp 2.0, ki 18.0): plant gain 104 1/s, crossover 33 Hz, phase margin 84 deg; reference filter 20 ms
+  the loop sees the 100 Hz swing of the buffer voltage (0.040 pu amplitude): |PI(j2w)| = 2.00 -> 0.080 pu of 100 Hz current reference added to the ripple loop output (same frequency: the ripple loop absorbs it)
+ripple loop (vector PI 1.0/18.0 on the detected 100 Hz ripple): static gain of the chain 0.31 pu/pu, phase -9 deg (capacitor +90, beta output -90, observer and current loop the rest) (observer at 2f: |H_v|/w = 0.78, -2 deg instead of 2 and 90 deg of a true derivative)
+  envelope pole with the quasi-static chain: -4.3 +0.5j rad/s -> time constant 233 ms, ripple settles in about 0.93 s after the enable at 0.5 s
+  envelope poles with the observer and the buffer current loop dynamics: -5331.4-702.9j, -1277.7-273.9j, -205.8-908.7j, -4.3+0.5j, 0.0-628.3j rad/s
+----------------------------------------------------------------------------------------------------
+averaged simulation (dt 10 us, control at ts, ideal PLL, no switching), ripple loop enabled at 0.50 s
+  before the decoupling (0.3-0.5 s): udc 1211 V mean, ripple 196.3 V amplitude (15.84 %); buffer 2009 V, swing 31 V pk-pk, current 42 A peak; grid current 555 A peak, THD 13.46 %, 3rd 13.42 %, 5th 1.12 %
+  with the decoupling (1.05-1.25 s): udc 1239 V mean, ripple 9.5 V amplitude (0.77 %); buffer 2000 V, swing 121 V pk-pk, current 221 A peak; grid current 566 A peak, THD 0.47 %, 3rd 0.47 %, 5th 0.02 %
+  udc ripple amplitude 165.5 V before, 4.56 V at the end: 90 % removed 390 ms after the enable
+  before: current controller at the voltage limit u_lim for 0.0 % of the time, |m| max 0.868
+  with the decoupling: current controller at the voltage limit u_lim for 0.0 % of the time, |m| max 0.790
+  ripple loop output at the end: |i_ac_ref| = 0.302 pu = 227 A (expected 222 A), m_b 0.60..0.64
+figures written to /home/claude/modelization-and-control/foundations_of_power_electronics/single_phase_afe/claude_analysis/figures
