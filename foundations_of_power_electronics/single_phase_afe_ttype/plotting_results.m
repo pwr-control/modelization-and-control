@@ -9,7 +9,7 @@ colore2b = [0.35 0.35 0.35];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 
-t1c = time_tc_sim(end) - glb_time.Nc*glb_time.tc*glb_time.decimation_tc;
+t1c = time_tc_sim(end) - param.glb_time.Nc*param.glb_time.tc*param.glb_time.decimation_tc;
 t2c = time_tc_sim(end);
 
 
