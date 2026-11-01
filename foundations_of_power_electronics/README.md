@@ -286,9 +286,13 @@ Recurring building blocks across the projects:
 - `docs/ps_25V_12kA_r.pdf` is the design document.
 
 ### `ps_isop_rail`
-- Railway auxiliary supply as an input-series output-parallel chain on a DC catenary:
-  3000 V nominal (4000 V max) split over 4 series systems of 250 kW, fPWM = 4 kHz.
-- Dedicated ISOP controller plus DAB/PSFBC/CLLC loops, FHT dq-PLL, FRT enabled.
+- Railway auxiliary supply as an input-series output-parallel (ISOP) chain on a 3 kV DC catenary:
+  four 250 kW phase-shift full bridges (ideal switches, fPWM = 4 kHz, 1:1 transformers) in series at
+  the input, 750 V common output; the transformers work in pairs (secondaries of modules 1+4 and 2+3
+  in parallel on one diode rectifier each). The catenary is emulated by a 4.5 kV lithium-ion battery.
+- One output-voltage PI gives the same phase shift to the four bridges (8 kHz); no input-voltage
+  sharing loop. Parameters in `param` (`init_model.m` + `private/`); design check with a switched
+  simulation in `claude_analysis/` and the open points in its README (sharing inside a pair is weak).
 - `trafo/four_winding_transformer.tex` derives the four-winding transformer analytically
   (flux-linkage matrix, T-equivalent, MMF balance, port relations).
 
