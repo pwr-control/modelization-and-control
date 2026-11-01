@@ -12,9 +12,9 @@ colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 colore4 = [0 0 0];
-t1c = t_ts_inv_sim_mod1(end) - glb_time.Nc*glb_time.tc;
+t1c = t_ts_inv_sim_mod1(end) - param.glb_time.Nc*param.glb_time.tc;
 t2c = t_ts_inv_sim_mod1(end);
-t1s = t_ts_inv_sim_mod1(end) - glb_time.Ns_inv*glb_time.ts_inv;
+t1s = t_ts_inv_sim_mod1(end) - param.glb_time.Ns_inv*param.glb_time.ts_inv;
 t2s = t_ts_inv_sim_mod1(end);
 
 
@@ -23,7 +23,7 @@ fontsize_labels = 13;
 options = bodeoptions;
 options.FreqUnits = 'Hz';
 
-t_tc_sim = t1c:glb_time.tc:t2c-glb_time.tc;
+t_tc_sim = t1c:param.glb_time.tc:t2c-param.glb_time.tc;
 
 figure;
 subplot 311
@@ -103,9 +103,9 @@ colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 colore4 = [0 0 0];
-t1c = t_ts_inv_sim_mod1(end) - glb_time.Nc*glb_time.tc;
+t1c = t_ts_inv_sim_mod1(end) - param.glb_time.Nc*param.glb_time.tc;
 t2c = t_ts_inv_sim_mod1(end);
-t1s = t_ts_inv_sim_mod1(end) - glb_time.Ns_inv*glb_time.ts_inv;
+t1s = t_ts_inv_sim_mod1(end) - param.glb_time.Ns_inv*param.glb_time.ts_inv;
 t2s = t_ts_inv_sim_mod1(end);
 
 
@@ -114,7 +114,7 @@ fontsize_labels = 13;
 options = bodeoptions;
 options.FreqUnits = 'Hz';
 
-t_tc_sim = t1c:glb_time.tc:t2c-glb_time.tc;
+t_tc_sim = t1c:param.glb_time.tc:t2c-param.glb_time.tc;
 
 figure;
 subplot 311
@@ -194,9 +194,9 @@ colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 colore4 = [0 0 0];
-t1c = t_ts_inv_sim_mod1(end) - glb_time.Nc*glb_time.tc;
+t1c = t_ts_inv_sim_mod1(end) - param.glb_time.Nc*param.glb_time.tc;
 t2c = t_ts_inv_sim_mod1(end);
-t1s = t_ts_inv_sim_mod1(end) - glb_time.Ns_inv*glb_time.ts_inv;
+t1s = t_ts_inv_sim_mod1(end) - param.glb_time.Ns_inv*param.glb_time.ts_inv;
 t2s = t_ts_inv_sim_mod1(end);
 
 
@@ -205,7 +205,7 @@ fontsize_labels = 13;
 options = bodeoptions;
 options.FreqUnits = 'Hz';
 
-t_tc_sim = t1c:glb_time.tc:t2c-glb_time.tc;
+t_tc_sim = t1c:param.glb_time.tc:t2c-param.glb_time.tc;
 
 figure;
 subplot 311
@@ -285,9 +285,9 @@ colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 colore4 = [0 0 0];
-t1c = t_ts_inv_sim_mod1(end) - glb_time.Nc*glb_time.tc;
+t1c = t_ts_inv_sim_mod1(end) - param.glb_time.Nc*param.glb_time.tc;
 t2c = t_ts_inv_sim_mod1(end);
-t1s = t_ts_inv_sim_mod1(end) - glb_time.Ns_inv*glb_time.ts_inv;
+t1s = t_ts_inv_sim_mod1(end) - param.glb_time.Ns_inv*param.glb_time.ts_inv;
 t2s = t_ts_inv_sim_mod1(end);
 
 
@@ -296,7 +296,7 @@ fontsize_labels = 13;
 options = bodeoptions;
 options.FreqUnits = 'Hz';
 
-t_tc_sim = t1c:glb_time.tc:t2c-glb_time.tc;
+t_tc_sim = t1c:param.glb_time.tc:t2c-param.glb_time.tc;
 
 figure;
 subplot 311
@@ -376,9 +376,9 @@ colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 colore4 = [0 0 0];
-t1c = t_ts_inv_sim_mod1(end) - glb_time.Nc*glb_time.tc;
+t1c = t_ts_inv_sim_mod1(end) - param.glb_time.Nc*param.glb_time.tc;
 t2c = t_ts_inv_sim_mod1(end);
-t1s = t_ts_inv_sim_mod1(end) - glb_time.Ns_inv*glb_time.ts_inv;
+t1s = t_ts_inv_sim_mod1(end) - param.glb_time.Ns_inv*param.glb_time.ts_inv;
 t2s = t_ts_inv_sim_mod1(end);
 
 
@@ -387,7 +387,7 @@ fontsize_labels = 13;
 options = bodeoptions;
 options.FreqUnits = 'Hz';
 
-t_tc_sim = t1c:glb_time.tc:t2c-glb_time.tc;
+t_tc_sim = t1c:param.glb_time.tc:t2c-param.glb_time.tc;
 
 figure;
 subplot 311
@@ -462,9 +462,9 @@ colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 colore4 = [0 0 0];
-t1c = t_ts_inv_sim_mod1(end) - glb_time.Nc*glb_time.tc;
+t1c = t_ts_inv_sim_mod1(end) - param.glb_time.Nc*param.glb_time.tc;
 t2c = t_ts_inv_sim_mod1(end);
-t1s = t_ts_inv_sim_mod1(end) - glb_time.Ns_inv*glb_time.ts_inv;
+t1s = t_ts_inv_sim_mod1(end) - param.glb_time.Ns_inv*param.glb_time.ts_inv;
 t2s = t_ts_inv_sim_mod1(end);
 
 
@@ -473,7 +473,7 @@ fontsize_labels = 13;
 options = bodeoptions;
 options.FreqUnits = 'Hz';
 
-t_tc_sim = t1c:glb_time.tc:t2c-glb_time.tc;
+t_tc_sim = t1c:param.glb_time.tc:t2c-param.glb_time.tc;
 
 figure;
 subplot 311
