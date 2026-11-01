@@ -1,5 +1,8 @@
 %[text] # inv\_im: model initialization (param structure by subsystem)
 % Rev. 01, 2026-10-05. Replaces the flat-workspace init_model.m (kept as init_model_legacy.m).
+% Rev. 02, 2026-11-01. Extended Kalman filter of the induction machine replaced: ekf_im_setup rev. 01 and
+% ekf_im_step of the library, MATLAB Function block ekf_im in inv_im_param.slx, voltage scale corrected
+% (section "Extended Kalman filter of the induction machine").
 % Model inv_im.slx: one three-phase two-level inverter (IGBT with advanced thermal model, MOSFET with
 % thermal model or ideal switch) fed by a lithium-ion battery through the DC link, with the three-phase
 % output inductor, driving the induction machine with field-oriented current control and EKF rotor flux
@@ -291,26 +294,33 @@ param.im.machine.displayInfo(); %[output:39e0b4d4]
 clear m
 %[text] ### Motor voltage to Udc scaling
 param.im.u_im_scale = 2/3*param.inv.hw.udc_nom/param.im.machine.ubez;
-param.im.u_im_scale_ekf = (2/3)^2 * param.inv.hw.udc_nom/param.im.machine.ubez;
+% Voltage fed to the EKF: machine pu (ubez) per pu of control voltage and per pu of measured DC-link
+% voltage. The control output is in pu of udc/sqrt(3) (space_vector: gain sqrt(3)/2 into sv_pwm, which
+% is normalized to 2/3 udc, with no division by the DC-link voltage), so the machine gets
+% u_ctrl*udc/sqrt(3); the EKF block multiplies by udcd_pu_inv_mod1, the measured DC-link voltage in pu of
+% param.afe.hw.udc_nom (Vdc_scale of the dclink block). Rev. 01 used (2/3)^2*udc_nom/ubez with the
+% nominal DC-link voltage: 0.770 of the voltage applied at the nominal DC-link voltage.
+param.im.u_im_scale_ekf = param.afe.hw.udc_nom/(sqrt(3)*param.im.machine.ubez);
 %[text] ### Control modes
 %[text] Flags marked (variant) drive Variant Source conditions in the model.
 param.im.mode.use_torque_curve = 0;                                         % (variant) energy production
 param.im.mode.use_speed_control = 1 - param.im.mode.use_torque_curve;       % (variant) drive
-param.im.mode.use_im_encoder = 1;
+param.im.mode.use_im_encoder = 1;                                           % 1: encoder, 0: EKF (sensorless) from time_use_im_ekf
 param.im.mode.use_load_estimator = 0;
 param.im.mode.use_estimator_from_mb = 0;                                    % mb: model based
 param.im.mode.use_motor_speed_control_mode = 0;
 param.im.mode.motor_torque_mode = 1 - param.im.mode.use_motor_speed_control_mode;   % torque curve for wind application
 param.im.mode.time_start_motor_control = 0.25;                              % [s]
+param.im.mode.time_use_im_ekf = param.im.mode.time_start_motor_control + 0.25;   % [s] encoder -> EKF (use_im_encoder = 0)
 %[text] ### C-caller versus Simulink implementation
 param.im.impl.use_current_controller_from_simulink_module_1 = 1;            % (variant)
 param.im.impl.use_current_controller_from_ccaller_module_1 = 0;             % (variant)
 param.im.impl.use_current_controller_from_simulink_module_2 = 0;
 param.im.impl.use_current_controller_from_ccaller_module_2 = 0;
-%[text] ### Control with EKF based rotor flux observer
+%[text] ### Control objects
 param.im.ctrl = ctrl_im_setup(param.glb_time.ts_inv, param.im.machine.omega_bez, param.im.u_im_scale, param.im.machine.Jm_norm);
-param.im.ctrl.ekf = ekf_im_setup(param.im.machine.alpha_norm, param.im.machine.beta_norm, param.im.machine.gamma_norm, ... %[output:group:8dae76a6] %[output:8188f2d4]
-    param.im.machine.sigma_norm, param.im.machine.mu_norm, param.im.machine.Lm_norm, param.im.machine.Jm_norm, param.glb_time.ts_inv); %[output:group:8dae76a6] %[output:8188f2d4]
+% param.im.ctrl.ekf, the extended Kalman filter, is set after the sensors (it reads param.meas): see
+% "Extended Kalman filter of the induction machine"
 %[text] ## Wind generator of the torque curve
 % The torque curve of param.load is the one of the 1.6 MW wind generator of afe_inv_psm (psm_calculus of
 % the library, class pmsm_setup): the torque_reference block of the model scales the speed with
@@ -394,6 +404,33 @@ param.meas.CurrentQuantization = param.meas.Imax_adc/2^11;
 
 param.meas.Umax_adc = 1500;                 % [V]
 param.meas.VoltageQuantization = param.meas.Umax_adc/2^11;
+%[text] ## Extended Kalman filter of the induction machine
+% Sensorless estimate of rotor flux, flux angle, speed and load torque: block
+% inv_im_mod1/inverter_ctrl/im_control/current_ctrl/rotor_flux_estimators/ekf/extended_kalman_observer,
+% MATLAB Function ekf_im calling ekf_im_step of the library, parameters read from this object through the
+% mask. States [i_alpha i_beta psi_alpha psi_beta omega T_load] in pu of the machine; model of the machine
+% plus the output inductor LFi/RLFi; second-order Taylor prediction and Joseph update. Derivation, choice
+% of Q and R and results: research note im_foc_ekf_sensorless (pwr-control/repositories-documentation,
+% research/power_electronics); check without Simulink: test_ekf_im of the library.
+%   - noise: 1 A rms on each current sensor (sigma_i, class default) plus the quantization of the current
+%     acquisition (R); Q from a voltage uncertainty of 2 % (u_err) and q_tload = 1e-6 per sample, the
+%     tuning knob of the load torque (larger: faster on load steps, noisier speed);
+%   - timing: the current reaches the control one step late (block "is inv quantizzation and one step delay")
+%     and the command is applied from the next PWM update, so the voltage of the interval that ends at
+%     the current sample is the command of two steps before: n_delay_u = 2 (Delay block in front of the
+%     filter, at least 1);
+%   - in speed control the shaft is at standstill until time_start_motor_control: speed and load torque
+%     are held at zero meanwhile (n_hold), since the speed is not observable at zero stator frequency;
+%     with the torque curve the shaft turns from the start and nothing is held.
+% The control takes the EKF angle and speed instead of the encoder ones when use_im_encoder = 0, from
+% time_use_im_ekf (Step of encoder-sensorless-switch); with use_im_encoder = 1 the filter only observes
+% (scope ekf/sdl: EKF angle and speed against the encoder-based ones).
+param.im.ctrl.ekf = ekf_im_setup(param.im.machine, param.glb_time.ts_inv, param.inv.hw.LFi, param.inv.hw.RLFi);
+param.im.ctrl.ekf.q_adc = param.meas.CurrentQuantization;  % [A]
+param.im.ctrl.ekf.n_hold = round(param.im.mode.time_start_motor_control/param.glb_time.ts_inv) ...
+    *param.im.mode.use_speed_control;
+param.im.ctrl.ekf.n_delay_u = 2;
+param.im.ctrl.ekf.displayInfo();
 %[text] ## Control settings common to all modules
 % local time alignment to master time
 param.ctrl.kp_align = 0.25;
@@ -960,9 +997,6 @@ end
 %---
 %[output:39e0b4d4]
 %   data: {"dataType":"text","outputData":{"text":"Induction Machine: ABB M3BP 355MLB 6 261kW\nIM Normalization Voltage Factor: 375.6 V | IM Normalization Current Factor: 581.2 A\nRotor Resistance: 0.00274 Ohm\nMagnetization Inductance: 0.00376 H\n---------------------------\n","truncated":false}}
-%---
-%[output:8188f2d4]
-%   data: {"dataType":"text","outputData":{"text":"IM EKF Fully controllable\nIM EKF is stable.\n","truncated":false}}
 %---
 %[output:0e2de209]
 %   data: {"dataType":"text","outputData":{"text":"Permanent Magnet Synchronous Machine: WindGen\nPSM Normalization Voltage Factor: 365.8 V | PSM Normalization Current Factor: 486.0 A\nPer-System Direct Axis Inductance: 0.00624 H\nPer-System Quadrature Axis Inductance: 0.00756 H\n---------------------------\n","truncated":false}}

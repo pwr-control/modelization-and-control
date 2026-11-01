@@ -88,6 +88,10 @@ Recurring building blocks across the projects:
 - Inverter + induction machine (ABB M3BP 355MLB 6, 261 kW) with encoder, fPWM = 4 kHz.
 - dq PI current control, MTPA, torque-curve mode; bridge selectable between ideal switch,
   IGBT and MOSFET with thermal model.
+- EKF of the machine (rotor flux, speed and load torque, `rotor_flux_estimators/ekf`): MATLAB Function
+  `ekf_im` calling `ekf_im_step` of the library, parameters from `ekf_im_setup` rev. 01 (November 2026).
+  The encoder drives the control by default (`use_im_encoder = 1`, the EKF only observes); with
+  `use_im_encoder = 0` the control switches to the EKF at `time_use_im_ekf`.
 
 ### `im_analysis_and_design`
 - Induction machine modelling and indirect field-oriented control (ABB M3BP 355MLB 6, 261 kW, 460 V,
