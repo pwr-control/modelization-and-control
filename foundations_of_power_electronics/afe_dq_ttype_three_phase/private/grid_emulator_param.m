@@ -1,8 +1,8 @@
 function emu = grid_emulator_param(g, fault)
 %GRID_EMULATOR_PARAM  Data of the three-phase grid emulator of afe_dq_ttype.slx (block
-%   three_phase_voltage_source_with_frt_emulator of the library feeding the Dyn11 transformer 3ph_Dyg made
-%   of three single-phase transformer blocks, star point of the secondary grounded) and of its fault
-%   generator.
+%   three_phase_voltage_source_with_frt_emulator of the library, in its MATLAB Function copy
+%   three_phase_voltage_with_frt_emulator_mfcn.slx, feeding the Dyn11 transformer 3ph_Dyg made of three
+%   single-phase transformer blocks, star point of the secondary grounded) and of its fault generator.
 %
 %   emu = grid_emulator_param(g, fault), with g = param.grid:
 %     g.application_voltage : [V] rms line-to-line (690, 480, 400): primary and secondary of the transformer
@@ -20,15 +20,17 @@ function emu = grid_emulator_param(g, fault)
 %   three_phase_transformer_setup) + frt_settings + grid_fault_generator + the SOF_50Hz entry of
 %   setup_global_filters: same numbers and the same field names where the model reads them. Fields read
 %   by afe_dq_ttype.slx:
-%     fgrid_nom, us_primary_nom, omega_grid_nom, Vemu_ref_norm, up_xi_pu_ref, up_eta_pu_ref, un_xi_pu_ref,
-%     un_eta_pu_ref, ugrid_bez, igrid_bez, sof_50Hz.A, sof_50Hz.B, sof_50Hz.C, trafo.Lm1, trafo.n1,
-%     trafo.n2, trafo.Rd1, trafo.Rd2, trafo.Ld1, trafo.Ld2, trafo.Rfe1, frt.* (grid_fault_param)
+%     fgrid_nom, us_secondary_nom (= us_primary_nom), omega_grid_nom, Vemu_ref_norm, up_xi_pu_ref,
+%     up_eta_pu_ref, un_xi_pu_ref, un_eta_pu_ref, ugrid_bez, igrid_bez, sof_50Hz.A, sof_50Hz.B, sof_50Hz.C,
+%     trafo.Lm1, trafo.n1, trafo.n2, trafo.Rd1, trafo.Rd2, trafo.Ld1, trafo.Ld2, trafo.Rfe1, frt.*
+%     (grid_fault_param)
 %
 %   Bases: ugrid_bez = application_voltage*sqrt(2/3) is the peak phase-to-neutral voltage (563.4 V at
 %   690 V). igrid_bez is the fixed value of the library class (270 A rms -> 381.8 A peak at 690 V,
 %   360 A rms at 480 V and 400 V), not the current of the transformer (i2bez = 1183 A peak at 1 MVA) nor
 %   the current base of the converter (ibez = 328.7 A at 250 kW): the model multiplies by igrid_bez the
-%   grid currents normalized with ibez in instantaneus_power (power-meter scope only, see the README).
+%   grid currents normalized with ibez in instantaneus_power (power-meter scope only, commented out in the
+%   model; see the README).
 
     V = g.application_voltage;
     emu.name = sprintf('grid_%dV_%dkVA_Dyn11', V, round(g.pwr_nom/1e3));

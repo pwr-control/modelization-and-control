@@ -11,30 +11,35 @@ current, the space vector modulation drives a three-level PWM.
 |---|---|
 | `init_model.m` | initialization: every number in the struct `param`, design figures, then it opens the model and checks the `param.*` references. Run it **from this folder** (the functions of `private/` are visible only to the files of this folder). |
 | `private/` | the parameter functions of this model (table below) |
-| `afe_dq_ttype.slx` | the model: grid emulator and Dyn11 transformer, LCL filter, T-type bridge (IGBT with loss and thermal model; ideal-switch bridge commented out), split DC link, load, the whole control |
-| `init_model_legacy.m` | the old flat init (shared template with seven clock domains and the DAB/PSFBC/CLLC/machine sections), kept for reference only: it no longer runs against the current library (see below) |
+| `afe_dq_ttype.slx` | the model: grid emulator and Dyn11 transformer, LCL filter, T-type bridge of `semiconductors_bridges` (IGBT with loss and thermal model; the old IGBT bridge and the ideal-switch bridge are commented out), split DC link, load, the whole control |
+| `non_virtual_blocks_counting.m` | counts the non-virtual blocks of the model and of its referenced models (`find_system` with `LookUnderMasks` `all`, `FollowLinks` `on`, `Virtual` `off`) |
 
 ## The model
 
-**Power stage.** The grid emulator (library block `three_phase_voltage_source_with_frt_emulator`: ideal
-sources, amplitude ramp of 20 ms from t = 0 through a 50 Hz second-order filter, fault generator off)
-feeds the primary of a Dyn11 1 MVA 690/690 V transformer made of three single-phase transformer blocks
+**Power stage.** The grid emulator (block `three_phase_voltage_source_with_frt_emulator` of
+`library/masked_models/power_supply_emulators/three_phase_voltage_with_frt_emulator_mfcn.slx`, the MATLAB
+Function copy of the original with the same mask and output bus: ideal sources, amplitude ramp of 20 ms
+from t = 0 through a 50 Hz second-order filter, fault generator off) feeds the primary of a Dyn11 1 MVA
+690/690 V transformer made of three single-phase transformer blocks
 (`Ld1` 113.7 µH, `Rd1` 11.9 mΩ, `Ld2` 37.9 µH, `Rd2` 11.9 mΩ, `Lm1` 144.8 mH, `Rfe1` 265 Ω, 24/14
 turns: the secondary is at 697 V, +1.0 %), star point of the secondary grounded. Filter (`LCL_filter`):
 three-phase inductor 500 µH (`RLFu` 3.9 mΩ), 3 × 200 µF in star with 50 mΩ in series (floating star
 point), 3 × 1 µH, then the transformer: the leakage referred to the secondary is 77 µH and the filter
 resonates at about 1.38 kHz. The bridge is the library block
-`igbt_based_three_level_three_phase_inverter_ttype` with the CM1200DW-34T data set embedded in
-`private/device_igbt_param.m` for the twelve switches (four per leg: two outer, two in the bidirectional
-path to the neutral point; each commutation at `udc/2`). The DC link is the library block
+`three_phase_bridge_three_level_ttype_igbt_simple_2th` (folder `semiconductors_bridges/three_phase_bridge`
+of `library/masked_models`; gates from `deadtime_generator_for_ttype`, DC terminals dc+, np, dc− on the DC
+link) with the CM1200DW-34T data set embedded in `private/device_igbt_param.m` for the twelve switches
+(four per leg: two outer, two in the bidirectional path to the neutral point; each commutation at
+`udc/2`). The old bridge `igbt_based_three_level_three_phase_inverter_ttype` and the ideal-switch bridge are still in the
+model, commented out. The DC link is the library block
 `dclink_for_three_levels`: 2 × 14.4 mF, 107 kΩ measuring resistors (`Rudc_measure`), initial voltages
 `udc_nom/2`; the load is a 4.16 Ω resistor across the whole link (275 kW at 1070 V).
 
 **Control** (all at `ts = 125 µs`, triggered at the bottom and at the top of the carrier; every
 acquisition is quantized and delayed by one sample):
 
-- PLL: four PLLs run in parallel (Simulink dq PLL, C-Caller dq PLL, Simulink FHT-PLL, C-Caller FHT-PLL)
-  and `Variant Source1/2` pick one; the active one is the C-Caller FHT-PLL (`param.afe.variant.dq_pll_mode4`);
+- PLL: the C-Caller FHT-PLL (`param.afe.variant.dq_pll_mode4`, picked by `Variant Source1/2`); the other
+  three (Simulink dq PLL, C-Caller dq PLL, Simulink FHT-PLL) are in the model, commented out;
 - DC-link voltage PI 4/45 (`udc_ctrl`): reference step at 1 ms to 1 pu through a 20 ms filter, output =
   active current reference limited to ±1.65 pu, anti-windup by back-calculation;
 - converter current: αβ→dq at the PLL angle, dq vector PI 0.25/35 on the converter-side current (the
@@ -57,7 +62,8 @@ acquisition is quantized and delayed by one sample):
 2. From this folder run `init_model.m`: it fills `param`, prints the local functions of `private/`, the
    bases, the design figures and a loss estimate, opens `afe_dq_ttype.slx`, imports the C-Caller bus
    types (`first_harmonic_tracker_output_t`, `dqpll_grid_output_t`, `sv_pwm_cm_output_t`), closes the
-   scopes and checks that every `param.*` name read by the model exists (`check_model_param_refs`).
+   scopes, checks that every `param.*` name read by the model exists (`check_model_param_refs`) and
+   defines in the base workspace the bus object `PowerMeterIecBus` (output of the IEC power meter).
 3. Run the simulation (`param.sim.simlength = 1.25` s, `ode23tb` with `MaxStep` and the Simscape local
    solver step at `param.sim.tc` = 0.625 µs).
 
@@ -65,9 +71,9 @@ acquisition is quantized and delayed by one sample):
 
 | Group | Content |
 |---|---|
-| `param.sim` | `simlength`, `tc` (0.625 µs: `FixedStep`, `MaxStep`, Simscape local solver step and logging base), `use_thermal_model` (only sets `nonlinear_iterations` 3 → 5 as in the legacy init), `nonlinear_iterations` (Solver Configuration of the grid emulator), `check_param_refs` |
-| `param.time`, `param.glb_time` | `fpwm` 4 kHz, `trgo` 1 (double update), `dead_time` 3 µs, `tc_factor` 200; `glb_time = timing_param(param.time)` gives `fPWM_AFE`, `TRGO_AFE_double_update`, `dead_time_AFE`, `ts_afe` 125 µs, `tc`, `Nc`, `Ns_afe` (the names the blocks read). The legacy `glb_time.ts_inv` read by the current PI had the same value and is mapped to `ts_afe`. |
-| `param.grid` | 690 V, 50 Hz, transformer data (`pwr_nom` 1 MVA, `ucc` 5 %, `eta` 95 %, `p_iron` 1.8 kW, turns, core geometry, `mur`); `frt = grid_fault_param('two_phase_D', 0.75, 0.915, 0.75, 0, 0)` (legacy test 25.4, both enables at 0); `emu = grid_emulator_param(param.grid, param.grid.frt)` (bases, references, `sof_50Hz` state space of the amplitude ramps, `trafo` = the fields of the three transformer blocks) |
+| `param.sim` | `simlength`, `tc` (0.625 µs: `FixedStep`, `MaxStep`, Simscape local solver step and logging base), `use_thermal_model` (only sets `nonlinear_iterations` 3 → 10, see open point 9), `nonlinear_iterations` (Solver Configuration of the grid emulator), `check_param_refs` |
+| `param.time`, `param.glb_time` | `fpwm` 4 kHz, `trgo` 1 (double update), `dead_time` 3 µs, `tc_factor` 200; `glb_time = timing_param(param.time)` gives `fPWM_AFE`, `tPWM_AFE`, `TRGO_AFE_double_update`, `dead_time_AFE`, `ts_afe` 125 µs, `tc`, `Nc`, `Ns_afe` (the names the blocks read). The legacy `glb_time.ts_inv` read by the current PI had the same value and is mapped to `ts_afe`. |
+| `param.grid` | 690 V, 50 Hz, transformer data (`pwr_nom` 1 MVA, `ucc` 5 %, `eta` 95 %, `p_iron` 1.8 kW, turns, core geometry, `mur`); `frt = grid_fault_param('two_phase_D', 0.75, 0.915, 0.75, 0, 0)` (legacy test 25.4, both enables at 0); `emu = grid_emulator_param(param.grid, param.grid.frt)` (bases, references, `sof_50Hz` state space of the amplitude ramps, `trafo` = the fields of the three transformer blocks, `frt` = the fault data, read by the emulator mask as `param.grid.emu.frt.*`) |
 | `param.afe.hw` | `afe_hw_param(690, 250e3, fpwm)`: bases (`ubez` 563.4 V, `ibez` 328.7 A, `udc_nom` 1070 V, `norm.*`), split DC link (`CFi1`, `CFi2` 14.4 mF, `Rudc_measure` 107 kΩ, `udc1_init`, `udc2_init`), filter (`LFu`, `LFu_cm`, `RLFu`, `RLFu_cm`, `CFu`, `RCFu`) |
 | `param.afe.pwm` | `fpwm`, `double_update`, `dead_time`, `tc` (informative copy: the modulator reads `param.glb_time.*`) |
 | `param.afe.behav` | `time_gain_module_1` (clock gain against the master time), `pwm_phase_shift_mod1`, `u_cm_comp_mod1` (gain of the zero-sequence controller output into the SVM, 0) |
@@ -77,7 +83,7 @@ acquisition is quantized and delayed by one sample):
 | `param.afe.design` | informative figures printed by the init: operating point and voltage headroom, LCL resonance against fs/6, crossover estimates, neutral-point ripple, switching ripple |
 | `param.afe.igbt`, `param.dev` | IGBT data set (`device_igbt_param`, CM1200DW-34T embedded, other names through `device_data_load` of the library) |
 | `param.meas` | ADC quantization (`adc_quantization` 1/2^11, read by every quantizer of the acquisitions) and full scales |
-| `param.thermal` | heatsink object read by the bridge mask (`heatsink.no_weight`, `cp`, `Tambient`, `DThs_init`, `Rth_switch_HA`, `Rth_diode_HA`), `loss_estimate` (averaged losses and junction temperatures at the design point) |
+| `param.thermal` | heatsink data read by the bridge mask (`Rth_switch_HA`, `Rth_diode_HA`, `Tambient`, `weight`, `cp_al`), the object `heatsink.*` read by the old bridge, commented out (`no_weight`, `cp`, `Tambient`, `DThs_init`, `Rth_switch_HA`, `Rth_diode_HA`), `loss_estimate` (averaged losses and junction temperatures at the design point) |
 
 ### Functions of `private/`
 
@@ -108,16 +114,40 @@ acquisition is quantized and delayed by one sample):
   `dv(t)`, `dw(t)` of the `td2tc` filters).
 - New `ModelUUID`.
 
-The legacy init `init_model_legacy.m` calls `grid_fault_generator` as a script (it is now a function with
-arguments) and builds the whole shared template: it does not run against the current library and is kept
-only to read the old numbers.
+The legacy init `init_model_legacy.m` (removed on 1 November 2026, still in the git history, e.g. commit
+`bb30c41`) called `grid_fault_generator` as a script (it is now a function with arguments) and built the
+whole shared template: it did not run against the current library.
 
 **Checks done.** The parameter part of the new init was run in Octave without the library on the path and
 compared with a reduced legacy init run with the library functions and classes of `dev`: the 126 distinct
 expressions of the model evaluate to the same values (the 50 Hz filter of the emulator has a different
 state-space realization with the same transfer function, and the integrators of the block start from zero,
 so the behaviour is the same). Every `param.*` name of the model resolves. The model was not simulated
-here (no MATLAB): open it, run the init and save it in Simulink.
+here (no MATLAB); it was then saved in Simulink with the changes of the next section.
+
+## Changes made in Simulink (1 November 2026)
+
+After the migration the model was changed in Simulink; the `_mfcn` copies and the commented-out blocks
+lower the number of non-virtual blocks counted by `non_virtual_blocks_counting.m`.
+
+- grid emulator: the MATLAB Function copy `three_phase_voltage_with_frt_emulator_mfcn` (4 non-virtual
+  blocks instead of 123, same mask and output bus); its mask reads `param.grid.emu.*`, the fault data
+  `param.grid.emu.frt.*` and `param.grid.emu.us_secondary_nom` (= `us_primary_nom`: the transformer is
+  690/690 V);
+- T-type bridge: `three_phase_bridge_three_level_ttype_igbt_simple_2th` of `semiconductors_bridges`; its
+  mask reads `param.afe.igbt.*`, `param.thermal.Rth_switch_HA`, `Rth_diode_HA`, `Tambient`, `weight`,
+  `cp_al`, the edge time constant `param.glb_time.tc` and the loss filter 5 × `param.glb_time.tPWM_AFE`;
+  five values keep the defaults of the library mask (`Gce_off` 1e-6, `Vth_gate_hyst` 0.85, `Vblock_Errf`
+  50, `Csnubber` 12 pF, `Rsnubber` 2.2 kΩ). Simscape nonlinear iterations raised to 10 (open point 9);
+- commented out: the old IGBT bridge and the ideal-switch bridge, three of the four PLLs,
+  `instantaneus_power`, `afe_measurement_sim`, a few inputs of `scopes/grid_afe_side`;
+- IEC power meter: the library block `grid/power meter iec` (Simulink) became the MATLAB Function copy
+  `grid/power meter iec mfunc`, commented out (open point 11); the init defines its output bus
+  `PowerMeterIecBus`;
+- `init_model_legacy.m` removed, `non_virtual_blocks_counting.m` added.
+
+The saved model reads 120 distinct `param.*` names (18 of them only in the commented-out blocks), all
+defined by the init.
 
 ## Open points found during the migration
 
@@ -156,20 +186,27 @@ with ideal PLL, no switching).
    actuator for a balancing loop on `udc1 − udc2`; `u_cm_comp_mod1` is 0 and the zero-sequence current PI
    has nothing to control in a three-wire system.
 6. **Bases and ratings.** `ibez` = 328.7 A comes from 250 kW with a 10 % margin: the 275 kW load takes
-   322 A peak = 0.98 pu. The power-meter subsystem (`instantaneus_power`) multiplies the currents in pu of
-   `ibez` by `grid_emu.igrid_bez` = 381.8 A (a fixed value of the library emulator class), so its active
-   and reactive power read 16 % high; the control does not use it.
+   322 A peak = 0.98 pu. The power-meter subsystem `instantaneus_power` (commented out since 1 November)
+   multiplies the currents in pu of `ibez` by `grid_emu.igrid_bez` = 381.8 A (a fixed value of the library
+   emulator class), so its active and reactive power read 16 % high; the control does not use it.
 7. **Transformer ratio.** The turns 24/14 (`n1 = floor(14·√3)`) give 697 V on the secondary (+1.0 %).
 8. **Semiconductors.** The same 1700 V / 1200 A module is used for the outer and for the middle switches
    (the middle path sees only `udc/2`); at 322 A peak the averaged estimate gives about 3 kW for the
    bridge (outer diode 271 W, middle IGBT 174 W, middle diode 48 W per leg), junction temperatures
    below 65 °C with 40 °C water, efficiency 98.7 % with the filter. Dead time 3 µs (td_off + tf of the
    module 1.4 µs): about 6.4 V of average voltage error at the current zero crossings (1.4 % of the phase
-   voltage).
-9. **Simscape solver.** `nonlinear_iterations` = 5 as in the legacy init. The new T-type bridges of
-   `library/masked_models/semiconductors_bridges` (not used here) need at least 10 iterations, 20 by
-   default, because two diodes switch in the same step; if this model is moved to them, raise
-   `param.sim.nonlinear_iterations` and expect the error "Temperature must be greater than absolute zero"
-   with 5.
+   voltage). The bridge of `semiconductors_bridges` reads the heatsink mass per die `param.thermal.weight`
+   = 0.15 kg, the old one read `heatsink.no_weight` = 0.015 kg (the /10 of the init: "thermal inertia not
+   accounted"): with `Rth_HA` = 15 mK/W the heatsink time constant goes from 0.2 s to 2 s, longer than the
+   1.25 s of a run, so the temperatures at the end of a run are still rising.
+9. **Simscape solver.** `nonlinear_iterations` = 10 (5 in the legacy init): the T-type cells of
+   `library/masked_models/semiconductors_bridges` need at least 10 because two diodes switch in the same
+   step (with 5 the run stops with "Temperature must be greater than absolute zero"); the test bench of the
+   library uses 20. If that error comes back, raise `param.sim.nonlinear_iterations`.
 10. **Model details.** The From `pwr_lim_enable` in `udc_ctrl` has no Goto (the switch keeps the PI
-    output); the zero-sequence and power-meter subsystems are computed but not used by the control.
+    output); the zero-sequence controller is computed but not used by the control.
+11. **IEC power meter copy.** In `grid/power meter iec mfunc` (commented out) the input `enable_time` of
+    the MATLAB Function receives the output of a Step (0 → 1 at 25 ms), while the code compares it with
+    the time (`enable = t >= enable_time`): enabled, the meter would work for the first 25 ms, give zeros
+    from 25 ms to 1 s and start again at 1 s. A Constant 0.025 in place of the Step (or `enable_time` as
+    a parameter of the block) gives the behaviour of the original.

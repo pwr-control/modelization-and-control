@@ -13,10 +13,13 @@ function dev = device_igbt_param(device, fpwm, udc)
 %     fpwm   : [Hz] switching frequency, used for the ZVS snubber
 %     udc    : [V]  DC-link voltage, used for the ZVS snubber
 %
-%   Fields read by the mask of the igbt_based_three_level_three_phase_inverter_ttype block of afe_dq_ttype.slx
-%   (the same data for the twelve switches, outer and inner):
+%   Fields read by the mask of the T-type bridge of afe_dq_ttype.slx (block
+%   three_phase_bridge_three_level_ttype_igbt_simple_2th of semiconductors_bridges; the same data for the
+%   twelve switches, outer and inner):
 %     Vth, Vce_sat, Rce_on, Eon, Eoff, Erec, Ion_sw_losses, Voff_sw_losses, Vdon_diode, Rdon_diode,
-%     Rth_switch_JH, Rth_diode_JH, Csnubber, Rsnubber, JunctionTermalMass
+%     Rth_switch_JH, Rth_diode_JH, JunctionTermalMass
+%   plus Csnubber and Rsnubber, read by the old igbt_based_three_level_three_phase_inverter_ttype (commented
+%   out in the model).
 %   Same names and derived quantities as the library class device_igbt_setting. The output keeps every
 %   field of the data set.
 

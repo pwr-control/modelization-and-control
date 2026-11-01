@@ -15,8 +15,8 @@
 %[text] split DC link, grid emulator, transformer, inductor, power meter, filters), for the C-Caller sources and for
 %[text] the IGBT data sets other than the embedded one. Run it from this folder (the functions of ./private are
 %[text] visible only to the files of this folder). The legacy flat init (shared template, seven clock domains,
-%[text] DAB/PSFBC/CLLC/machines) is kept as init_model_legacy.m for reference; it no longer runs with the library
-%[text] (grid_fault_generator is now a function with arguments).
+%[text] DAB/PSFBC/CLLC/machines, init_model_legacy.m) was removed on 1 November 2026 (git history, e.g. commit
+%[text] bb30c41); it no longer ran with the library (grid_fault_generator is now a function with arguments).
 
 clear;
 model = 'afe_dq_ttype';
@@ -51,12 +51,15 @@ clear local_functions library_path
 param.sim.simlength = 1.25;                 % [s] model StopTime
 param.sim.tc = 0.625e-6;                    % [s] logging base, model MaxStep (ode23tb) and step of the Simscape
                                             %     local solver (glb_time.tc): ts/200 at fpwm = 4 kHz, double update
-param.sim.use_thermal_model = 1;            % the active bridge is the IGBT T-type with the loss and thermal model
-                                            % (the ideal-switch bridge is commented out in the model): the flag only
-                                            % sets the Simscape nonlinear iterations, as the legacy init
+param.sim.use_thermal_model = 1;            % the active bridge is three_phase_bridge_three_level_ttype_igbt_simple_2th
+                                            % of semiconductors_bridges (IGBT, loss and thermal model; the old IGBT
+                                            % and ideal-switch bridges are commented out): the flag only sets the
+                                            % Simscape nonlinear iterations
 param.sim.nonlinear_iterations = 3;         % Simscape Solver Configuration (block grid/grid_emulator/Solver Configuration)
 if param.sim.use_thermal_model
-    param.sim.nonlinear_iterations = 10;     % legacy value; the new T-type blocks of semiconductors_bridges need 20
+    param.sim.nonlinear_iterations = 10;    % T-type cells: two diodes switch in the same step and 5 iterations fail
+                                            % ("Temperature must be greater than absolute zero"); legacy value 5,
+                                            % the test bench of semiconductors_bridges uses 20
 end
 param.sim.check_param_refs = true;          % at the end: check that every param.* read by the model exists
 %[text] ## Timing
@@ -226,7 +229,9 @@ param.thermal.Rth_diode_HA = param.thermal.Rth_switch_HA;       % [K/W]
 param.thermal.Tambient = 40;                                    % [degC] water temperature
 param.thermal.DThs_init = 0;                                    % [K] initial heatsink rise
 
-% heatsink object read by the bridge mask (fields Rth_switch_HA, Rth_diode_HA, no_weight, cp, Tambient, DThs_init)
+% the bridge of semiconductors_bridges reads Rth_switch_HA, Rth_diode_HA, Tambient, weight (per die) and cp_al
+% above; the heatsink object below is read by the old IGBT bridge, commented out in the model (fields
+% Rth_switch_HA, Rth_diode_HA, no_weight, cp, Tambient, DThs_init)
 param.thermal.heatsink.name = 'liquid_cooled_plate_2kw';
 param.thermal.heatsink.weight = param.thermal.weight;
 param.thermal.heatsink.no_weight = param.thermal.no_weight;
