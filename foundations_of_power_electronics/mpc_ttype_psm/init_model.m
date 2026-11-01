@@ -232,8 +232,9 @@ d.u_ocv = pk.number_of_cells*interp1(0:1e-3:1, pk.ocv_model, param.battery.initi
 d.vdc_pu_ocv = d.u_ocv/hw.udc_nom;                              % [pu] DC voltage seen by the control
 d.u_phase_max_pu = d.u_ocv/sqrt(3)/mc.ubez;                     % [pu] peak phase voltage, linear range of the bridge
 % current loop of the predictive control seen as a deadbeat loop on one axis: one-step gain g = (true voltage /
-% predicted voltage)*(L of the prediction / true L); with the delay compensation the closed-loop poles are 0 and
-% 1 - g (deadbeat for g = 1). The prediction uses Lq + LFi on both axes, so the d axis has g = (Lq + LFi)/(Ld + LFi).
+% predicted voltage)*(L of the prediction / true L); with the delay compensation the error obeys
+% e(k+1) = (1 - g)*e(k-1) (deadbeat for g = 1, stable for 0 < g < 2). The prediction uses Lq + LFi on both axes,
+% so the d axis has g = (Lq + LFi)/(Ld + LFi).
 d.g_q = mpc.L_norm*mc.Lbez/(mc.Lq_m + hw.LFi);
 d.g_d = mpc.L_norm*mc.Lbez/(mc.Ld_m + hw.LFi);
 % operating point at rated speed
@@ -262,7 +263,7 @@ d.t_gate_on = param.glb_time.dead_time_INV + ...
 param.psm.design = d;
 fprintf('Per unit: battery %.0f V open circuit at soc %.2f = %.3f pu of udc_nom %.0f V | linear limit of the bridge %.2f pu of ubez\n', ...
     d.u_ocv, param.battery.initial_battery_soc, d.vdc_pu_ocv, hw.udc_nom, d.u_phase_max_pu);
-fprintf('Predictive control: state voltages times u_scale = %.4f (pu of ubez) | one-step gain g = %.3f (q axis, deadbeat), %.3f (d axis, pole 1 - g = %.3f)\n', ...
+fprintf('Predictive control: state voltages times u_scale = %.4f (pu of ubez) | one-step gain g = %.3f (q axis, deadbeat), %.3f (d axis: the error times %.3f every two steps)\n', ...
     mpc.u_scale, d.g_q, d.g_d, 1 - d.g_d);
 fprintf('Rated speed: iq_ref = %.3f pu (id = 0) | %.0f kW per system, %.0f A rms, %.0f V peak (%.2f pu, m = %.2f), cos(phi) %.2f\n', ...
     d.iq_ref, d.P_gen/1e3, d.i_rms, d.u_inv, d.u_inv_pu, d.m_index, d.cosphi);

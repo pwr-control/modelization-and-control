@@ -114,7 +114,7 @@ with the number of the old open point (migration README) in brackets.
 | # | Problem | Fix |
 |---|---|---|
 | 1 | (1) The prediction used the voltage of a state in pu of `udc_nom` in a machine model in pu of `ubez`: the true voltage was 2.925 times the predicted one. | State voltage times `u_scale = udc_nom/ubez`, from `vdc1` (P) and `vdc2` (N) separately. |
-| 2 | (4) No delay compensation: the prediction started from the current measured one step before, but the chosen vector acts one step later. With fix 1 missing too, the loop seen as a deadbeat loop had the poles `z² − z + g = 0`, g = 2.6 (q) and 3.1 (d): unstable. | Current and `vdc1 − vdc2` of now computed with the vector of the last step, then the choice. Poles 0 and 1 − g: g = 1.00 on q (deadbeat), 1.20 on d (pole −0.20). |
+| 2 | (4) No delay compensation: the prediction started from the current measured one step before, but the chosen vector acts one step later. With fix 1 missing too, the loop seen as a deadbeat loop had the poles `z² − z + g = 0`, g = 2.6 (q) and 3.1 (d): unstable. | Current and `vdc1 − vdc2` of now computed with the vector of the last step, then the choice: the error obeys `e(k+1) = (1 − g)·e(k−1)`, g = 1.00 on q (deadbeat), 1.20 on d (the error is multiplied by −0.20 every two steps). Without it even g = 1 gives an undamped oscillation at 1.3 kHz. |
 | 3 | (3) Neutral point: `k_dc = 0` (the first state of a pair of redundant small vectors always won, the neutral point drifted by hundreds of volts) and a fictitious capacitance `1e-3` in the term, 3070 times too strong. | `np_gain = ibez/(CFi1·udc_nom·omega_bez)` = 0.325, neutral-point current from the phase currents of the legs at O, `k_dc = 1`. |
 | 4 | (9) Switching: states with almost the same current error (zero vectors, small vectors) were picked by their order in the table: thousands of direct P↔N jumps of a leg per second at partial load. | `k_sw = 1e-5` times the number of level changes of the three legs (O↔P, O↔N count 1, P↔N counts 2): it only breaks the ties. |
 | 5 | (2, 7) EKF voltage: 3 (Gain2, Gain3) × output × `u_psm_scale_ekf` was √3 times the true voltage, and it was the vector chosen in this step, not the one that made the measured current. | Output of `mpc_ttype_gate` = voltage of the vector applied two steps before, in pu of `ubez`; Gain2, Gain3 = 1; `u_psm_scale_ekf` = 1. |
@@ -247,7 +247,7 @@ From the init (`param.psm.design`) and from the design check:
 | pu of the machine | Rs 0.040, Ld 0.804, Lq 0.974, Ls 0.889; with the 230 µH inductor the bridge sees 0.833 (d) and 1.003 (q) |
 | DC link | battery 1249 V open circuit at soc 0.85 (1.168 × `udc_nom`), about 1275 V while it takes 223 kW |
 | operating point at 17.8 rpm | torque curve 125 kNm per system = −0.874 pu (id = 0), 233 kW, 300 A rms, bridge voltage 476 V peak = 1.30 pu of `ubez` = 0.66 of the linear limit `udc/√3` |
-| predictive control | `u_scale` 2.925, `L_norm` 1.003, `R_norm` 0.042, `ts_pu` 0.0121; one-step gain 1.00 (q), 1.20 (d) |
+| predictive control | `u_scale` 2.925, `L_norm` 1.003, `R_norm` 0.042, `ts_pu` 0.0121; one-step gain g = 1.00 (q), 1.20 (d): `e(k+1) = (1 − g)·e(k−1)` |
 | neutral point | 1 pu of neutral-point current for one step moves `vdc1 − vdc2` by 0.0039 pu (4.2 V) |
 | gate timing | a gate is below the 5.5 V threshold 0.63 µs after its turn-off command (1.25 µs on the tc grid) and above it 3.29 µs after its turn-on command |
 
