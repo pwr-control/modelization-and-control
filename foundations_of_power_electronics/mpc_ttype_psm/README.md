@@ -232,10 +232,10 @@ It also has the old control values (it does not know the new names of the fixes)
   (a leg keeps its old level for 3 µs when it moves with the current), split DC link, battery = open-circuit
   voltage + R0 + R1//C1; 1.5 s. It does not model the gate filter and the Simscape solver (the gate timing
   is checked apart on the tc grid), the diodes of the snubbers or the losses.
-- **The model was not simulated in MATLAB** (no MATLAB here). Please run it and look at: the current of Q3
-  of one leg around an O→P change (no short-circuit peak), `vdc1 − vdc2` (within about ±10 V at rated
-  power), the torque against the torque curve, and the `Observer Comparison mod1` scope (the three observers
-  should agree).
+- **Run in MATLAB/Simulink by Davide on 1 November 2026: the fixed model runs well.** What the check
+  above predicts for the scopes: no short-circuit peak in the current of Q3 of a leg at an O→P change,
+  `vdc1 − vdc2` within about ±10 V at rated power, the torque on the torque curve, and the three observers
+  of the `Observer Comparison mod1` scope in agreement.
 
 ## Design figures
 
