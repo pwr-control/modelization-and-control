@@ -14,7 +14,6 @@ vector control.
 | `im_gyro_inv_model.slx` | the model with the averaged inverter (`gyro_inverter`: controlled voltage sources on the AC side, controlled current sources on the DC side); the bridge of ideal switches is commented out |
 | `im_inv_model.slx` | the same model with the bridge of six ideal switches (`inverter/ctrl/inverter/inverter`) active; same parameters |
 | `inv_im_ekf.slx` | older copy of `im_inv_model`, **not migrated** (open point 12) |
-| `init_model_legacy.m` | the legacy flat init, kept for reference; to be removed after the merge |
 | `graphics.mlx` | post-processing live script: plots of the logged x/y currents and voltages, estimated and actual fluxes, speed and torque (run it after a simulation). It read `Ns_inv*ts_inv` and `Tbez`, names no init defined: now `param.glb_time.Ns_inv*param.glb_time.ts_inv` (the logging window) and `param.im.machine.torque_nom` |
 | `non_virtual_blocks_counting.m` | counts the non-virtual blocks of both models and of their referenced models (`find_system` with `LookUnderMasks` `all`, `FollowLinks` `on`, `Virtual` `off`) |
 
@@ -128,8 +127,9 @@ Variant `param.im.mode.use_uf_control = 1` (three `Variant Source` blocks in
 - Configuration set: `StopTime = param.sim.simlength`, `FixedStep = param.sim.tc` (it read `tc`, a name
   the legacy init never defined; the solver is variable-step), `MaxStep = param.glb_time.tc`.
 
-The legacy init `init_model_legacy.m` built the shared template (seven clock domains, grid emulator,
-DAB/PSFBC/CLLC/ISOP rail, PMSM, UPQC): it no longer runs against the library (`lithium_ion_battery_setup`
+The legacy init `init_model_legacy.m` (removed after the migration, still in the history of the repository)
+built the shared template (seven clock domains, grid emulator, DAB/PSFBC/CLLC/ISOP rail, PMSM, UPQC): it no
+longer ran against the library (`lithium_ion_battery_setup`
 takes the charge capacity, `grid_fault_generator` is a function, the battery block reads
 `param.battery.nominal_battery_voltage_1`).
 

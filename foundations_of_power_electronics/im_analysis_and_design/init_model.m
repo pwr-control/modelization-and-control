@@ -18,10 +18,11 @@
 %[text] link, inductor, battery, modulator, C-Caller sv_pwm) and for the ideal-switch data sets other than the
 %[text] embedded one. Run it from this folder (the functions of ./private are visible only to the files of this
 %[text] folder). The legacy flat init (shared template, seven clock domains, grid emulator, DAB/PSFBC/CLLC, PMSM)
-%[text] is kept as init_model_legacy.m for reference; it no longer runs with the library (lithium_ion_battery_setup
-%[text] takes the charge capacity, grid_fault_generator is a function, the battery block reads
-%[text] param.battery.nominal_battery_voltage_1). inv_im_ekf.slx is an older copy of im_inv_model without the
-%[text] observer its name suggests and with names no init defines: it is not migrated (see the README).
+%[text] was removed after the migration (init_model_legacy.m in the history of the repository); it no longer ran
+%[text] with the library (lithium_ion_battery_setup takes the charge capacity, grid_fault_generator is a function,
+%[text] the battery block reads param.battery.nominal_battery_voltage_1). inv_im_ekf.slx is an older copy of
+%[text] im_inv_model without the observer its name suggests and with names no init defines: it is not migrated
+%[text] (see the README).
 
 clear;
 model = 'im_gyro_inv_model';                % averaged inverter (gyro_inverter)
