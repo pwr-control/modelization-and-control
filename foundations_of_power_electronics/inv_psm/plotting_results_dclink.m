@@ -7,17 +7,17 @@ tratto3=1;
 colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
-t1c = t_tc_sim(end) - Nc*tc;
+t1c = t_tc_sim(end) - param.glb_time.Nc*param.glb_time.tc;
 t2c = t_tc_sim(end);
 % t1s = t_ts_afe_sim(end) - Ns_afe*ts_afe;
 % t2s = t_ts_afe_sim(end);
 
 t1s = 1;
-t2s = t1s + 10/fPWM_AFE;
+t2s = t1s + 10/param.glb_time.fPWM_INV;
 
 t1c_zoom = t_tc_sim(end) - 5/50;
 t2c_zoom = t_tc_sim(end);
-t3c_zoom = t_tc_sim(end) - 50/fPWM_AFE;
+t3c_zoom = t_tc_sim(end) - 50/param.glb_time.fPWM_INV;
 t4c_zoom = t_tc_sim(end);
 t1s_zoom = t_ts_afe_sim(end) - 5/50;
 t2s_zoom = t_ts_afe_sim(end);
