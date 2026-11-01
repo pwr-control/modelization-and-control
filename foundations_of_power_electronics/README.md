@@ -88,10 +88,20 @@ Recurring building blocks across the projects:
 - Inverter + induction machine (ABB M3BP 355MLB 6, 261 kW) with encoder, fPWM = 4 kHz.
 - dq PI current control, MTPA, torque-curve mode; bridge selectable between ideal switch,
   IGBT and MOSFET with thermal model.
+- EKF of the machine (rotor flux, speed and load torque, `rotor_flux_estimators/ekf`): MATLAB Function
+  `ekf_im` calling `ekf_im_step` of the library, parameters from `ekf_im_setup` rev. 01 (November 2026).
+  Sensorless by default (`use_im_encoder = 0`): the control starts on the encoder and switches to the EKF
+  at `time_use_im_ekf`; with `use_im_encoder = 1` the EKF only observes.
 
 ### `im_analysis_and_design`
-- Induction machine modelling and indirect field-oriented control; three model variants
-  (`im_inv_model`, `im_gyro_inv_model`, `inv_im_ekf`).
+- Induction machine modelling and indirect field-oriented control (ABB M3BP 355MLB 6, 261 kW, 460 V,
+  60 Hz, encoder): speed PI, rotor-flux PI, x/y current PI, current-model rotor-flux observer;
+  4 kHz two-level inverter on a 1200 V battery. `im_gyro_inv_model` uses the averaged inverter,
+  `im_inv_model` the ideal-switch bridge; `inv_im_ekf` is an older copy without a Kalman filter of the
+  machine (not migrated).
+- `init_model.m` migrated (November 2026) to the `param` structure with the parameter functions in
+  `private/`; the legacy flat init was removed after the check. The folder README lists the open
+  points of the control found by the design check.
 - `graphics.mlx` plots stator/rotor currents and fluxes in the stationary and rotor frames —
   the notebook is for machine-model verification rather than drive tuning.
 
