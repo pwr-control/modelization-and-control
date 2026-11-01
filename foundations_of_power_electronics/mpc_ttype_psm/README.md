@@ -263,9 +263,10 @@ From the init (`param.psm.design`) and from the design check:
    loses the angle after about 1 s (with the encoder it still works). +20 % is fine (−10.6°, torque on the
    curve). If the real inductances are not known within about ±15 %, an inductance or angle adaptation is
    needed.
-4. **Remaining angle error** of about −1.2° (sensorless) and −0.7° (encoder): it comes from the angle of the
-   current reference (the EKF output is two steps old, the reference is for the next step) and gives
-   id ≈ −0.03 pu. The torque is on the curve within 0.4 %.
+4. **Remaining angle error.** The control angle is one step old with the encoder (−0.7° at 17.8 rpm) and
+   about two steps old with the EKF (−1.2°), and the current reference is the target of the next step: the
+   current lags the rotor frame by 1.4° (encoder) to 1.9° (EKF), id ≈ −0.02 to −0.03 pu. The torque is on
+   the curve within 0.4 %; an angle advance of `(n + 1)·omega·ts` in the current reference would remove it.
 5. **DC voltage.** The battery is at 1249–1275 V, 1.17–1.19 times `udc_nom` of the 690 V data set: please
    check the voltage rating of the switches. The control uses the measured `vdc1` and `vdc2`, so it follows
    the battery.
