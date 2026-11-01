@@ -1,0 +1,5 @@
+equal modules           : v =  1170.9,  1170.9,  1170.9,  1170.9 V | i_out =  375.0,  375.0,  375.0,  375.0 A | D = 0.7740
+module 1 turns +2 %     : v =  1150.0,  1177.9,  1177.9,  1177.9 V | i_out =  368.3,  377.2,  377.2,  377.2 A | D = 0.7702
+module 2 leakage +5 %   : v =  1167.8,  1180.1,  1167.8,  1167.8 V | i_out =  374.0,  377.9,  374.0,  374.0 A | D = 0.7756
+module 2 leakage +20 %  : v =  1158.4,  1208.3,  1158.4,  1158.4 V | i_out =  371.0,  387.0,  371.0,  371.0 A | D = 0.7809
+restoring conductance g = 0.985 S, tau = Cin/g = 1.22 ms (first order, output inductors left out)
