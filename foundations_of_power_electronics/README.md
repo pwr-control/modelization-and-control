@@ -336,7 +336,12 @@ Recurring building blocks across the projects:
   transformer, 340 V / 90 A DC output, LC filter with 2nd/3rd/5th/7th tuned traps; cascaded
   voltage and current PI, dq-PLL and a harmonic observer (`hobs_test.slx` tests the observer
   alone).
-- `six_pulses_thyristor_based_rectifier/` — a second six-pulse variant with the same data.
+- `six_pulses_thyristor_based_rectifier/` — six-pulse bridge of `thyristor_rr` thyristors (Lauritzen-Ma
+  charge model) on a 400 V grid through a Dyn11 100 kVA transformer and 65 µH inductors, DC LC filter,
+  3.4 Ω load; C-Caller PLL `dqpll_thyr` on the bridge voltages, C-Caller firing generator, load current PI
+  (20 A, step to 100 A). `init_model.m` migrated (November 2026) to the `param` structure with the parameter
+  functions in `private/`; the folder README lists the open points of the start-up, the current PI, the PLL
+  and the thyristor model found by the design check.
 - `twelve_pulse_thyristor_rectifier/` — twelve-pulse bridge on a three-winding Dy/Dd
   transformer for a 775 V traction DC bus from a 20 kV / 1250 kVA supply, with 5th/7th/11th/13th
   tuned shunt filters. `pm/` is the detailed model, `pm_reduced_model/` its reduced-order
