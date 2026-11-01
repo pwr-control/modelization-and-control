@@ -183,7 +183,8 @@ diodes with their snubbers, the transformer T model, the battery cell model, the
 of the model with the 1/2^11 quantization and one sample of delay. It is not the Simscape model (I cannot run
 MATLAB here) but it has the same structure and numbers. Run `python3 isop_sim.py <case> ...` (cases at the
 end of the file), then `plots.py` and `analyze.py` / `analyze_win.py` / `classic_isop_estimate.py`; all
-numbers are in `design_check_ps_isop_rail_output.txt`.
+numbers are in `design_check_ps_isop_rail_output.txt`, the figures in `figures/` (PDF; `plots.py` also writes PNG
+files, which git ignores).
 
 - **Start and steady state (the model as it is).** From the DC steady state of the network (`DoDC` on) the
   output reaches 95 % in 178 ms and 99 % in 295 ms, no overshoot. Steady state: 751.5 V mean (the PI holds
@@ -191,10 +192,8 @@ numbers are in `design_check_ps_isop_rail_output.txt`.
   phase shift 0.782 (the init predicts 0.777), 1170.9 V on each module, string current 246 A, primary current
   380 A rms / 460 A peak, magnetizing current 52 A peak, 751.5 A from each rectifier. The input filter
   (2 mH, four 1.2 mF in series) rings at 205 Hz at the start (+37 V on each module) and is well damped by the
-  slow voltage loop.
-
-  ![start-up](claude_analysis/figures/startup.png)
-  ![waveforms](claude_analysis/figures/waveforms.png)
+  slow voltage loop. Figures: [startup.pdf](claude_analysis/figures/startup.pdf),
+  [waveforms.pdf](claude_analysis/figures/waveforms.pdf).
 
 - **Input voltage sharing.** Identical modules share perfectly. A deviation between the two pairs decays in
   a few milliseconds (oscillating, envelope τ ≈ 2.6 ms); a deviation inside a pair decays with τ ≈ 64 ms.
@@ -208,22 +207,17 @@ numbers are in `design_check_ps_isop_rail_output.txt`.
   | module 2 leakage +20 % | module 2: 1450 V (+24 %), module 3: 959 V, modules 1 and 4: 1137 V; module 2 gives about 357 kW, 606 A rms, 900 A peak | 1208 V / 1158 V |
 
   A turns-ratio difference is handled well (the modules settle at equal `n·v`), a leakage difference is not.
-
-  ![voltage sharing](claude_analysis/figures/voltage_sharing.png)
+  Figure: [voltage_sharing.pdf](claude_analysis/figures/voltage_sharing.pdf).
 
 - **Start from 0 V and nominal catenary.** If the string capacitors really start at 0 V (their 0 V target
   has High priority in the model, but `DoDC` is on: which one Simscape takes I could not check), the input
   filter rings up to 2290 V per module (twice the nominal) with 1.8 kA in the string. With the emulator at
-  3 kV the PI saturates (phase shift 1) and the output stays at 604 V.
-
-  ![zero start and 3 kV](claude_analysis/figures/zero_start_and_3kV.png)
+  3 kV the PI saturates (phase shift 1) and the output stays at 604 V. Figure: [zero_start_and_3kV.pdf](claude_analysis/figures/zero_start_and_3kV.pdf).
 
 - **DC magnetizing current.** The start (phase shift changing from one half period to the next) leaves a DC
   part in the magnetizing current of −21 A (40 % of the 52 A AC peak; highest instantaneous value 68 A), which
   decays only through the winding and switch resistances, with a time constant of about 0.2 s. Nothing in the
-  control corrects it (open point 5).
-
-  ![magnetizing DC](claude_analysis/figures/magnetizing_dc.png)
+  control corrects it (open point 5). Figure: [magnetizing_dc.pdf](claude_analysis/figures/magnetizing_dc.pdf).
 
 ## Open points found during the migration
 

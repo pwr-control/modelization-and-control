@@ -16,6 +16,9 @@ plt.rcParams.update({'font.size': 9, 'axes.edgecolor': INK2, 'axes.labelcolor': 
                      'legend.frameon': False, 'axes.titlesize': 9, 'axes.titleweight': 'bold'})
 def load(n):
     d = np.load(os.path.join(HERE, f'case_{n}.npz')); return d['rec'], d['win']
+def save(fig, name):   # PDF for the repository (*.png is ignored there), PNG for a quick look
+    fig.savefig(os.path.join(OUT, name + '.pdf'))
+    fig.savefig(os.path.join(OUT, name + '.png'), dpi=150)
 def per(x):      # average over one PWM period (two control intervals)
     return np.convolve(x, [0.5, 0.5], mode='same')
 
@@ -29,7 +32,7 @@ ax[1].plot(t[m], rec[m, 2], color=S[0]); ax[1].set_ylabel('pu'); ax[1].set_title
 ax[2].plot(t[m], rec[m, 7], color=S[0]); ax[2].set_ylabel('V'); ax[2].set_title('Input voltage of each module (the four are equal)')
 ax[3].plot(t[m], rec[m, 3], color=S[0]); ax[3].set_ylabel('A'); ax[3].set_title('Input current of the string (Ldc_dc1)')
 ax[3].set_xlabel('time [s]')
-fig.tight_layout(); fig.savefig(os.path.join(OUT, 'startup.png'), dpi=150); plt.close(fig)
+fig.tight_layout(); save(fig, 'startup'); plt.close(fig)
 
 # ---------------------------------------------------------------- 2. steady-state waveforms
 _, w = load('nominal'); w = w[w[:, 0] > 0]
@@ -44,7 +47,7 @@ ax[2].plot(tt, w[:, 13], color=S[3], ls='--', label='secondary current, module 4
 ax[2].plot(tt, w[:, 22], color=S[2], label='output current of rectifier_1')
 ax[2].set_ylabel('A'); ax[2].set_title('Rectifier_1: modules 1 and 4 in parallel on the AC side'); ax[2].legend(loc='lower right', ncol=1)
 ax[2].set_xlabel('time [us]')
-fig.tight_layout(); fig.savefig(os.path.join(OUT, 'waveforms.png'), dpi=150); plt.close(fig)
+fig.tight_layout(); save(fig, 'waveforms'); plt.close(fig)
 
 # ---------------------------------------------------------------- 3. input voltage sharing
 fig, ax = plt.subplots(1, 2, figsize=(8.6, 3.6), gridspec_kw={'width_ratios': [1.1, 1]})
@@ -67,7 +70,7 @@ ax[1].axhline(1171, color=INK2, lw=0.8, ls='--')
 ax[1].set_xticks(x); ax[1].set_xticklabels([l for _c, l in cases], fontsize=8); ax[1].set_ylabel('V'); ax[1].set_ylim(800, 1550)
 ax[1].set_title('Input voltage of each module, steady state'); ax[1].legend(loc='upper left', ncol=2, fontsize=8)
 ax[1].grid(axis='x', visible=False)
-fig.tight_layout(); fig.savefig(os.path.join(OUT, 'voltage_sharing.png'), dpi=150); plt.close(fig)
+fig.tight_layout(); save(fig, 'voltage_sharing'); plt.close(fig)
 
 # ---------------------------------------------------------------- 4. start from 0 V and nominal catenary
 _, wz = load('zero_init'); wz = wz[wz[:, 0] > 0]; rz, _ = load('zero_init')
@@ -84,12 +87,12 @@ ax[2].plot(rc[:, 0], rc[:, 1], color=S[0], label='output voltage')
 ax[2].axhline(750, color=INK2, lw=0.8, ls='--', label='reference 750 V')
 ax[2].set_ylim(0, 800); ax[2].set_title('Emulator at 3 kV (nominal catenary)'); ax[2].set_xlabel('time [s]'); ax[2].set_ylabel('V')
 ax[2].legend(loc='lower right', fontsize=8)
-fig.tight_layout(); fig.savefig(os.path.join(OUT, 'zero_start_and_3kV.png'), dpi=150); plt.close(fig)
+fig.tight_layout(); save(fig, 'zero_start_and_3kV'); plt.close(fig)
 
 # ---------------------------------------------------------------- 5. DC magnetizing current after the start
 fig, ax = plt.subplots(1, 1, figsize=(7.0, 2.8))
 ax.plot(rec[:, 0], per(rec[:, 11]), color=S[0])
 ax.set_xlabel('time [s]'); ax.set_ylabel('A'); ax.set_xlim(0, 1.75)
 ax.set_title('Mean magnetizing current of each transformer (one PWM period); peak of the AC part 52 A')
-fig.tight_layout(); fig.savefig(os.path.join(OUT, 'magnetizing_dc.png'), dpi=150); plt.close(fig)
+fig.tight_layout(); save(fig, 'magnetizing_dc'); plt.close(fig)
 print('figures in', OUT, sorted(os.listdir(OUT)))
