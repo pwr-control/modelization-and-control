@@ -48,9 +48,9 @@ fprintf('%s init: local parameter functions in private/: %s\n', model, strjoin({
 clear local_functions library_path
 %[text] ## Simulation
 param.sim.simlength = 1.2;                  % [s] model StopTime (legacy simlength)
-param.sim.tc = 0.5e-6;                      % [s] logging base, MaxStep of ode23tb and step of the Simscape local
+param.sim.tc = 1.0e-6;                      % [s] logging base, MaxStep of ode23tb and step of the Simscape local
                                             %     solver (legacy Tc = Ts = Tcontrol_rect/400)
-param.sim.nonlinear_iterations = 5;         % Simscape Solver Configuration (grid_line/Grid/grid_emulator), legacy literal
+param.sim.nonlinear_iterations = 3;         % Simscape Solver Configuration (grid_line/Grid/grid_emulator), legacy literal
 param.sim.check_param_refs = true;          % at the end: check that every param.* read by the model exists
 %[text] ## Timing
 % one clock domain: the digital control of the rectifier at 5 kHz (PLL, firing pulses, current PI); the power
