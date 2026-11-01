@@ -8,10 +8,15 @@
 %[text] 8 kHz (timer at 4 kHz with double update) in the per unit of the machine: torque reference from the torque
 %[text] curve of the turbine (speed -> torque, generator), current reference on the q axis only (id = 0), and a
 %[text] finite-set model predictive control (MATLAB Function mpc_ttype_gate) that tests the 27 states of the bridge
-%[text] and writes the 12 gate commands directly (there is no modulator). Rotor angle, speed and magnet flux come from
-%[text] a 6-state extended Kalman filter (EKF) on the alpha/beta currents and voltages (sensorless); the encoder
-%[text] angle is also there. The gate commands go through a dead-time generator (interlock between Q1 and Q4 of each
-%[text] leg). Variant: speed control instead of the torque curve (use_speed_control, with motor_load_setting).
+%[text] and writes the 12 gate commands directly (there is no modulator). It compensates the one-step delay of the
+%[text] measurements, keeps the two DC-link capacitors balanced (neutral point) and avoids P <-> N jumps of a leg.
+%[text] Rotor angle and magnet flux come from a 6-state extended Kalman filter (EKF) on the alpha/beta currents and
+%[text] the bridge voltage applied by the predictive control (sensorless); the speed comes from a double integrator
+%[text] observer on the EKF angle; the encoder angle is also there. The gate generator filters the gates, interlocks
+%[text] Q1 and Q4 of each leg and delays the turn-on of all four gates by the dead time.
+%[text] Variant: speed control instead of the torque curve (use_speed_control, with motor_load_setting).
+%[text] The control was fixed in November 2026 (voltage base of the prediction, delay compensation, neutral point,
+%[text] voltage and inductance of the observers, speed estimate, overlap of the gates): see the README.
 %[text] All parameters are local: the numbers are in this script and the parameter functions are in ./private
 %[text] (timing_param, inv_hw_param, psm_machine_param, psm_ctrl_param, battery_param, check_model_param_refs).
 %[text] The library is needed only for the Simulink/Simscape blocks and the C-Caller source of the back-EMF
@@ -60,7 +65,8 @@ param.sim.check_param_refs = true;          % at the end: check that every param
 param.time.fpwm = 4e3;                      % [Hz] frequency of the control timer (inv_psm_mod1/inverter/timer). There
                                             %      is no PWM: the predictive control writes the gate commands
 param.time.trgo = 1;                        % double update: control at 2*fpwm = 8 kHz
-param.time.dead_time = 3e-6;                % [s] dead time of the gate generator (interlock Q1-Q4 of each leg)
+param.time.dead_time = 3e-6;                % [s] dead time of the gate generator: turn-on delay of the four gates
+                                            %     of each leg and dead time of the Q1-Q4 interlock
 param.time.t_measure = param.sim.simlength; % [s] logging window: the whole simulation (legacy)
 param.time.tc_factor = 200;                 % ts/tc: tc = 0.625 us (logging, MaxStep, Simscape local solver, gate filters)
 param.time.tc_decimation = 1;
@@ -91,9 +97,13 @@ param.afe.behav.time_gain_module_1 = 1.0002;
 % bridge: twelve ideal switches (threshold 5.5 V, Ron 1.5 mOhm) with diodes (2 V, 0.15 mOhm) and RC snubbers
 % (10 nF, 2.2 kOhm); per leg Q1 (P), Q2 and Q3 (bidirectional switch to the neutral point), Q4 (N). The
 % predictive control gives P = Q1 + Q2, O = Q2 + Q3, N = Q3 + Q4, gate levels 0/15 V.
-% gate generator (deadtime_generator_for_ttype): first-order filter with time constant glb_time.tc on the four
-% gates, then a CMOS interlock (15 V logic) between Q1 and Q4 only, with the dead time glb_time.dead_time_INV.
-% Q2 and Q3 go to the bridge through the filter only (see the README: Q1-Q3 and Q2-Q4 are not interlocked).
+% gate generator (inverter/deadtime_generator_for_ttype, one block per leg): first-order filter with time
+% constant glb_time.tc on the four gates, CMOS interlock (15 V logic) between Q1 and Q4 with the dead time
+% glb_time.dead_time_INV, then a turn-on delay on the four gates (Transport Delay + MinMax: min(gate, gate delayed
+% by dead_time_INV)): a gate rises dead_time_INV after its command and falls at once. Without it Q1-Q3 and Q2-Q4
+% (not interlocked) overlapped for one step of the local solver at each O -> P and O -> N change: a short circuit
+% of a DC-link capacitor. Now the gate that turns off is below the 5.5 V threshold after 2 tc (1.25 us) and the
+% other one turns on after 3 us.
 %[text] ## Battery across the DC link (block battery/lithium_ion_battery)
 % lithium-ion pack across the whole split DC link (P to N): 1200 V nominal (legacy: udc1_bez of the 1200 V DAB
 % data set of the library, hwdata.dab.udc1_bez), 250 kW, initial state of charge 0.85. As in the legacy init, R0
@@ -131,9 +141,14 @@ param.psm.machine_in.h5_percent = 0;               % [%] 5th and 7th flux harmon
 param.psm.machine_in.h7_percent = 0;
 param.psm.machine = psm_machine_param(param.psm.machine_in);
 
-% voltage scales of the observers: control voltage (pu) -> machine voltage (pu of ubez)
-param.psm.u_psm_scale = 2/3*param.inv.hw.udc_nom/param.psm.machine.ubez;                 % back-EMF observers (not active)
-param.psm.u_psm_scale_ekf = sqrt(3)/2*2/3*param.inv.hw.udc_nom/param.psm.machine.ubez;   % EKF: udc_nom/sqrt(3)/ubez
+% voltage scales of the observers. The predictive control gives the observers the bridge voltage of the vector
+% applied two steps before (the one that made the measured current), already in pu of ubez: the scales are 1.
+% The two non-EKF back-EMF observers multiply it by their udc input, which is the constant 1 (block
+% inner_ctrl/udc_one_observers). Before November 2026: 3 times a voltage in pu of udc_nom times
+% sqrt(3)/2*2/3*udc_nom/ubez (EKF: sqrt(3) times the true voltage) or times udc_pu*2/3*udc_nom/ubez (non-EKF
+% observers: about 2.3 times the true voltage).
+param.psm.u_psm_scale = 1;                          % back-EMF observers (not active), read as param.psm.ctrl.u_psm_scale
+param.psm.u_psm_scale_ekf = 1;                      % EKF
 %[text] ## Mechanical side: torque curve, fixed speed, speed reference
 % energy production (default): the shaft turns at rpm_sim (block fixed_speed_setting: step at 0.025 s, 0.1 s lag);
 % the torque reference is the torque curve of the 1.5 MW generic generator (legacy library script
@@ -166,10 +181,13 @@ if param.psm.impl.use_ekf_bemf_module_1 + param.psm.impl.use_observer_from_simul
 end
 %[text] ### Controllers and observers
 % weights of the cost function of the predictive control (legacy: fields k_kalman, k_dc, k_sw of the EKF object
-% of the library, values 1, 0, 0): only the current error counts, the neutral point and the switching are free
+% of the library, values 1, 0, 0: the neutral point drifted by hundreds of volts). With np_gain the term of
+% vdc1 - vdc2 is in the same per unit as the current error. The switching term counts the level changes of the
+% three legs: it only breaks the ties between states that give almost the same current (zero and small vectors)
+% and removes most P <-> N jumps of a leg at partial load.
 ctrl_in.k_kalman = 1;                               % weight of the current error
-ctrl_in.k_dc = 0;                                   % weight of the neutral-point voltage
-ctrl_in.k_sw = 0;                                   % weight of the change of the voltage vector
+ctrl_in.k_dc = 1;                                   % weight of the neutral-point voltage vdc1 - vdc2
+ctrl_in.k_sw = 1e-5;                                % weight of the number of level changes of the legs
 % speed PI and observers: library defaults of ctrl_pmsm_setup, EKF of the legacy init
 ctrl_in.kp_w = 2.5;                                 % [pu/pu] speed PI
 ctrl_in.ki_w = 18;                                  % [1/s]
@@ -182,7 +200,7 @@ ctrl_in.q_ekf = 1/10;                               % EKF noise (ekf_pmsm_setup)
 ctrl_in.q_ekf_diag = [param.glb_time.ts_inv^2 param.glb_time.ts_inv^2 1/2 1/2 1 1];   % R = ts*r_ekf*eye(2)
 ctrl_in.r_ekf = 1;
 param.psm.ctrl = psm_ctrl_param(param.glb_time.ts_inv, param.psm.machine.omega_bez, param.psm.machine.Jm_norm, ...
-    param.psm.u_psm_scale, param.psm.machine, ctrl_in);
+    param.psm.u_psm_scale, param.psm.machine, param.inv.hw, ctrl_in);
 clear ctrl_in
 
 % local time alignment to the master time (phase_compensation_1/alignment_ctrl, output local_time_corr_inv1 into
@@ -206,16 +224,18 @@ param.ctrl.filters.inv.SOF_50Hz.ss_c = ss(1/(tau_sof*s + 1)^2);
 clear ts tau_sof s
 %[text] ### Design figures (informative)
 % per-unit chain: currents in pu of ibez of the machine (one system). The predictive control computes the
-% voltage of each bridge state from vdc1 + vdc2 in pu of udc_nom (Vdc_scale of the DC link block) and puts it
-% into a machine model in pu of ubez; the EKF gets that voltage times 3 times u_psm_scale_ekf (= udc_nom/sqrt(3)/ubez).
+% voltage of each bridge state from vdc1 (P) and vdc2 (N) in pu of udc_nom (Vdc_scale of the DC link block) times
+% u_scale = udc_nom/ubez, so in pu of ubez, the base of its machine model and of the observers.
 % Operating point: rated speed, torque curve times torque_overload_factor, id = 0 (the reference is on the q axis).
-mc = param.psm.machine; hw = param.inv.hw; pk = param.battery.pack_1; ts = param.glb_time.ts_inv;
+mc = param.psm.machine; hw = param.inv.hw; pk = param.battery.pack_1; mpc = param.psm.ctrl.mpc;
 d.u_ocv = pk.number_of_cells*interp1(0:1e-3:1, pk.ocv_model, param.battery.initial_battery_soc);   % [V] battery, open circuit
 d.vdc_pu_ocv = d.u_ocv/hw.udc_nom;                              % [pu] DC voltage seen by the control
 d.u_phase_max_pu = d.u_ocv/sqrt(3)/mc.ubez;                     % [pu] peak phase voltage, linear range of the bridge
-d.mpc_voltage_ratio = hw.udc_nom/mc.ubez;                       % true voltage / voltage used by the prediction
-d.ekf_voltage_ratio = 3*param.psm.u_psm_scale_ekf*mc.ubez/hw.udc_nom;   % voltage given to the EKF / true voltage
-d.ts_pu = ts*mc.omega_bez;                                      % prediction step in the pu time of the model
+% current loop of the predictive control seen as a deadbeat loop on one axis: one-step gain g = (true voltage /
+% predicted voltage)*(L of the prediction / true L); with the delay compensation the closed-loop poles are 0 and
+% 1 - g (deadbeat for g = 1). The prediction uses Lq + LFi on both axes, so the d axis has g = (Lq + LFi)/(Ld + LFi).
+d.g_q = mpc.L_norm*mc.Lbez/(mc.Lq_m + hw.LFi);
+d.g_d = mpc.L_norm*mc.Lbez/(mc.Ld_m + hw.LFi);
 % operating point at rated speed
 d.T_curve = interp1(param.load.rpm_base, param.load.torque_base, mc.rpm_nom);    % [Nm] torque curve, per system
 d.iq_ref = -param.load.torque_overload_factor*d.T_curve/mc.tau_bez;              % [pu] torque reference = iq reference
@@ -229,28 +249,28 @@ d.m_index = d.u_inv/(d.u_ocv/2);                                % referred to vd
 d.cosphi = uq*iq/(d.u_inv*abs(iq));                             % < 0: power flows to the DC link
 d.P_gen = -3/2*mc.pp*mc.psi_m*iq*mc.omega_m_bez;                % [W] per system (generated)
 d.i_rms = abs(iq)/sqrt(2);                                      % [A] rms
-% neutral point: change of vdc1 - vdc2 (pu of udc_nom) in one step for 1 pu of neutral-point current, true value
-% (capacitors CFi1 = CFi2: d(vdc1 - vdc2)/dt = inp/CFi1) and value written in the predictive control (1/1e-3*inp*ts_pu)
-d.np_dv_true = mc.ibez*ts/hw.CFi1/hw.udc_nom;
-d.np_dv_mpc = 1/1e-3*d.ts_pu;
-% gate timing after a command step (filter time constant tc, interlock logic at 7.5 V, switch threshold 5.5 V)
-tc = param.glb_time.tc; v_gate = 15; v_logic = v_gate/2; v_th = 5.5;   % values typed in the blocks
-d.t_Q1Q4_on = tc*log(v_gate/(v_gate - v_logic));                % [s] Q1 or Q4 on (the other one off for long)
-d.t_Q1Q4_off = tc*log(v_gate/v_logic);                          % [s] Q1 or Q4 off
-d.t_Q2Q3_on = tc*log(v_gate/(v_gate - v_th));                   % [s] Q2 or Q3 on
-d.t_Q2Q3_off = tc*log(v_gate/v_th);                             % [s] Q2 or Q3 off
+% neutral point: change of vdc1 - vdc2 (pu of udc_nom) in one step for 1 pu of neutral-point current
+% (capacitors CFi1 = CFi2: d(vdc1 - vdc2)/dt = i_np/CFi1); the predictive control uses the same value
+d.np_dv_step = mpc.np_gain*mpc.ts_pu;
+% gate timing after a command (filter time constant tc, switch threshold 5.5 V, logic threshold 7.5 V of the
+% Q1-Q4 interlock, turn-on delay dead_time_INV), continuous time; on the tc grid of the local solver the gate
+% that turns off is below the threshold from the second step (1.25 us)
+tc = param.glb_time.tc; v_gate = 15; v_th = 5.5; v_logic = v_gate/2;   % values typed in the blocks
+d.t_gate_off = max(tc*log(v_gate/v_th), tc*log(v_gate/v_logic));        % [s] below 5.5 V (Q2/Q3 filter, Q1/Q4 logic)
+d.t_gate_on = param.glb_time.dead_time_INV + ...
+    min(tc*log(v_gate/(v_gate - v_th)), tc*log(v_gate/(v_gate - v_logic)));   % [s] above 5.5 V
 param.psm.design = d;
 fprintf('Per unit: battery %.0f V open circuit at soc %.2f = %.3f pu of udc_nom %.0f V | linear limit of the bridge %.2f pu of ubez\n', ...
     d.u_ocv, param.battery.initial_battery_soc, d.vdc_pu_ocv, hw.udc_nom, d.u_phase_max_pu);
-fprintf('Predictive control: voltages in pu of udc_nom, machine model in pu of ubez: the true voltage is %.3f times the predicted one | EKF voltage = %.3f x true voltage\n', ...
-    d.mpc_voltage_ratio, d.ekf_voltage_ratio);
+fprintf('Predictive control: state voltages times u_scale = %.4f (pu of ubez) | one-step gain g = %.3f (q axis, deadbeat), %.3f (d axis, pole 1 - g = %.3f)\n', ...
+    mpc.u_scale, d.g_q, d.g_d, 1 - d.g_d);
 fprintf('Rated speed: iq_ref = %.3f pu (id = 0) | %.0f kW per system, %.0f A rms, %.0f V peak (%.2f pu, m = %.2f), cos(phi) %.2f\n', ...
     d.iq_ref, d.P_gen/1e3, d.i_rms, d.u_inv, d.u_inv_pu, d.m_index, d.cosphi);
-fprintf('Neutral point: 1 pu of current for one step moves vdc1 - vdc2 by %.4f pu (the predictive control assumes %.2f pu)\n', ...
-    d.np_dv_true, d.np_dv_mpc);
-fprintf('Gate timing: Q1/Q4 on %.3f us, off %.3f us | Q2/Q3 on %.3f us, off %.3f us (overlap Q1-Q3 and Q2-Q4: see the README)\n', ...
-    d.t_Q1Q4_on*1e6, d.t_Q1Q4_off*1e6, d.t_Q2Q3_on*1e6, d.t_Q2Q3_off*1e6);
-clear mc hw pk ts d iq we L_q R ud uq tc v_gate v_logic v_th
+fprintf('Neutral point: 1 pu of current for one step moves vdc1 - vdc2 by %.4f pu of udc_nom (%.1f V)\n', ...
+    d.np_dv_step, d.np_dv_step*hw.udc_nom);
+fprintf('Gate timing: below the 5.5 V threshold %.2f us after a turn-off command, above it %.2f us after a turn-on command (no overlap of Q1-Q3, Q2-Q4)\n', ...
+    d.t_gate_off*1e6, d.t_gate_on*1e6);
+clear mc hw pk mpc d iq we L_q R ud uq tc v_gate v_th v_logic
 %[text] ## Sensors end scale and quantization
 param.meas.adc_quantization = 1/2^11;               % [pu] quantizer of the acquisitions (pu signals, 12 bit)
 param.meas.adc12_quantization = param.meas.adc_quantization;
