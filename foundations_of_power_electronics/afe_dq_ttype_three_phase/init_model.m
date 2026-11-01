@@ -56,7 +56,7 @@ param.sim.use_thermal_model = 1;            % the active bridge is the IGBT T-ty
                                             % sets the Simscape nonlinear iterations, as the legacy init
 param.sim.nonlinear_iterations = 3;         % Simscape Solver Configuration (block grid/grid_emulator/Solver Configuration)
 if param.sim.use_thermal_model
-    param.sim.nonlinear_iterations = 5;     % legacy value; the new T-type blocks of semiconductors_bridges need 20
+    param.sim.nonlinear_iterations = 10;     % legacy value; the new T-type blocks of semiconductors_bridges need 20
 end
 param.sim.check_param_refs = true;          % at the end: check that every param.* read by the model exists
 %[text] ## Timing
@@ -192,6 +192,7 @@ fprintf('LCL: LFu %.0f uH, CFu %.0f uF, transformer %.1f uH: resonance %.0f Hz (
 fprintf('Neutral point: peak modulating signal %.2f, np current %.0f A peak (3rd harmonic) -> %.2f V pk-pk on 2 x %.1f mF, no balancing loop | switching ripple %.0f A pk-pk\n', ...
     d.m_peak, max(abs(d.i_np)), d.du_np_pp, hw.CFi1*1e3, d.di_sw_max);
 clear hw w tr ts d th m_abc i_abc q_np
+
 %[text] ## Power semiconductors
 % IGBT module Mitsubishi CM1200DW-34T (1700 V / 1200 A, energies at 1000 V / 1200 A, 125 degC, Rg = 1 Ohm) for
 % the twelve switches of the T-type bridge (four per leg: two outer, two in the bidirectional middle path, the
@@ -210,6 +211,7 @@ param.meas.Imax_adc = 1049.835;                     % [A]
 param.meas.CurrentQuantization = param.meas.Imax_adc/2^11;
 param.meas.Umax_adc = 1500;                         % [V]
 param.meas.VoltageQuantization = param.meas.Umax_adc/2^11;
+
 %[text] ## Thermal model
 % aluminium plate, liquid cooled, sized for PrimePACK2; liquid flow > 28 l/min. "A" (ambient) is the water:
 % HA is the temperature rise from water to heatsink surface; water in/out rise max 5 K with 2 kW total losses
@@ -275,6 +277,7 @@ param.thermal.loss_estimate = p;
 fprintf('T-type losses at %.0f A peak, %.0f V, %.0f kHz (rectifier): outer diode %.0f W, middle IGBT %.0f W, middle diode %.0f W, outer IGBT %.1f W; bridge %.0f W, filter %.0f W; Tj %.0f / %.0f / %.0f degC; efficiency %.2f %%\n', ...
     dsg.i_peak, hw.udc_nom, fsw/1e3, p.D1, p.Q3, p.D2, p.Q1, p.bridge, p.filter, p.Tj_D1, p.Tj_Q3, p.Tj_D2, p.efficiency*100);
 clear g hw dsg fsw th m3 m i ia dP dN dO vq vd eq ed out pos p
+
 %[text] ## Model setup
 open_system(model);
 Simulink.importExternalCTypes(model, 'Names', {'first_harmonic_tracker_output_t'});
@@ -297,3 +300,23 @@ if param.sim.check_param_refs
     end
     clear missing_refs model_refs
 end
+
+% Simulink.Bus for output "m" of the MATLAB Function block three_phase_power_meter_iec
+% (Symbols pane: Type = Bus: PowerMeterIecBus). Bus objects stay in the base workspace.
+names = {'Q1p', 'Q1n', 'P1n', 'P1p', 'U1n', 'U1p', ...
+    'i_act_1n', 'i_react_1n', 'i_act_1p', 'i_react_1p'};
+
+elems = Simulink.BusElement.empty(0,1);
+for k = 1:numel(names)
+    e            = Simulink.BusElement;
+    e.Name       = names{k};
+    e.Dimensions = 1;
+    e.DataType   = 'double';
+    e.Complexity = 'real';
+    elems(k,1)   = e;
+end
+
+PowerMeterIecBus          = Simulink.Bus;
+PowerMeterIecBus.Elements = elems;
+assignin('base', 'PowerMeterIecBus', PowerMeterIecBus);
+clear names elems e k
