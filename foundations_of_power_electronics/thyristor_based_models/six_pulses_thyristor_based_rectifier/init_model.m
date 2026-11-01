@@ -49,14 +49,15 @@ clear local_functions library_path
 %[text] ## Simulation
 param.sim.simlength = 1.2;                  % [s] model StopTime (legacy simlength)
 param.sim.tc = 1.0e-6;                      % [s] logging base, MaxStep of ode23tb and step of the Simscape local
-                                            %     solver (legacy Tc = Ts = Tcontrol_rect/400)
-param.sim.nonlinear_iterations = 3;         % Simscape Solver Configuration (grid_line/Grid/grid_emulator), legacy literal
+                                            %     solver (legacy Tc = Ts = 0.5 us = Tcontrol_rect/400; 1 us since
+                                            %     Davide's run of 1 Nov 2026)
+param.sim.nonlinear_iterations = 3;         % Simscape Solver Configuration (grid_line/Grid/grid_emulator), 5 in the legacy
 param.sim.check_param_refs = true;          % at the end: check that every param.* read by the model exists
 %[text] ## Timing
 % one clock domain: the digital control of the rectifier at 5 kHz (PLL, firing pulses, current PI); the power
 % meter blocks copied from the AFE models run at the same step
 param.time.fs_rect = 5e3;                           % [Hz] legacy fPWM_RECT (Tcontrol_rect = 200 us)
-param.time.tc_factor = 1/param.time.fs_rect/param.sim.tc;   % ts_rect/tc = 400 (legacy)
+param.time.tc_factor = 1/param.time.fs_rect/param.sim.tc;   % ts_rect/tc = 200 (400 in the legacy)
 param.time.t_measure = 20e-3;                       % [s] logging window at tc (thyristor_data), legacy t_misura
 
 param.glb_time = timing_param(param.time, param.sim.simlength);
@@ -121,7 +122,7 @@ param.meas.I_FS = param.meas.Iout_dc_nom*param.meas.margin_factor;   % [A] 103.5
 param.meas.V_FS = param.meas.Vout_dc_nom*param.meas.margin_factor;   % [V] 391 V
 param.meas.Vnom_ac_adc = param.grid.application_voltage/sqrt(3)*sqrt(2);   % [V] 326.6 V
 param.meas.rms.periods = 1;
-param.meas.rms.n1 = 2*pi*param.meas.rms.periods/param.grid.omega_nom/param.glb_time.tc;   % 40000 (legacy rms.n1)
+param.meas.rms.n1 = 2*pi*param.meas.rms.periods/param.grid.omega_nom/param.glb_time.tc;   % 20000 (legacy rms.n1, 40000 at 0.5 us)
 %[text] ### Control
 % values of the legacy init and literals of the blocks; the gains of the C-Caller PLL and the pulse width are
 % fixed in the C sources (see rect_ctrl_param)

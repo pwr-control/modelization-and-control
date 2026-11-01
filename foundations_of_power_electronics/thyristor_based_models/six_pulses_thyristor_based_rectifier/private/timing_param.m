@@ -6,7 +6,7 @@ function glb_time = timing_param(t, simlength)
 %     t.fs_rect       [Hz] rate of the digital control of the rectifier: PLL, firing pulse generator,
 %                     current PI (legacy fPWM_RECT = 5 kHz, Tcontrol_rect = 1/fPWM_RECT)
 %     t.tc_factor     ts_rect/tc: tc is the logging base, MaxStep of the global solver and the step of the
-%                     Simscape local solver (legacy Tc = Ts = Tcontrol_rect/400)
+%                     Simscape local solver (legacy Tc = Ts = Tcontrol_rect/400 = 0.5 us; now 200 -> 1 us)
 %     t.t_measure     [s] window of the logging at tc (thyristor data, To Workspace thyristor_data;
 %                     legacy t_misura)
 %     simlength       [s] StopTime: window of the logging at ts_rect (power meter)
@@ -18,7 +18,7 @@ function glb_time = timing_param(t, simlength)
 
     glb_time.fs_rect = t.fs_rect;                           % [Hz]
     glb_time.ts_rect = 1/t.fs_rect;                         % [s] 200 us at 5 kHz
-    glb_time.tc = glb_time.ts_rect/t.tc_factor;             % [s] 0.5 us
+    glb_time.tc = glb_time.ts_rect/t.tc_factor;             % [s] 1 us
     glb_time.t_measure = t.t_measure;                       % [s]
     glb_time.Nc = ceil(t.t_measure/glb_time.tc);            % samples of the logging at tc (last t_measure)
     glb_time.Ns_rect = ceil(simlength/glb_time.ts_rect);    % samples of the logging at ts_rect (whole run)

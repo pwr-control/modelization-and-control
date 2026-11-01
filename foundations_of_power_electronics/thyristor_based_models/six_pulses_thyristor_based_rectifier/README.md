@@ -59,14 +59,14 @@ pulses, and a PI on the load current sets the firing angle. Test: load current 2
    model exists (`check_model_param_refs`) and defines the bus object `PowerMeterIecBus` in the base
    workspace.
 3. Run the simulation (`param.sim.simlength` = 1.2 s, `ode23tb` with `MaxStep` and the Simscape local solver
-   step at `param.sim.tc` = 0.5 µs).
+   step at `param.sim.tc` = 1 µs).
 
 ## Parameter structure
 
 | Group | Content |
 |---|---|
-| `param.sim` | `simlength` 1.2 s, `tc` 0.5 µs (`FixedStep`, `MaxStep`, step of the Simscape local solver), `nonlinear_iterations` 5 (Solver Configuration of the grid emulator), `check_param_refs` |
-| `param.time`, `param.glb_time` | `fs_rect` 5 kHz, `tc_factor` 400, `t_measure` 20 ms; `glb_time = timing_param(param.time, simlength)` gives `ts_rect` 200 µs, `tc`, `t_measure`, `Nc`, `Ns_rect`, `firing_step_deg_50Hz` (3.6°), `z_rect` |
+| `param.sim` | `simlength` 1.2 s, `tc` 1 µs (`FixedStep`, `MaxStep`, step of the Simscape local solver), `nonlinear_iterations` 3 (Solver Configuration of the grid emulator), `check_param_refs` |
+| `param.time`, `param.glb_time` | `fs_rect` 5 kHz, `tc_factor` 200, `t_measure` 20 ms; `glb_time = timing_param(param.time, simlength)` gives `ts_rect` 200 µs, `tc`, `t_measure`, `Nc`, `Ns_rect`, `firing_step_deg_50Hz` (3.6°), `z_rect` |
 | `param.grid` | `application_voltage` 400 V, `f_nom` 50 Hz, `omega_nom`; `frt = grid_fault_param('two_phase_D', 0.75, 0.915, 0.75, 0, 0)` (test 25.4, both enables at 0); `emu = grid_emulator_param(param.grid, param.grid.frt)`; `trafo = transformer_param(...)` (the 16 numbers of the `configurable_trafo` dialog, the check of the clock number, the vector group and derived values: leakage referred to the secondary `R_sc2`, `L_sc2`, `ucc`, nominal current, magnetizing current, iron losses) |
 | `param.rect.hw` | `Lac` 65 µH, `LFu_dc` 1.2 mH, `RLFu_dc`, `f0_dc` 35 Hz, `CFu1_dc` = `CFu2_dc` 8.62 mF, `RCFu1_dc` 0.25 Ω, `RCFu2_dc` 2.5 mΩ |
 | `param.rect.thy` | `thyristor_param('abb_5STP26N6500_A')`: `Vf`, `Ron`, `Goff`, `Vth`, `Vgt`, `Il`, `Ih`, `tau`, `Tm`, `Qth`, `tq` (the mask of `BR2/ssc_thyristor_bridge` reads them; they were typed there before) |
@@ -106,15 +106,19 @@ for 400 V), and the fault data were in `param.frt.data`, while the emulator mask
 - Grid emulator at 400 V (draft: 690 V).
 - Power meter at the control step 200 µs with 6000 samples (draft: 125 µs and 14000 samples, from the AFE
   template).
-- THD block at `tc` = 0.5 µs, the step of the model (draft: `param.glb_time.tc` = 0.25 µs from the template).
+- THD block at `tc`, the step of the model (draft: `param.glb_time.tc` = 0.25 µs from the template, while the
+  model step was 0.5 µs).
 - Fault data of test 25.4 kept with both enables at 0 (draft: `enable_frt_2 = 1`, which puts the dip during
   the 100 A test). Set the last argument of `grid_fault_param` to 1 to apply it.
+- After the run in MATLAB (1 November 2026) Davide set `param.sim.tc` 0.5 → 1 µs (the step of the model, of the
+  Simscape local solver and of the THD block) and the nonlinear iterations of the Solver Configuration 5 → 3.
 - `init_model_legacy.m` stays in the folder until the merge; delete it after the check in MATLAB.
 
 **Checks done.** The parameter part of the new init was run in Octave without the library on the path and
 compared with the draft init: of the 191 distinct expressions of the model, 149 give the same value, 25
 changed on purpose (20 of the power meter, 4 of the THD block, the clock number) and 17 were not defined by
-the draft (the fault data of the emulator mask). Every `param.*` name of the model resolves. The slx keeps the
+the draft (the fault data of the emulator mask); this comparison was made with `tc` = 0.5 µs, before the change
+to 1 µs. Every `param.*` name of the model resolves. The slx keeps the
 order, compression and dates of its zip entries; all changed XML parts parse. The model was not simulated in
 Simulink here (no MATLAB).
 
@@ -170,6 +174,6 @@ model with a copy of the C code of the PLL and of the firing generator).
    Both depend on how Simscape evaluates edge events after a mode change: please check in Simulink (thyristor
    currents negative while on, kA spikes in the grid current).
 8. **Smaller points.** Thyristor data of a 6.5 kV / 2880 A device (tq 800 µs) for a 400 V / 100 A bridge;
-   snubbers 1 µF (about 70 W at 100 A); THD block at 0.5 µs with a 400000-sample window (heavy); the
+   snubbers 1 µF (about 70 W at 100 A); THD block at the model step with a 200000-sample window (heavy); the
    trapezoidal local solver can ring at the switching events (Backward Euler is more robust); misleading
    gain names in `PI_i` and `PI_v`.
