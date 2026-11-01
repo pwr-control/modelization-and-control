@@ -221,7 +221,7 @@ d.pm_udc = 180 + angle(Lv(k))*180/pi;                           % [deg] phase ma
 % with tau = Cdc_dc1/g, g = (u_out/u_in)*(n*D/Req - i_mod/u_in) (linearized, first order, output inductors left
 % out). In this model it holds between the two rectifiers (pairs 1+4 and 2+3). Inside a pair the two bridges
 % are tied on the AC side through the leakage inductances: a voltage difference gives a reactive circulating
-% current and almost no restoring power, so the sharing inside a pair is about 25 times slower and very
+% current and almost no restoring power, so the sharing inside a pair is about 23 times slower and very
 % sensitive to a leakage mismatch (see the README, open point 3).
 d.g_ivs = d.u_out/d.u_in*(d.n*d.D/d.Req - d.i_mod/d.u_in);      % [S]
 d.tau_ivs = hw.Cdc_dc1/d.g_ivs;                                 % [s]

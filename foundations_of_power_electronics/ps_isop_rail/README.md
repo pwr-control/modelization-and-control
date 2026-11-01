@@ -17,6 +17,9 @@ voltage PI gives the same phase shift to the four bridges; there is no input-vol
 | `trafo/four_winding_transformer.tex/.pdf` | derivation of a four-winding transformer (two primaries, two secondaries on one core); not used by the model, see open point 3 |
 | `init_model_legacy.m` | the old flat init, kept until the merge; it no longer runs with the library (open point 9) |
 
+A short note on the architecture and on the input-voltage sharing is in pwr-control/repositories-documentation,
+`research/power_electronics/isop_rail_auxiliary_supply` (English, with its own copy of the simulator).
+
 ## The architecture
 
 **Why input series, output parallel.** The catenary voltage (3000 V nominal, 2000 ... 3600 V permanent range
@@ -55,7 +58,7 @@ voltages, and between two AC sources tied through inductors an amplitude differe
 (circulating) current, not real power. In the fundamental-harmonic model the power of module k is
 `P_k = V_k·V_r·sin θ / X_k` (`V_k` ∝ `v_k` its AC voltage, `V_r` the voltage at the rectifier, `X_k` its
 leakage reactance), so its input current `P_k / v_k` does **not** depend on `v_k`: there is no restoring
-force, only the losses give a little (τ ≈ 64 ms in the simulation instead of ≈ 2.6 ms between the pairs).
+force, only the losses give a little (τ ≈ 64 ms in the simulation instead of ≈ 2.7 ms between the pairs).
 And a leakage difference changes `X_k`, so it changes the input current directly: the module with the larger
 leakage draws less current and its capacitor charges up. This is open point 3.
 
@@ -196,7 +199,7 @@ files, which git ignores).
   [waveforms.pdf](claude_analysis/figures/waveforms.pdf).
 
 - **Input voltage sharing.** Identical modules share perfectly. A deviation between the two pairs decays in
-  a few milliseconds (oscillating, envelope τ ≈ 2.6 ms); a deviation inside a pair decays with τ ≈ 64 ms.
+  a few milliseconds (oscillating, envelope τ ≈ 2.7 ms); a deviation inside a pair decays with τ ≈ 64 ms.
   With one module different, steady state:
 
   | Case | The model: pairs on one rectifier (switched simulation) | One rectifier per module (averaged estimate) |
@@ -232,7 +235,7 @@ files, which git ignores).
    `rload` = 0.5625 Ω.
 3. **Input voltage sharing inside a pair (the main point).** The pairs save two rectifiers and two
    inductors, but they make the two modules of a pair share the input voltage only through second-order
-   effects (see "The architecture"): 64 ms instead of 2.6 ms, and a 5 % leakage difference puts 1351 V and
+   effects (see "The architecture"): 64 ms instead of 2.7 ms, and a 5 % leakage difference puts 1351 V and
    1005 V on the two modules (+15 %), 20 % gives +24 % and 143 % of the rated power in one module. Options:
    (a) one rectifier (and one 250 µH inductor) per module, outputs in parallel on the DC side: the classic
    ISOP, the estimate gives +3 % for a 20 % leakage difference; (b) keep the pairs and add a sharing loop per
