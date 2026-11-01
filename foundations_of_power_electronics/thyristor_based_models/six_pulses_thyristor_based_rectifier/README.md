@@ -110,7 +110,7 @@ for 400 V), and the fault data were in `param.frt.data`, while the emulator mask
   model step was 0.5 µs).
 - Fault data of test 25.4 kept with both enables at 0 (draft: `enable_frt_2 = 1`, which puts the dip during
   the 100 A test). Set the last argument of `grid_fault_param` to 1 to apply it.
-- After the run in MATLAB (1 November 2026) Davide set `param.sim.tc` 0.5 → 1 µs (the step of the model, of the
+- In his commit of 1 November 2026 (model saved in Simulink) Davide set `param.sim.tc` 0.5 → 1 µs (the step of the model, of the
   Simscape local solver and of the THD block) and the nonlinear iterations of the Solver Configuration 5 → 3.
 - `init_model_legacy.m` stays in the folder until the merge; delete it after the check in MATLAB.
 
