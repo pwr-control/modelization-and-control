@@ -1,0 +1,668 @@
+Design check of single_phase_dab: switched simulation (dab_sim.py), static characteristic (dab_sweep.py) and
+small-signal analysis of the current loop (dab_loop.py). Written by dab_report.py from the npz files of the cases.
+
+Cases of dab_sim.py (__main__); all with the values of init_model.m unless written:
+  nominal               the model as it is: DC links pre-charged at the battery OCV, k_ff = 1, PI kp 0.5 ki 18,
+                        bench reference 0.1 pu -> 1 pu at 150 ms through the 20 ms filter, tc 0.625 us, 0.6 s
+  kff_05, kff_0         as nominal with k_ff = 0.5 and 0
+  proposal              as nominal with k_ff = 0.5, kp 0.05, ki 40
+  kff_05_fine,          kff_05 and proposal with tc = T/400 = 0.208 us
+  proposal_fine
+  fine_tc               nominal with tc = T/400 = 0.208 us, 0.3 s
+  legacy_start          as the legacy init: DC-link capacitors at 0 V, batteries at their OCV, 0.3 s
+  step_full             reference 0.90 -> 0.95 pu at 350 ms without the filter (k_ff = 1), loop check at full load
+  step_light            reference 0.10 -> 0.15 pu at 80 ms without the filter (k_ff = 1), loop check at light load
+  step_light_fine       step_light with tc = T/400
+  step_light_k0,        reference 0.10 -> 0.15 pu at 150 ms / 0.90 -> 0.95 pu at 350 ms, no filter, k_ff = 0
+  step_full_k0          (feedback loop alone, PI of the model)
+  prop_step_light,      as step_light_k0 / step_full_k0 with kp 0.05, ki 40
+  prop_step_full
+  step_light_k0_t1200,  step_light_k0 / prop_step_light with tc = T/1200 = 69 ns (phase steps of 0.3 deg)
+  prop_step_light_t1200
+
+Notes on the numbers:
+  - iL1 = current of LFi_dc1 (battery-1 side), positive from battery_1 to battery_2; 1 pu = Idc_FS = 250 A.
+  - P_bat = battery terminal power, P_dc = DC power into bridge 1 / out of bridge 2, P_ac = AC power of the bridges.
+    P_dc1 - P_dc2 contains a numerical loss of the backward-Euler step (about 11 kW at 1 pu with tc 0.625 us,
+    proportional to tc), see the static characteristic below and the README.
+  - "current back to zero inside the dead time": the current of the outgoing switches falls to zero in the
+    diodes before the dead time ends; the bridge floats and the incoming switches turn on hard at the end of the
+    dead time (the commutation is lost).
+  - The "after the step" lines (bench cases only) use the average of iL1 over one PWM period.
+
+------------------------------------------------------------------ control intervals and high-resolution windows
+===== nominal: 0.600 s, 14400 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.0393 u 0.0404 (min 0.0358 max 0.0446) fb 0.0370 iL1    9.26 A (0.0370 pu, p-p over 1 ms 0.18) iL2    7.45 A vdc1  1111.8 vdc2  1113.8 V | P_bat1   10.30 kW P_dc1   10.55 P_ac1   10.43 P_ac2    8.69 P_dc2    8.56 P_bat2    8.28 kW
+  t=   50.0 ms ref 0.0918 u 0.1070 (min 0.1060 max 0.1078) fb 0.0840 iL1   20.98 A (0.0839 pu, p-p over 1 ms 0.12) iL2   18.75 A vdc1  1110.5 vdc2  1115.1 V | P_bat1   23.30 kW P_dc1   23.33 P_ac1   23.21 P_ac2   21.08 P_dc2   20.95 P_bat2   20.91 kW
+  t=  100.0 ms ref 0.0993 u 0.1076 (min 0.1054 max 0.1101) fb 0.1020 iL1   25.49 A (0.1020 pu, p-p over 1 ms 2.25) iL2   23.08 A vdc1  1110.0 vdc2  1115.6 V | P_bat1   28.30 kW P_dc1   28.71 P_ac1   28.58 P_ac2   26.28 P_dc2   26.14 P_bat2   25.76 kW
+  t=  149.0 ms ref 0.0999 u 0.1077 (min 0.1043 max 0.1107) fb 0.1001 iL1   25.02 A (0.1001 pu, p-p over 1 ms 3.17) iL2   22.66 A vdc1  1109.8 vdc2  1115.7 V | P_bat1   27.77 kW P_dc1   29.13 P_ac1   29.01 P_ac2   26.70 P_dc2   26.57 P_bat2   25.24 kW
+  t=  160.0 ms ref 0.4532 u 0.3183 (min 0.3036 max 0.3395) fb 0.6859 iL1  171.49 A (0.6859 pu, p-p over 1 ms 18.10) iL2  157.94 A vdc1  1091.1 vdc2  1132.8 V | P_bat1  187.57 kW P_dc1  186.77 P_ac1  186.54 P_ac2  178.36 P_dc2  178.07 P_bat2  178.19 kW
+  t=  170.0 ms ref 0.6685 u 0.4732 (min 0.4596 max 0.4852) fb 0.9319 iL1  232.99 A (0.9320 pu, p-p over 1 ms 7.03) iL2  211.42 A vdc1  1085.1 vdc2  1138.2 V | P_bat1  253.13 kW P_dc1  255.08 P_ac1  254.73 P_ac2  242.99 P_dc2  242.58 P_bat2  240.24 kW
+  t=  180.0 ms ref 0.7991 u 0.5614 (min 0.5549 max 0.5670) fb 1.0534 iL1  263.36 A (1.0534 pu, p-p over 1 ms 4.40) iL2  237.15 A vdc1  1081.8 vdc2  1140.9 V | P_bat1  285.18 kW P_dc1  285.94 P_ac1  285.52 P_ac2  271.85 P_dc2  271.36 P_bat2  270.27 kW
+  t=  200.0 ms ref 0.9262 u 0.6281 (min 0.6271 max 0.6295) fb 1.1348 iL1  283.70 A (1.1348 pu, p-p over 1 ms 2.47) iL2  254.03 A vdc1  1079.7 vdc2  1142.7 V | P_bat1  306.53 kW P_dc1  305.58 P_ac1  305.10 P_ac2  290.12 P_dc2  289.57 P_bat2  290.08 kW
+  t=  250.0 ms ref 0.9940 u 0.6049 (min 0.6027 max 0.6064) fb 1.1046 iL1  276.16 A (1.1046 pu, p-p over 1 ms 0.39) iL2  247.90 A vdc1  1080.7 vdc2  1141.8 V | P_bat1  298.61 kW P_dc1  298.79 P_ac1  298.33 P_ac2  283.79 P_dc2  283.26 P_bat2  282.94 kW
+  t=  300.0 ms ref 0.9995 u 0.5601 (min 0.5595 max 0.5612) fb 1.0610 iL1  265.25 A (1.0610 pu, p-p over 1 ms 0.31) iL2  238.77 A vdc1  1082.1 vdc2  1140.7 V | P_bat1  287.15 kW P_dc1  286.69 P_ac1  286.27 P_ac2  272.68 P_dc2  272.20 P_bat2  272.27 kW
+  t=  400.0 ms ref 1.0000 u 0.5268 (min 0.5260 max 0.5288) fb 1.0142 iL1  253.57 A (1.0143 pu, p-p over 1 ms 1.20) iL2  229.14 A vdc1  1083.3 vdc2  1139.7 V | P_bat1  274.84 kW P_dc1  274.01 P_ac1  273.62 P_ac2  261.02 P_dc2  260.57 P_bat2  261.03 kW
+  t=  500.0 ms ref 1.0000 u 0.5178 (min 0.5170 max 0.5192) fb 1.0039 iL1  250.98 A (1.0039 pu, p-p over 1 ms 1.11) iL2  226.90 A vdc1  1083.7 vdc2  1139.3 V | P_bat1  272.11 kW P_dc1  271.18 P_ac1  270.80 P_ac2  258.29 P_dc2  257.84 P_bat2  258.44 kW
+  t=  599.0 ms ref 1.0000 u 0.5177 (min 0.5167 max 0.5187) fb 1.0000 iL1  250.02 A (1.0001 pu, p-p over 1 ms 0.95) iL2  226.11 A vdc1  1083.7 vdc2  1139.4 V | P_bat1  271.09 kW P_dc1  271.36 P_ac1  270.98 P_ac2  258.40 P_dc2  257.95 P_bat2  257.51 kW
+  max |iL1| 285 A at 204.79 ms; max vdc1 1113 V; max vdc2 1144 V; max |i1| 498 A; max |i2| 513 A; max |im| 24.7 A; max |vCs1| 76.0 V
+  after the step: peak iL1 1.140 pu at 204.8 ms; u peak 0.635
+  |iL1 - 1 pu| < 2 % from 387.7 ms
+  |iL1 - 1 pu| < 1 % from 411.6 ms
+  soc 0.849860 / 0.850126
+  window 149.5 ms: 149.500 .. 149.999 ms (800 steps, 6.00 periods)
+    u 0.1045 (phase 9.41 deg, min 9.39 max 9.46)
+    vdc1 1109.9 V (p-p 1.01), vdc2 1115.7 V (p-p 0.95)
+    iL1 26.64 A (p-p 0.246), iL2 24.19 A (p-p 0.233)
+    idab1 20.34 A, idab2 18.12 A; P_dc1 22.58 kW, P_dc2 20.21 kW; P_ac1 22.46 kW, P_ac2 20.35 kW
+    i1 rms 27.3 A, peak 51.6 A, dc -0.37 A | i2 rms 28.0 A, peak 59.2 A | im peak 23.3 A, dc -0.03 A | vCs1 dc 0.03 V p-p 9.3 V, vCs2 dc 0.61 V p-p 9.1 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 7.6 mean 28.0 max 51.6 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 23.5 mean 35.7 max 59.2 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+  window 599.5 ms: 599.500 .. 599.999 ms (800 steps, 6.00 periods)
+    u 0.5167 (phase 46.51 deg, min 46.50 max 46.53)
+    vdc1 1083.8 V (p-p 1.21), vdc2 1139.3 V (p-p 1.82)
+    iL1 250.46 A (p-p 0.113), iL2 226.49 A (p-p 0.110)
+    idab1 248.99 A, idab2 225.93 A; P_dc1 269.82 kW, P_dc2 257.43 kW; P_ac1 269.45 kW, P_ac2 257.88 kW
+    i1 rms 294.2 A, peak 361.1 A, dc -0.91 A | i2 rms 294.2 A, peak 376.1 A | im peak 22.5 A, dc -3.95 A | vCs1 dc -4.03 V p-p 66.9 V, vCs2 dc 6.41 V p-p 66.1 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 270.5 mean 301.1 max 327.3 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 319.3 mean 348.5 max 376.1 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== kff_05: 0.600 s, 14400 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.0393 u 0.0278 (min 0.0263 max 0.0303) fb 0.0259 iL1    6.47 A (0.0259 pu, p-p over 1 ms 2.81) iL2    4.76 A vdc1  1111.9 vdc2  1113.7 V | P_bat1    7.20 kW P_dc1    6.80 P_ac1    6.68 P_ac2    4.99 P_dc2    4.86 P_bat2    5.23 kW
+  t=   50.0 ms ref 0.0918 u 0.0973 (min 0.0963 max 0.0982) fb 0.0425 iL1   10.62 A (0.0425 pu, p-p over 1 ms 1.31) iL2    8.81 A vdc1  1111.5 vdc2  1114.1 V | P_bat1   11.80 kW P_dc1   13.07 P_ac1   12.95 P_ac2   11.14 P_dc2   11.01 P_bat2    9.79 kW
+  t=  100.0 ms ref 0.0993 u 0.1055 (min 0.1052 max 0.1058) fb 0.0840 iL1   21.00 A (0.0840 pu, p-p over 1 ms 0.01) iL2   18.78 A vdc1  1110.5 vdc2  1115.1 V | P_bat1   23.32 kW P_dc1   23.32 P_ac1   23.20 P_ac2   21.07 P_dc2   20.93 P_bat2   20.94 kW
+  t=  149.0 ms ref 0.0999 u 0.1067 (min 0.1042 max 0.1097) fb 0.0965 iL1   24.12 A (0.0965 pu, p-p over 1 ms 2.79) iL2   21.80 A vdc1  1109.9 vdc2  1115.6 V | P_bat1   26.77 kW P_dc1   27.61 P_ac1   27.48 P_ac2   25.22 P_dc2   25.09 P_bat2   24.28 kW
+  t=  160.0 ms ref 0.4532 u 0.2390 (min 0.2241 max 0.2534) fb 0.5218 iL1  130.44 A (0.5218 pu, p-p over 1 ms 11.10) iL2  121.03 A vdc1  1096.6 vdc2  1128.0 V | P_bat1  143.27 kW P_dc1  144.75 P_ac1  144.57 P_ac2  138.22 P_dc2  137.99 P_bat2  136.10 kW
+  t=  170.0 ms ref 0.6685 u 0.3417 (min 0.3349 max 0.3484) fb 0.7245 iL1  181.11 A (0.7245 pu, p-p over 1 ms 8.56) iL2  166.59 A vdc1  1090.9 vdc2  1133.1 V | P_bat1  197.84 kW P_dc1  199.09 P_ac1  198.84 P_ac2  190.20 P_dc2  189.89 P_bat2  188.37 kW
+  t=  180.0 ms ref 0.7991 u 0.4074 (min 0.4025 max 0.4126) fb 0.8375 iL1  209.38 A (0.8375 pu, p-p over 1 ms 4.06) iL2  191.28 A vdc1  1088.1 vdc2  1135.6 V | P_bat1  228.02 kW P_dc1  228.63 P_ac1  228.33 P_ac2  218.19 P_dc2  217.84 P_bat2  216.97 kW
+  t=  200.0 ms ref 0.9262 u 0.4710 (min 0.4692 max 0.4750) fb 0.9464 iL1  236.62 A (0.9465 pu, p-p over 1 ms 1.28) iL2  214.65 A vdc1  1085.4 vdc2  1137.9 V | P_bat1  256.94 kW P_dc1  255.31 P_ac1  254.96 P_ac2  243.44 P_dc2  243.04 P_bat2  244.16 kW
+  t=  250.0 ms ref 0.9940 u 0.5098 (min 0.5088 max 0.5106) fb 0.9962 iL1  249.06 A (0.9962 pu, p-p over 1 ms 0.57) iL2  225.31 A vdc1  1084.0 vdc2  1139.1 V | P_bat1  270.08 kW P_dc1  269.95 P_ac1  269.57 P_ac2  257.17 P_dc2  256.74 P_bat2  256.58 kW
+  t=  300.0 ms ref 0.9995 u 0.5169 (min 0.5168 max 0.5170) fb 0.9961 iL1  249.05 A (0.9962 pu, p-p over 1 ms 0.00) iL2  225.30 A vdc1  1083.9 vdc2  1139.2 V | P_bat1  270.07 kW P_dc1  269.92 P_ac1  269.55 P_ac2  257.15 P_dc2  256.71 P_bat2  256.57 kW
+  t=  400.0 ms ref 1.0000 u 0.5179 (min 0.5166 max 0.5188) fb 0.9990 iL1  249.75 A (0.9990 pu, p-p over 1 ms 1.05) iL2  225.88 A vdc1  1083.8 vdc2  1139.3 V | P_bat1  270.81 kW P_dc1  271.45 P_ac1  271.07 P_ac2  258.51 P_dc2  258.06 P_bat2  257.24 kW
+  t=  500.0 ms ref 1.0000 u 0.5179 (min 0.5163 max 0.5190) fb 0.9993 iL1  249.83 A (0.9993 pu, p-p over 1 ms 1.39) iL2  225.93 A vdc1  1083.7 vdc2  1139.4 V | P_bat1  270.89 kW P_dc1  271.50 P_ac1  271.12 P_ac2  258.46 P_dc2  258.01 P_bat2  257.29 kW
+  t=  599.0 ms ref 1.0000 u 0.5178 (min 0.5170 max 0.5185) fb 0.9995 iL1  249.88 A (0.9995 pu, p-p over 1 ms 0.70) iL2  225.99 A vdc1  1083.8 vdc2  1139.2 V | P_bat1  270.94 kW P_dc1  271.17 P_ac1  270.80 P_ac2  258.28 P_dc2  257.84 P_bat2  257.38 kW
+  max |iL1| 251 A at 452.29 ms; max vdc1 1113 V; max vdc2 1140 V; max |i1| 451 A; max |i2| 467 A; max |im| 24.7 A; max |vCs1| 62.7 V
+  after the step: peak iL1 1.003 pu at 452.3 ms; u peak 0.519
+  |iL1 - 1 pu| < 2 % from 221.2 ms
+  |iL1 - 1 pu| < 1 % from 239.8 ms
+  soc 0.849868 / 0.850119
+  window 149.5 ms: 149.500 .. 149.999 ms (800 steps, 6.00 periods)
+    u 0.1045 (phase 9.40 deg, min 9.38 max 9.47)
+    vdc1 1110.4 V (p-p 0.76), vdc2 1115.2 V (p-p 0.77)
+    iL1 25.15 A (p-p 0.653), iL2 22.76 A (p-p 0.636)
+    idab1 20.85 A, idab2 18.63 A; P_dc1 23.15 kW, P_dc2 20.77 kW; P_ac1 23.03 kW, P_ac2 20.91 kW
+    i1 rms 27.7 A, peak 52.3 A, dc 0.03 A | i2 rms 28.2 A, peak 59.2 A | im peak 23.3 A, dc -0.07 A | vCs1 dc 0.05 V p-p 9.3 V, vCs2 dc -0.12 V p-p 9.2 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 10.7 mean 29.1 max 52.3 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 23.5 mean 35.7 max 59.2 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+  window 599.5 ms: 599.500 .. 599.999 ms (800 steps, 6.00 periods)
+    u 0.5183 (phase 46.65 deg, min 46.61 max 46.66)
+    vdc1 1083.6 V (p-p 1.45), vdc2 1139.4 V (p-p 2.10)
+    iL1 249.64 A (p-p 0.363), iL2 225.78 A (p-p 0.321)
+    idab1 252.18 A, idab2 228.35 A; P_dc1 273.24 kW, P_dc2 260.22 kW; P_ac1 272.86 kW, P_ac2 260.66 kW
+    i1 rms 299.6 A, peak 374.4 A, dc -0.23 A | i2 rms 299.6 A, peak 392.4 A | im peak 18.3 A, dc 0.74 A | vCs1 dc 2.38 V p-p 68.6 V, vCs2 dc -1.13 V p-p 69.1 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 257.7 mean 306.8 max 334.6 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 311.0 mean 355.6 max 392.4 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== kff_0: 0.600 s, 14400 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.0393 u 0.0147 (min 0.0129 max 0.0168) fb 0.0146 iL1    3.66 A (0.0146 pu, p-p over 1 ms 0.12) iL2    1.95 A vdc1  1112.5 vdc2  1113.2 V | P_bat1    4.07 kW P_dc1    3.88 P_ac1    3.76 P_ac2    2.13 P_dc2    2.00 P_bat2    2.16 kW
+  t=   50.0 ms ref 0.0918 u 0.0597 (min 0.0586 max 0.0609) fb 0.0376 iL1    9.46 A (0.0378 pu, p-p over 1 ms 0.01) iL2    7.65 A vdc1  1111.8 vdc2  1113.8 V | P_bat1   10.51 kW P_dc1   10.51 P_ac1   10.39 P_ac2    8.65 P_dc2    8.52 P_bat2    8.52 kW
+  t=  100.0 ms ref 0.0993 u 0.0980 (min 0.0954 max 0.1012) fb 0.0637 iL1   15.91 A (0.0636 pu, p-p over 1 ms 2.43) iL2   13.88 A vdc1  1111.1 vdc2  1114.5 V | P_bat1   17.68 kW P_dc1   16.70 P_ac1   16.58 P_ac2   14.66 P_dc2   14.53 P_bat2   15.47 kW
+  t=  149.0 ms ref 0.0999 u 0.1068 (min 0.1065 max 0.1071) fb 0.0840 iL1   21.00 A (0.0840 pu, p-p over 1 ms 0.01) iL2   18.78 A vdc1  1110.5 vdc2  1115.1 V | P_bat1   23.32 kW P_dc1   23.31 P_ac1   23.19 P_ac2   21.06 P_dc2   20.93 P_bat2   20.94 kW
+  t=  160.0 ms ref 0.4532 u 0.1686 (min 0.1640 max 0.1714) fb 0.3394 iL1   84.84 A (0.3394 pu, p-p over 1 ms 11.76) iL2   79.25 A vdc1  1101.8 vdc2  1123.3 V | P_bat1   93.62 kW P_dc1   96.49 P_ac1   96.35 P_ac2   91.81 P_dc2   91.63 P_bat2   88.64 kW
+  t=  170.0 ms ref 0.6685 u 0.2268 (min 0.2198 max 0.2320) fb 0.4907 iL1  122.67 A (0.4907 pu, p-p over 1 ms 5.16) iL2  114.05 A vdc1  1098.1 vdc2  1126.8 V | P_bat1  134.81 kW P_dc1  137.62 P_ac1  137.44 P_ac2  131.36 P_dc2  131.14 P_bat2  128.29 kW
+  t=  180.0 ms ref 0.7991 u 0.2699 (min 0.2689 max 0.2710) fb 0.6029 iL1  150.74 A (0.6029 pu, p-p over 1 ms 8.45) iL2  139.63 A vdc1  1094.5 vdc2  1130.0 V | P_bat1  165.18 kW P_dc1  165.50 P_ac1  165.29 P_ac2  158.20 P_dc2  157.95 P_bat2  157.43 kW
+  t=  200.0 ms ref 0.9262 u 0.3428 (min 0.3406 max 0.3448) fb 0.7300 iL1  182.50 A (0.7300 pu, p-p over 1 ms 3.28) iL2  167.75 A vdc1  1091.3 vdc2  1132.8 V | P_bat1  199.31 kW P_dc1  199.84 P_ac1  199.59 P_ac2  190.92 P_dc2  190.62 P_bat2  189.84 kW
+  t=  250.0 ms ref 0.9940 u 0.4376 (min 0.4361 max 0.4387) fb 0.8818 iL1  220.45 A (0.8818 pu, p-p over 1 ms 2.34) iL2  200.98 A vdc1  1087.0 vdc2  1136.5 V | P_bat1  239.78 kW P_dc1  240.95 P_ac1  240.63 P_ac2  229.90 P_dc2  229.52 P_bat2  228.26 kW
+  t=  300.0 ms ref 0.9995 u 0.4780 (min 0.4773 max 0.4787) fb 0.9463 iL1  236.59 A (0.9464 pu, p-p over 1 ms 1.15) iL2  214.69 A vdc1  1085.3 vdc2  1138.0 V | P_bat1  256.90 kW P_dc1  256.94 P_ac1  256.59 P_ac2  244.83 P_dc2  244.42 P_bat2  244.19 kW
+  t=  400.0 ms ref 1.0000 u 0.5072 (min 0.5065 max 0.5085) fb 0.9881 iL1  247.03 A (0.9881 pu, p-p over 1 ms 0.84) iL2  223.56 A vdc1  1084.2 vdc2  1139.0 V | P_bat1  267.94 kW P_dc1  266.59 P_ac1  266.22 P_ac2  253.96 P_dc2  253.52 P_bat2  254.54 kW
+  t=  500.0 ms ref 1.0000 u 0.5133 (min 0.5132 max 0.5134) fb 0.9961 iL1  249.05 A (0.9962 pu, p-p over 1 ms 0.00) iL2  225.30 A vdc1  1083.9 vdc2  1139.2 V | P_bat1  270.07 kW P_dc1  269.92 P_ac1  269.55 P_ac2  257.15 P_dc2  256.71 P_bat2  256.57 kW
+  t=  599.0 ms ref 1.0000 u 0.5173 (min 0.5161 max 0.5184) fb 0.9992 iL1  249.80 A (0.9992 pu, p-p over 1 ms 1.10) iL2  225.89 A vdc1  1083.9 vdc2  1139.2 V | P_bat1  270.86 kW P_dc1  270.94 P_ac1  270.56 P_ac2  258.04 P_dc2  257.60 P_bat2  257.28 kW
+  max |iL1| 250 A at 592.04 ms; max vdc1 1113 V; max vdc2 1140 V; max |i1| 434 A; max |i2| 450 A; max |im| 24.6 A; max |vCs1| 55.8 V
+  after the step: peak iL1 1.002 pu at 592.1 ms; u peak 0.519
+  |iL1 - 1 pu| < 2 % from 360.4 ms
+  |iL1 - 1 pu| < 1 % from 426.2 ms
+  soc 0.849876 / 0.850112
+  window 149.5 ms: 149.500 .. 149.999 ms (800 steps, 6.00 periods)
+    u 0.1070 (phase 9.63 deg, min 9.63 max 9.64)
+    vdc1 1110.5 V (p-p 0.33), vdc2 1115.1 V (p-p 0.38)
+    iL1 21.00 A (p-p 0.017), iL2 18.78 A (p-p 0.017)
+    idab1 21.00 A, idab2 18.78 A; P_dc1 23.32 kW, P_dc2 20.94 kW; P_ac1 23.20 kW, P_ac2 21.07 kW
+    i1 rms 27.8 A, peak 52.2 A, dc -0.00 A | i2 rms 28.3 A, peak 59.1 A | im peak 23.2 A, dc -0.00 A | vCs1 dc 0.00 V p-p 9.3 V, vCs2 dc -0.00 V p-p 9.0 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 11.4 mean 29.4 max 52.2 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 23.6 mean 35.7 max 59.1 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+  window 599.5 ms: 599.500 .. 599.999 ms (800 steps, 6.00 periods)
+    u 0.5183 (phase 46.65 deg, min 46.63 max 46.65)
+    vdc1 1083.8 V (p-p 1.65), vdc2 1139.3 V (p-p 2.33)
+    iL1 249.30 A (p-p 0.221), iL2 225.49 A (p-p 0.201)
+    idab1 252.51 A, idab2 227.83 A; P_dc1 273.63 kW, P_dc2 259.61 kW; P_ac1 273.24 kW, P_ac2 260.06 kW
+    i1 rms 302.5 A, peak 410.9 A, dc -7.86 A | i2 rms 302.5 A, peak 428.6 A | im peak 18.3 A, dc -0.68 A | vCs1 dc 0.26 V p-p 86.2 V, vCs2 dc -1.70 V p-p 86.4 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 220.0 mean 305.3 max 372.1 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 275.9 mean 357.4 max 428.6 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== proposal: 0.600 s, 14400 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.0393 u 0.0252 (min 0.0226 max 0.0277) fb 0.0151 iL1    3.78 A (0.0151 pu, p-p over 1 ms 0.34) iL2    2.08 A vdc1  1112.4 vdc2  1113.2 V | P_bat1    4.21 kW P_dc1    4.26 P_ac1    4.13 P_ac2    2.50 P_dc2    2.37 P_bat2    2.30 kW
+  t=   50.0 ms ref 0.0918 u 0.1003 (min 0.0994 max 0.1009) fb 0.0770 iL1   19.25 A (0.0770 pu, p-p over 1 ms 1.45) iL2   17.14 A vdc1  1110.6 vdc2  1115.0 V | P_bat1   21.38 kW P_dc1   23.51 P_ac1   23.39 P_ac2   21.26 P_dc2   21.12 P_bat2   19.10 kW
+  t=  100.0 ms ref 0.0993 u 0.1081 (min 0.1069 max 0.1088) fb 0.0895 iL1   22.37 A (0.0895 pu, p-p over 1 ms 6.61) iL2   20.01 A vdc1  1110.6 vdc2  1115.0 V | P_bat1   24.84 kW P_dc1   30.26 P_ac1   30.14 P_ac2   27.79 P_dc2   27.65 P_bat2   22.39 kW
+  t=  149.0 ms ref 0.0999 u 0.1075 (min 0.1067 max 0.1086) fb 0.1062 iL1   26.55 A (0.1062 pu, p-p over 1 ms 7.84) iL2   24.24 A vdc1  1109.2 vdc2  1116.4 V | P_bat1   29.47 kW P_dc1   26.50 P_ac1   26.38 P_ac2   24.16 P_dc2   24.02 P_bat2   26.91 kW
+  t=  160.0 ms ref 0.4532 u 0.2487 (min 0.2391 max 0.2586) fb 0.5561 iL1  139.01 A (0.5561 pu, p-p over 1 ms 9.65) iL2  128.49 A vdc1  1095.8 vdc2  1128.7 V | P_bat1  152.54 kW P_dc1  151.48 P_ac1  151.29 P_ac2  144.67 P_dc2  144.44 P_bat2  144.65 kW
+  t=  170.0 ms ref 0.6685 u 0.3332 (min 0.3264 max 0.3398) fb 0.7098 iL1  177.46 A (0.7098 pu, p-p over 1 ms 6.63) iL2  163.32 A vdc1  1091.6 vdc2  1132.5 V | P_bat1  193.92 kW P_dc1  194.95 P_ac1  194.71 P_ac2  186.35 P_dc2  186.05 P_bat2  184.66 kW
+  t=  180.0 ms ref 0.7991 u 0.3901 (min 0.3855 max 0.3946) fb 0.8104 iL1  202.61 A (0.8104 pu, p-p over 1 ms 3.94) iL2  185.44 A vdc1  1088.9 vdc2  1134.9 V | P_bat1  220.81 kW P_dc1  221.30 P_ac1  221.02 P_ac2  211.45 P_dc2  211.11 P_bat2  210.22 kW
+  t=  200.0 ms ref 0.9262 u 0.4569 (min 0.4545 max 0.4594) fb 0.9160 iL1  229.00 A (0.9160 pu, p-p over 1 ms 0.93) iL2  208.17 A vdc1  1086.3 vdc2  1137.1 V | P_bat1  248.86 kW P_dc1  248.47 P_ac1  248.14 P_ac2  237.05 P_dc2  236.66 P_bat2  236.66 kW
+  t=  250.0 ms ref 0.9940 u 0.5081 (min 0.5078 max 0.5083) fb 0.9941 iL1  248.53 A (0.9941 pu, p-p over 1 ms 3.65) iL2  224.82 A vdc1  1083.6 vdc2  1139.4 V | P_bat1  269.54 kW P_dc1  268.60 P_ac1  268.23 P_ac2  255.88 P_dc2  255.44 P_bat2  255.93 kW
+  t=  300.0 ms ref 0.9995 u 0.5146 (min 0.5145 max 0.5148) fb 0.9961 iL1  249.05 A (0.9962 pu, p-p over 1 ms 0.00) iL2  225.30 A vdc1  1083.9 vdc2  1139.2 V | P_bat1  270.07 kW P_dc1  269.92 P_ac1  269.55 P_ac2  257.15 P_dc2  256.70 P_bat2  256.57 kW
+  t=  400.0 ms ref 1.0000 u 0.5177 (min 0.5172 max 0.5183) fb 0.9970 iL1  249.25 A (0.9970 pu, p-p over 1 ms 4.05) iL2  225.25 A vdc1  1084.3 vdc2  1138.9 V | P_bat1  270.26 kW P_dc1  270.82 P_ac1  270.44 P_ac2  258.05 P_dc2  257.61 P_bat2  256.59 kW
+  t=  500.0 ms ref 1.0000 u 0.5181 (min 0.5177 max 0.5183) fb 0.9937 iL1  248.45 A (0.9938 pu, p-p over 1 ms 2.83) iL2  224.94 A vdc1  1083.7 vdc2  1139.4 V | P_bat1  269.42 kW P_dc1  272.21 P_ac1  271.83 P_ac2  259.28 P_dc2  258.83 P_bat2  256.11 kW
+  t=  599.0 ms ref 1.0000 u 0.5179 (min 0.5173 max 0.5183) fb 0.9936 iL1  248.40 A (0.9936 pu, p-p over 1 ms 2.93) iL2  224.72 A vdc1  1084.1 vdc2  1139.1 V | P_bat1  269.36 kW P_dc1  271.65 P_ac1  271.27 P_ac2  258.77 P_dc2  258.33 P_bat2  255.93 kW
+  max |iL1| 252 A at 578.75 ms; max vdc1 1113 V; max vdc2 1141 V; max |i1| 399 A; max |i2| 418 A; max |im| 24.2 A; max |vCs1| 44.6 V
+  after the step: peak iL1 1.010 pu at 578.7 ms; u peak 0.518
+  |iL1 - 1 pu| < 2 % from 235.9 ms
+  |iL1 - 1 pu| < 1 % from 599.4 ms
+  soc 0.849868 / 0.850120
+  window 149.5 ms: 149.500 .. 149.999 ms (800 steps, 6.00 periods)
+    u 0.1068 (phase 9.61 deg, min 9.60 max 9.61)
+    vdc1 1110.6 V (p-p 1.10), vdc2 1115.0 V (p-p 1.03)
+    iL1 28.27 A (p-p 1.802), iL2 25.73 A (p-p 1.764)
+    idab1 21.07 A, idab2 18.84 A; P_dc1 23.40 kW, P_dc2 21.01 kW; P_ac1 23.28 kW, P_ac2 21.15 kW
+    i1 rms 27.9 A, peak 53.1 A, dc -0.01 A | i2 rms 28.4 A, peak 59.2 A | im peak 23.3 A, dc 0.06 A | vCs1 dc 0.15 V p-p 9.4 V, vCs2 dc -0.18 V p-p 9.1 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 10.4 mean 29.5 max 53.1 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 23.5 mean 35.7 max 59.2 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+  window 599.5 ms: 599.500 .. 599.999 ms (800 steps, 6.00 periods)
+    u 0.5183 (phase 46.64 deg, min 46.64 max 46.65)
+    vdc1 1083.4 V (p-p 1.53), vdc2 1139.7 V (p-p 2.06)
+    iL1 248.14 A (p-p 1.193), iL2 224.80 A (p-p 1.109)
+    idab1 252.17 A, idab2 227.36 A; P_dc1 273.17 kW, P_dc2 259.16 kW; P_ac1 272.79 kW, P_ac2 259.60 kW
+    i1 rms 299.7 A, peak 378.0 A, dc 0.71 A | i2 rms 299.7 A, peak 395.8 A | im peak 19.6 A, dc -2.13 A | vCs1 dc 0.01 V p-p 73.2 V, vCs2 dc -1.60 V p-p 72.0 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 251.4 mean 305.0 max 348.9 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 301.8 mean 357.2 max 395.8 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== kff_05_fine: 0.600 s, 14399 control intervals, tc = 208.3 ns
+  t=   10.0 ms ref 0.0393 u 0.0213 (min 0.0210 max 0.0221) fb 0.0363 iL1    9.08 A (0.0363 pu, p-p over 1 ms 2.49) iL2    7.61 A vdc1  1111.6 vdc2  1114.1 V | P_bat1   10.10 kW P_dc1   10.22 P_ac1   10.10 P_ac2    8.68 P_dc2    8.55 P_bat2    8.41 kW
+  t=   50.0 ms ref 0.0918 u 0.0969 (min 0.0958 max 0.0982) fb 0.0415 iL1   10.37 A (0.0415 pu, p-p over 1 ms 0.15) iL2    8.85 A vdc1  1111.7 vdc2  1114.0 V | P_bat1   11.53 kW P_dc1   12.27 P_ac1   12.15 P_ac2   10.72 P_dc2   10.59 P_bat2    9.86 kW
+  t=  100.0 ms ref 0.0993 u 0.1059 (min 0.1056 max 0.1062) fb 0.0834 iL1   20.81 A (0.0833 pu, p-p over 1 ms 0.00) iL2   19.12 A vdc1  1110.5 vdc2  1115.2 V | P_bat1   23.12 kW P_dc1   23.11 P_ac1   22.99 P_ac2   21.46 P_dc2   21.32 P_bat2   21.32 kW
+  t=  149.0 ms ref 0.0999 u 0.1071 (min 0.1036 max 0.1096) fb 0.0958 iL1   23.94 A (0.0958 pu, p-p over 1 ms 2.91) iL2   22.17 A vdc1  1110.2 vdc2  1115.5 V | P_bat1   26.58 kW P_dc1   27.91 P_ac1   27.79 P_ac2   26.21 P_dc2   26.07 P_bat2   24.74 kW
+  t=  160.0 ms ref 0.4544 u 0.2392 (min 0.2240 max 0.2542) fb 0.5231 iL1  130.79 A (0.5232 pu, p-p over 1 ms 10.59) iL2  124.37 A vdc1  1096.6 vdc2  1128.4 V | P_bat1  143.64 kW P_dc1  145.61 P_ac1  145.42 P_ac2  142.48 P_dc2  142.25 P_bat2  139.92 kW
+  t=  170.0 ms ref 0.6692 u 0.3445 (min 0.3366 max 0.3521) fb 0.7209 iL1  180.23 A (0.7209 pu, p-p over 1 ms 7.56) iL2  170.02 A vdc1  1091.1 vdc2  1133.4 V | P_bat1  196.90 kW P_dc1  198.40 P_ac1  198.14 P_ac2  194.51 P_dc2  194.20 P_bat2  192.34 kW
+  t=  180.0 ms ref 0.7995 u 0.4106 (min 0.4054 max 0.4155) fb 0.8339 iL1  208.48 A (0.8339 pu, p-p over 1 ms 4.07) iL2  195.58 A vdc1  1088.2 vdc2  1136.1 V | P_bat1  227.07 kW P_dc1  227.52 P_ac1  227.22 P_ac2  223.11 P_dc2  222.75 P_bat2  221.95 kW
+  t=  200.0 ms ref 0.9263 u 0.4798 (min 0.4764 max 0.4811) fb 0.9343 iL1  233.59 A (0.9343 pu, p-p over 1 ms 2.13) iL2  218.05 A vdc1  1085.5 vdc2  1138.5 V | P_bat1  253.72 kW P_dc1  255.42 P_ac1  255.07 P_ac2  250.42 P_dc2  250.02 P_bat2  248.08 kW
+  t=  250.0 ms ref 0.9940 u 0.5182 (min 0.5176 max 0.5188) fb 0.9920 iL1  248.02 A (0.9921 pu, p-p over 1 ms 0.77) iL2  230.79 A vdc1  1084.0 vdc2  1139.9 V | P_bat1  268.99 kW P_dc1  269.05 P_ac1  268.67 P_ac2  263.75 P_dc2  263.31 P_bat2  262.95 kW
+  t=  300.0 ms ref 0.9995 u 0.5225 (min 0.5225 max 0.5226) fb 0.9971 iL1  249.29 A (0.9971 pu, p-p over 1 ms 0.00) iL2  231.90 A vdc1  1083.9 vdc2  1139.9 V | P_bat1  270.32 kW P_dc1  270.18 P_ac1  269.79 P_ac2  264.86 P_dc2  264.41 P_bat2  264.26 kW
+  t=  400.0 ms ref 1.0000 u 0.5275 (min 0.5268 max 0.5281) fb 0.9982 iL1  249.55 A (0.9982 pu, p-p over 1 ms 0.57) iL2  232.11 A vdc1  1083.9 vdc2  1140.0 V | P_bat1  270.60 kW P_dc1  270.80 P_ac1  270.41 P_ac2  265.45 P_dc2  265.00 P_bat2  264.51 kW
+  t=  500.0 ms ref 1.0000 u 0.5277 (min 0.5265 max 0.5285) fb 0.9987 iL1  249.68 A (0.9987 pu, p-p over 1 ms 1.04) iL2  232.22 A vdc1  1083.8 vdc2  1140.0 V | P_bat1  270.73 kW P_dc1  271.43 P_ac1  271.04 P_ac2  266.08 P_dc2  265.62 P_bat2  264.64 kW
+  t=  599.0 ms ref 1.0000 u 0.5276 (min 0.5261 max 0.5285) fb 0.9989 iL1  249.72 A (0.9989 pu, p-p over 1 ms 1.19) iL2  232.28 A vdc1  1083.7 vdc2  1140.1 V | P_bat1  270.77 kW P_dc1  271.37 P_ac1  270.97 P_ac2  266.03 P_dc2  265.58 P_bat2  264.69 kW
+  max |iL1| 251 A at 474.71 ms; max vdc1 1113 V; max vdc2 1141 V; max |i1| 365 A; max |i2| 381 A; max |im| 24.0 A; max |vCs1| 33.0 V
+  after the step: peak iL1 1.003 pu at 474.7 ms; u peak 0.529
+  |iL1 - 1 pu| < 2 % from 226.3 ms
+  |iL1 - 1 pu| < 1 % from 247.8 ms
+  soc 0.849868 / 0.850123
+  window 149.5 ms: 149.500 .. 150.000 ms (2400 steps, 6.00 periods)
+    u 0.1069 (phase 9.62 deg, min 9.47 max 9.79)
+    vdc1 1109.3 V (p-p 0.58), vdc2 1116.3 V (p-p 0.59)
+    iL1 24.31 A (p-p 1.676), iL2 22.55 A (p-p 1.652)
+    idab1 22.08 A, idab2 20.33 A; P_dc1 24.49 kW, P_dc2 22.70 kW; P_ac1 24.37 kW, P_ac2 22.84 kW
+    i1 rms 23.6 A, peak 38.9 A, dc 0.09 A | i2 rms 24.6 A, peak 47.4 A | im peak 22.7 A, dc 0.02 A | vCs1 dc 0.43 V p-p 5.7 V, vCs2 dc 0.41 V p-p 5.8 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 24.9 mean 30.0 max 38.9 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 35.3 mean 37.3 max 47.4 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+  window 599.5 ms: 599.500 .. 600.000 ms (2400 steps, 6.00 periods)
+    u 0.5266 (phase 47.39 deg, min 47.35 max 47.43)
+    vdc1 1083.6 V (p-p 1.12), vdc2 1140.2 V (p-p 1.70)
+    iL1 250.31 A (p-p 0.460), iL2 232.83 A (p-p 0.414)
+    idab1 249.25 A, idab2 231.89 A; P_dc1 270.05 kW, P_dc2 264.44 kW; P_ac1 269.66 kW, P_ac2 264.90 kW
+    i1 rms 298.7 A, peak 350.9 A, dc 1.96 A | i2 rms 298.6 A, peak 367.9 A | im peak 17.6 A, dc 0.34 A | vCs1 dc 0.95 V p-p 58.6 V, vCs2 dc -0.51 V p-p 58.8 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 295.9 mean 306.5 max 319.4 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 343.8 mean 355.9 max 367.9 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== proposal_fine: 0.600 s, 14399 control intervals, tc = 208.3 ns
+  t=   10.0 ms ref 0.0393 u 0.0207 (min 0.0193 max 0.0219) fb 0.0334 iL1    8.35 A (0.0334 pu, p-p over 1 ms 5.13) iL2    6.94 A vdc1  1111.4 vdc2  1114.3 V | P_bat1    9.29 kW P_dc1    9.98 P_ac1    9.85 P_ac2    8.44 P_dc2    8.31 P_bat2    7.61 kW
+  t=   50.0 ms ref 0.0918 u 0.0984 (min 0.0980 max 0.0992) fb 0.0929 iL1   23.22 A (0.0929 pu, p-p over 1 ms 4.10) iL2   21.37 A vdc1  1110.7 vdc2  1114.9 V | P_bat1   25.79 kW P_dc1   23.40 P_ac1   23.27 P_ac2   21.74 P_dc2   21.60 P_bat2   23.92 kW
+  t=  100.0 ms ref 0.0993 u 0.1074 (min 0.1067 max 0.1086) fb 0.1009 iL1   25.22 A (0.1009 pu, p-p over 1 ms 9.18) iL2   23.22 A vdc1  1111.1 vdc2  1114.6 V | P_bat1   27.99 kW P_dc1   26.15 P_ac1   26.03 P_ac2   24.46 P_dc2   24.32 P_bat2   26.11 kW
+  t=  149.0 ms ref 0.0999 u 0.1083 (min 0.1076 max 0.1088) fb 0.0906 iL1   22.64 A (0.0906 pu, p-p over 1 ms 7.16) iL2   21.00 A vdc1  1109.7 vdc2  1115.9 V | P_bat1   25.14 kW P_dc1   32.05 P_ac1   31.93 P_ac2   30.31 P_dc2   30.16 P_bat2   23.33 kW
+  t=  160.0 ms ref 0.4544 u 0.2487 (min 0.2387 max 0.2586) fb 0.5450 iL1  136.26 A (0.5450 pu, p-p over 1 ms 11.49) iL2  129.43 A vdc1  1095.9 vdc2  1129.0 V | P_bat1  149.56 kW P_dc1  150.82 P_ac1  150.62 P_ac2  147.64 P_dc2  147.40 P_bat2  145.68 kW
+  t=  170.0 ms ref 0.6692 u 0.3347 (min 0.3278 max 0.3415) fb 0.7056 iL1  176.39 A (0.7056 pu, p-p over 1 ms 6.47) iL2  166.54 A vdc1  1091.7 vdc2  1132.9 V | P_bat1  192.78 kW P_dc1  194.13 P_ac1  193.88 P_ac2  190.28 P_dc2  189.99 P_bat2  188.37 kW
+  t=  180.0 ms ref 0.7995 u 0.3934 (min 0.3885 max 0.3981) fb 0.8058 iL1  201.46 A (0.8058 pu, p-p over 1 ms 3.99) iL2  189.29 A vdc1  1089.0 vdc2  1135.3 V | P_bat1  219.58 kW P_dc1  220.25 P_ac1  219.96 P_ac2  215.99 P_dc2  215.65 P_bat2  214.67 kW
+  t=  200.0 ms ref 0.9263 u 0.4627 (min 0.4605 max 0.4647) fb 0.9145 iL1  228.64 A (0.9146 pu, p-p over 1 ms 3.54) iL2  213.71 A vdc1  1085.9 vdc2  1138.1 V | P_bat1  248.49 kW P_dc1  248.58 P_ac1  248.24 P_ac2  243.76 P_dc2  243.36 P_bat2  242.99 kW
+  t=  250.0 ms ref 0.9940 u 0.5165 (min 0.5159 max 0.5171) fb 0.9838 iL1  245.95 A (0.9838 pu, p-p over 1 ms 0.11) iL2  229.03 A vdc1  1084.3 vdc2  1139.6 V | P_bat1  266.79 kW P_dc1  266.75 P_ac1  266.37 P_ac2  261.51 P_dc2  261.07 P_bat2  260.91 kW
+  t=  300.0 ms ref 0.9995 u 0.5225 (min 0.5224 max 0.5226) fb 0.9971 iL1  249.29 A (0.9971 pu, p-p over 1 ms 0.01) iL2  231.90 A vdc1  1083.9 vdc2  1139.9 V | P_bat1  270.32 kW P_dc1  270.18 P_ac1  269.79 P_ac2  264.86 P_dc2  264.41 P_bat2  264.25 kW
+  t=  400.0 ms ref 1.0000 u 0.5276 (min 0.5272 max 0.5281) fb 0.9970 iL1  249.25 A (0.9970 pu, p-p over 1 ms 3.44) iL2  231.69 A vdc1  1084.2 vdc2  1139.7 V | P_bat1  270.27 kW P_dc1  270.73 P_ac1  270.34 P_ac2  265.37 P_dc2  264.92 P_bat2  264.08 kW
+  t=  500.0 ms ref 1.0000 u 0.5273 (min 0.5272 max 0.5275) fb 1.0048 iL1  251.20 A (1.0048 pu, p-p over 1 ms 2.56) iL2  233.36 A vdc1  1083.9 vdc2  1139.8 V | P_bat1  272.33 kW P_dc1  270.16 P_ac1  269.77 P_ac2  264.84 P_dc2  264.38 P_bat2  266.02 kW
+  t=  599.0 ms ref 1.0000 u 0.5280 (min 0.5276 max 0.5282) fb 0.9959 iL1  248.97 A (0.9959 pu, p-p over 1 ms 3.30) iL2  231.85 A vdc1  1083.6 vdc2  1140.3 V | P_bat1  269.98 kW P_dc1  271.85 P_ac1  271.46 P_ac2  266.46 P_dc2  266.01 P_bat2  264.13 kW
+  max |iL1| 252 A at 375.29 ms; max vdc1 1113 V; max vdc2 1141 V; max |i1| 358 A; max |i2| 375 A; max |im| 24.0 A; max |vCs1| 31.8 V
+  after the step: peak iL1 1.009 pu at 375.3 ms; u peak 0.528
+  |iL1 - 1 pu| < 2 % from 238.7 ms
+  |iL1 - 1 pu| < 1 % from 257.2 ms
+  soc 0.849868 / 0.850123
+  window 149.5 ms: 149.500 .. 150.000 ms (2400 steps, 6.00 periods)
+    u 0.1080 (phase 9.72 deg, min 9.68 max 9.76)
+    vdc1 1108.1 V (p-p 0.51), vdc2 1117.5 V (p-p 0.52)
+    iL1 26.16 A (p-p 4.036), iL2 24.40 A (p-p 3.955)
+    idab1 25.69 A, idab2 23.83 A; P_dc1 28.47 kW, P_dc2 26.63 kW; P_ac1 28.35 kW, P_ac2 26.77 kW
+    i1 rms 27.3 A, peak 36.8 A, dc -0.18 A | i2 rms 28.4 A, peak 47.4 A | im peak 22.9 A, dc 0.10 A | vCs1 dc -0.28 V p-p 5.5 V, vCs2 dc -0.28 V p-p 5.6 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 22.4 mean 32.4 max 36.8 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 35.1 mean 42.3 max 47.4 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+  window 599.5 ms: 599.500 .. 600.000 ms (2400 steps, 6.00 periods)
+    u 0.5277 (phase 47.50 deg, min 47.48 max 47.51)
+    vdc1 1083.1 V (p-p 1.18), vdc2 1140.6 V (p-p 1.81)
+    iL1 250.77 A (p-p 1.294), iL2 233.45 A (p-p 1.028)
+    idab1 249.53 A, idab2 232.02 A; P_dc1 270.25 kW, P_dc2 264.68 kW; P_ac1 269.86 kW, P_ac2 265.13 kW
+    i1 rms 299.0 A, peak 354.4 A, dc -2.52 A | i2 rms 299.0 A, peak 370.5 A | im peak 17.7 A, dc -0.25 A | vCs1 dc -1.14 V p-p 60.5 V, vCs2 dc 1.81 V p-p 60.6 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 290.1 mean 306.3 max 323.3 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 339.5 mean 356.3 max 370.5 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== fine_tc: 0.300 s, 7199 control intervals, tc = 208.3 ns
+  t=   10.0 ms ref 0.0393 u 0.0397 (min 0.0340 max 0.0443) fb 0.0364 iL1    9.11 A (0.0365 pu, p-p over 1 ms 0.70) iL2    7.58 A vdc1  1111.9 vdc2  1113.8 V | P_bat1   10.13 kW P_dc1   10.49 P_ac1   10.37 P_ac2    8.95 P_dc2    8.82 P_bat2    8.45 kW
+  t=   50.0 ms ref 0.0918 u 0.1072 (min 0.1063 max 0.1081) fb 0.0832 iL1   20.81 A (0.0832 pu, p-p over 1 ms 0.18) iL2   19.11 A vdc1  1110.5 vdc2  1115.1 V | P_bat1   23.11 kW P_dc1   23.39 P_ac1   23.27 P_ac2   21.73 P_dc2   21.59 P_bat2   21.31 kW
+  t=  100.0 ms ref 0.0993 u 0.1070 (min 0.1046 max 0.1109) fb 0.1035 iL1   25.88 A (0.1035 pu, p-p over 1 ms 3.14) iL2   24.06 A vdc1  1110.1 vdc2  1115.6 V | P_bat1   28.73 kW P_dc1   26.90 P_ac1   26.78 P_ac2   25.20 P_dc2   25.06 P_bat2   26.87 kW
+  t=  149.0 ms ref 0.0999 u 0.1070 (min 0.1047 max 0.1101) fb 0.1019 iL1   25.46 A (0.1018 pu, p-p over 1 ms 2.71) iL2   23.69 A vdc1  1109.9 vdc2  1115.8 V | P_bat1   28.26 kW P_dc1   26.98 P_ac1   26.85 P_ac2   25.29 P_dc2   25.15 P_bat2   26.40 kW
+  t=  160.0 ms ref 0.4544 u 0.3197 (min 0.3060 max 0.3410) fb 0.6866 iL1  171.65 A (0.6866 pu, p-p over 1 ms 18.52) iL2  162.12 A vdc1  1091.1 vdc2  1133.4 V | P_bat1  187.74 kW P_dc1  186.25 P_ac1  186.01 P_ac2  182.44 P_dc2  182.15 P_bat2  182.97 kW
+  t=  170.0 ms ref 0.6692 u 0.4773 (min 0.4634 max 0.4900) fb 0.9275 iL1  231.89 A (0.9276 pu, p-p over 1 ms 6.47) iL2  216.27 A vdc1  1085.3 vdc2  1138.7 V | P_bat1  251.96 kW P_dc1  253.51 P_ac1  253.16 P_ac2  248.43 P_dc2  248.02 P_bat2  245.88 kW
+  t=  180.0 ms ref 0.7995 u 0.5672 (min 0.5605 max 0.5732) fb 1.0470 iL1  261.74 A (1.0470 pu, p-p over 1 ms 4.08) iL2  242.73 A vdc1  1082.0 vdc2  1141.6 V | P_bat1  283.48 kW P_dc1  284.42 P_ac1  283.99 P_ac2  278.64 P_dc2  278.15 P_bat2  276.78 kW
+  t=  200.0 ms ref 0.9263 u 0.6383 (min 0.6361 max 0.6393) fb 1.1237 iL1  280.95 A (1.1238 pu, p-p over 1 ms 1.77) iL2  259.49 A vdc1  1080.0 vdc2  1143.3 V | P_bat1  303.63 kW P_dc1  305.03 P_ac1  304.53 P_ac2  298.72 P_dc2  298.17 P_bat2  296.49 kW
+  t=  250.0 ms ref 0.9940 u 0.6158 (min 0.6138 max 0.6171) fb 1.1004 iL1  275.12 A (1.1005 pu, p-p over 1 ms 0.49) iL2  254.44 A vdc1  1080.8 vdc2  1142.6 V | P_bat1  297.51 kW P_dc1  297.84 P_ac1  297.38 P_ac2  291.77 P_dc2  291.23 P_bat2  290.59 kW
+  max |iL1| 284 A at 206.12 ms; max vdc1 1113 V; max vdc2 1144 V; max |i1| 433 A; max |i2| 448 A; max |im| 24.0 A; max |vCs1| 36.0 V
+  soc 0.849950 / 0.850046
+  window 149.5 ms: 149.500 .. 150.000 ms (2400 steps, 6.00 periods)
+    u 0.1065 (phase 9.58 deg, min 9.47 max 9.73)
+    vdc1 1110.7 V (p-p 0.62), vdc2 1114.9 V (p-p 0.71)
+    iL1 25.52 A (p-p 1.648), iL2 23.73 A (p-p 1.623)
+    idab1 21.51 A, idab2 19.79 A; P_dc1 23.89 kW, P_dc2 22.06 kW; P_ac1 23.77 kW, P_ac2 22.20 kW
+    i1 rms 22.6 A, peak 34.0 A, dc 0.45 A | i2 rms 23.7 A, peak 47.5 A | im peak 22.6 A, dc -0.05 A | vCs1 dc 0.08 V p-p 3.9 V, vCs2 dc -0.05 V p-p 4.0 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 29.3 mean 29.9 max 30.5 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 35.3 mean 36.3 max 47.5 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+  window 299.5 ms: 299.500 .. 300.000 ms (2400 steps, 6.00 periods)
+    u 0.5718 (phase 51.46 deg, min 51.44 max 51.49)
+    vdc1 1082.1 V (p-p 1.06), vdc2 1141.5 V (p-p 1.68)
+    iL1 264.83 A (p-p 0.035), iL2 245.43 A (p-p 0.036)
+    idab1 264.59 A, idab2 245.24 A; P_dc1 286.27 kW, P_dc2 279.99 kW; P_ac1 285.84 kW, P_ac2 280.48 kW
+    i1 rms 324.0 A, peak 374.6 A, dc -0.86 A | i2 rms 324.0 A, peak 390.6 A | im peak 17.7 A, dc -1.09 A | vCs1 dc 0.23 V p-p 57.4 V, vCs2 dc -0.35 V p-p 57.6 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 334.2 mean 337.1 max 339.9 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 384.9 mean 388.0 max 390.6 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== legacy_start: 0.300 s, 7199 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.0393 u -0.0423 (min -0.4287 max 0.7210) fb 0.6153 iL1  153.82 A (0.6153 pu, p-p over 1 ms 571.56) iL2  986.04 A vdc1  1040.4 vdc2  1217.3 V | P_bat1  166.42 kW P_dc1   -1.41 P_ac1   -1.71 P_ac2   -8.29 P_dc2   -8.68 P_bat2 1181.74 kW
+  t=   50.0 ms ref 0.0918 u 0.1282 (min 0.1256 max 0.1316) fb 0.1957 iL1   48.94 A (0.1957 pu, p-p over 1 ms 2.47) iL2   45.51 A vdc1  1107.3 vdc2  1118.1 V | P_bat1   54.19 kW P_dc1   52.03 P_ac1   51.90 P_ac2   48.86 P_dc2   48.71 P_bat2   50.90 kW
+  t=  100.0 ms ref 0.0993 u 0.1153 (min 0.1146 max 0.1166) fb 0.1315 iL1   32.87 A (0.1315 pu, p-p over 1 ms 1.32) iL2   30.14 A vdc1  1109.2 vdc2  1116.3 V | P_bat1   36.46 kW P_dc1   34.89 P_ac1   34.77 P_ac2   32.28 P_dc2   32.14 P_bat2   33.66 kW
+  t=  149.0 ms ref 0.0999 u 0.1083 (min 0.1055 max 0.1114) fb 0.1114 iL1   27.85 A (0.1114 pu, p-p over 1 ms 2.80) iL2   25.36 A vdc1  1109.6 vdc2  1115.9 V | P_bat1   30.91 kW P_dc1   28.86 P_ac1   28.73 P_ac2   26.43 P_dc2   26.29 P_bat2   28.28 kW
+  t=  160.0 ms ref 0.4532 u 0.3204 (min 0.3058 max 0.3412) fb 0.6916 iL1  172.91 A (0.6916 pu, p-p over 1 ms 18.29) iL2  159.22 A vdc1  1091.0 vdc2  1133.0 V | P_bat1  189.09 kW P_dc1  188.59 P_ac1  188.36 P_ac2  180.10 P_dc2  179.81 P_bat2  179.66 kW
+  t=  170.0 ms ref 0.6685 u 0.4752 (min 0.4622 max 0.4874) fb 0.9366 iL1  234.16 A (0.9366 pu, p-p over 1 ms 7.08) iL2  212.45 A vdc1  1084.9 vdc2  1138.3 V | P_bat1  254.37 kW P_dc1  255.52 P_ac1  255.17 P_ac2  243.64 P_dc2  243.23 P_bat2  241.43 kW
+  t=  180.0 ms ref 0.7991 u 0.5638 (min 0.5574 max 0.5694) fb 1.0561 iL1  264.05 A (1.0562 pu, p-p over 1 ms 4.23) iL2  237.73 A vdc1  1081.7 vdc2  1141.0 V | P_bat1  285.91 kW P_dc1  286.67 P_ac1  286.25 P_ac2  272.56 P_dc2  272.07 P_bat2  270.95 kW
+  t=  200.0 ms ref 0.9262 u 0.6288 (min 0.6274 max 0.6311) fb 1.1391 iL1  284.78 A (1.1391 pu, p-p over 1 ms 1.01) iL2  254.80 A vdc1  1079.8 vdc2  1142.6 V | P_bat1  307.66 kW P_dc1  306.33 P_ac1  305.85 P_ac2  290.81 P_dc2  290.26 P_bat2  291.01 kW
+  t=  250.0 ms ref 0.9940 u 0.6071 (min 0.6052 max 0.6080) fb 1.1038 iL1  275.96 A (1.1038 pu, p-p over 1 ms 0.53) iL2  247.71 A vdc1  1080.8 vdc2  1141.8 V | P_bat1  298.40 kW P_dc1  298.80 P_ac1  298.34 P_ac2  283.92 P_dc2  283.39 P_bat2  282.73 kW
+  max |iL1| 3333 A at 1.29 ms; max vdc1 1604 V; max vdc2 1790 V; max |i1| 1088 A; max |i2| 1108 A; max |im| 28.9 A; max |vCs1| 86.3 V
+  soc 0.849941 / 0.850043
+  window 0.0 ms: 0.001 .. 0.250 ms (400 steps, 3.00 periods)
+    u -0.5204 (phase -46.61 deg, min -89.94 max 0.00)
+    vdc1 13.5 V (p-p 39.53), vdc2 13.4 V (p-p 39.02)
+    iL1 550.60 A (p-p 1073.883), iL2 -550.61 A (p-p 1073.984)
+    idab1 -2.88 A, idab2 -4.48 A; P_dc1 -0.08 kW, P_dc2 -0.12 kW; P_ac1 -0.09 kW, P_ac2 -0.12 kW
+    i1 rms 8.5 A, peak 21.7 A, dc -1.60 A | i2 rms 8.6 A, peak 21.4 A | im peak 0.5 A, dc 0.01 A | vCs1 dc -0.09 V p-p 2.6 V, vCs2 dc -0.09 V p-p 2.6 V
+    bridge 1: 6 turn-off events, |i| at turn-off min 0.0 mean 7.7 max 21.7 A, current in the ZVS direction 6/6, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 2/6
+    bridge 2: 7 turn-off events, |i| at turn-off min 0.0 mean 6.1 max 20.3 A, current in the ZVS direction 7/7, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 4/7
+    switch/diode iterations per step: max 2, steps with > 3: 0
+  window 149.5 ms: 149.500 .. 149.999 ms (800 steps, 6.00 periods)
+    u 0.1075 (phase 9.68 deg, min 9.54 max 9.88)
+    vdc1 1110.7 V (p-p 0.96), vdc2 1114.9 V (p-p 0.98)
+    iL1 27.87 A (p-p 2.094), iL2 25.36 A (p-p 2.021)
+    idab1 24.00 A, idab2 21.68 A; P_dc1 26.65 kW, P_dc2 24.17 kW; P_ac1 26.53 kW, P_ac2 24.31 kW
+    i1 rms 30.8 A, peak 54.7 A, dc -2.57 A | i2 rms 31.3 A, peak 60.1 A | im peak 23.7 A, dc 0.54 A | vCs1 dc -0.98 V p-p 9.4 V, vCs2 dc -0.15 V p-p 9.3 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 10.5 mean 32.2 max 54.7 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 22.6 mean 38.6 max 60.1 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== step_full: 0.400 s, 9600 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.9000 u 0.7877 (min 0.7245 max 0.8179) fb 1.0401 iL1  260.07 A (1.0403 pu, p-p over 1 ms 45.13) iL2  244.16 A vdc1  1079.7 vdc2  1145.9 V | P_bat1  281.39 kW P_dc1  341.60 P_ac1  340.96 P_ac2  322.04 P_dc2  321.33 P_bat2  277.82 kW
+  t=   50.0 ms ref 0.9000 u 0.5861 (min 0.5846 max 0.5898) fb 1.0916 iL1  272.90 A (1.0916 pu, p-p over 1 ms 1.69) iL2  245.20 A vdc1  1081.3 vdc2  1141.3 V | P_bat1  295.19 kW P_dc1  293.37 P_ac1  292.93 P_ac2  279.11 P_dc2  278.61 P_bat2  279.82 kW
+  t=  100.0 ms ref 0.9000 u 0.5106 (min 0.5094 max 0.5117) fb 0.9966 iL1  249.14 A (0.9966 pu, p-p over 1 ms 0.60) iL2  225.39 A vdc1  1084.0 vdc2  1139.1 V | P_bat1  270.17 kW P_dc1  269.88 P_ac1  269.50 P_ac2  257.13 P_dc2  256.69 P_bat2  256.68 kW
+  t=  149.0 ms ref 0.9000 u 0.4773 (min 0.4767 max 0.4783) fb 0.9442 iL1  236.06 A (0.9442 pu, p-p over 1 ms 1.29) iL2  214.25 A vdc1  1085.6 vdc2  1137.8 V | P_bat1  256.33 kW P_dc1  255.71 P_ac1  255.36 P_ac2  244.08 P_dc2  243.67 P_bat2  243.74 kW
+  t=  160.0 ms ref 0.9000 u 0.4710 (min 0.4703 max 0.4717) fb 0.9404 iL1  235.11 A (0.9404 pu, p-p over 1 ms 0.09) iL2  213.54 A vdc1  1085.5 vdc2  1137.8 V | P_bat1  255.33 kW P_dc1  255.32 P_ac1  254.98 P_ac2  243.45 P_dc2  243.05 P_bat2  242.88 kW
+  t=  170.0 ms ref 0.9000 u 0.4679 (min 0.4671 max 0.4686) fb 0.9330 iL1  233.26 A (0.9331 pu, p-p over 1 ms 0.67) iL2  211.88 A vdc1  1085.8 vdc2  1137.6 V | P_bat1  253.37 kW P_dc1  252.90 P_ac1  252.56 P_ac2  241.21 P_dc2  240.80 P_bat2  240.97 kW
+  t=  180.0 ms ref 0.9000 u 0.4651 (min 0.4646 max 0.4662) fb 0.9279 iL1  231.98 A (0.9279 pu, p-p over 1 ms 1.14) iL2  210.75 A vdc1  1086.0 vdc2  1137.4 V | P_bat1  252.01 kW P_dc1  251.27 P_ac1  250.94 P_ac2  239.69 P_dc2  239.29 P_bat2  239.67 kW
+  t=  200.0 ms ref 0.9000 u 0.4582 (min 0.4579 max 0.4585) fb 0.9235 iL1  230.87 A (0.9235 pu, p-p over 1 ms 0.38) iL2  209.85 A vdc1  1086.1 vdc2  1137.3 V | P_bat1  250.84 kW P_dc1  250.76 P_ac1  250.42 P_ac2  239.22 P_dc2  238.83 P_bat2  238.61 kW
+  t=  250.0 ms ref 0.9000 u 0.4516 (min 0.4514 max 0.4518) fb 0.9116 iL1  227.89 A (0.9116 pu, p-p over 1 ms 0.01) iL2  207.34 A vdc1  1086.4 vdc2  1137.1 V | P_bat1  247.68 kW P_dc1  247.56 P_ac1  247.23 P_ac2  236.17 P_dc2  235.79 P_bat2  235.68 kW
+  t=  300.0 ms ref 0.9000 u 0.4483 (min 0.4461 max 0.4499) fb 0.9036 iL1  225.89 A (0.9036 pu, p-p over 1 ms 1.79) iL2  205.64 A vdc1  1086.4 vdc2  1137.1 V | P_bat1  245.56 kW P_dc1  246.06 P_ac1  245.73 P_ac2  234.62 P_dc2  234.24 P_bat2  233.68 kW
+  max |iL1| 470 A at 2.67 ms; max vdc1 1120 V; max vdc2 1192 V; max |i1| 1117 A; max |i2| 1115 A; max |im| 31.2 A; max |vCs1| 180.4 V
+  soc 0.849885 / 0.850104
+  window 349.5 ms: 349.500 .. 349.999 ms (800 steps, 6.00 periods)
+    u 0.4464 (phase 40.18 deg, min 40.18 max 40.18)
+    vdc1 1086.7 V (p-p 1.92), vdc2 1136.8 V (p-p 2.50)
+    iL1 225.69 A (p-p 0.163), iL2 205.42 A (p-p 0.167)
+    idab1 224.44 A, idab2 202.70 A; P_dc1 243.88 kW, P_dc2 230.45 kW; P_ac1 243.55 kW, P_ac2 230.85 kW
+    i1 rms 264.8 A, peak 407.4 A, dc -3.50 A | i2 rms 264.9 A, peak 423.5 A | im peak 18.7 A, dc -0.03 A | vCs1 dc -0.64 V p-p 99.5 V, vCs2 dc -6.40 V p-p 99.3 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 155.7 mean 253.7 max 373.5 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 207.7 mean 309.2 max 423.5 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== step_light: 0.120 s, 2880 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.1000 u 0.1076 (min 0.0999 max 0.1119) fb 0.0872 iL1   21.79 A (0.0872 pu, p-p over 1 ms 5.81) iL2   19.54 A vdc1  1110.4 vdc2  1115.2 V | P_bat1   24.19 kW P_dc1   29.87 P_ac1   29.75 P_ac2   27.42 P_dc2   27.28 P_bat2   21.81 kW
+  t=   50.0 ms ref 0.1000 u 0.1064 (min 0.1029 max 0.1103) fb 0.0970 iL1   24.25 A (0.0970 pu, p-p over 1 ms 3.67) iL2   21.83 A vdc1  1110.4 vdc2  1115.2 V | P_bat1   26.92 kW P_dc1   27.55 P_ac1   27.43 P_ac2   25.16 P_dc2   25.02 P_bat2   24.41 kW
+  t=  100.0 ms ref 0.1500 u 0.1258 (min 0.1238 max 0.1293) fb 0.1825 iL1   45.62 A (0.1825 pu, p-p over 1 ms 3.06) iL2   42.27 A vdc1  1107.8 vdc2  1117.7 V | P_bat1   50.53 kW P_dc1   46.97 P_ac1   46.84 P_ac2   43.98 P_dc2   43.83 P_bat2   47.27 kW
+  max |iL1| 68 A at 81.71 ms; max vdc1 1116 V; max vdc2 1127 V; max |i1| 131 A; max |i2| 133 A; max |im| 26.0 A; max |vCs1| 15.5 V
+  soc 0.849996 / 0.850004
+  window 79.5 ms: 79.500 .. 79.999 ms (800 steps, 6.00 periods)
+    u 0.1048 (phase 9.44 deg, min 9.36 max 9.55)
+    vdc1 1110.6 V (p-p 0.76), vdc2 1115.0 V (p-p 0.77)
+    iL1 25.43 A (p-p 1.234), iL2 23.02 A (p-p 1.192)
+    idab1 21.08 A, idab2 18.86 A; P_dc1 23.41 kW, P_dc2 21.02 kW; P_ac1 23.29 kW, P_ac2 21.16 kW
+    i1 rms 27.9 A, peak 52.9 A, dc 0.05 A | i2 rms 28.4 A, peak 59.3 A | im peak 23.4 A, dc 0.17 A | vCs1 dc 0.06 V p-p 9.4 V, vCs2 dc -0.18 V p-p 9.1 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 10.9 mean 29.6 max 52.9 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 23.4 mean 35.7 max 59.3 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== step_light_fine: 0.120 s, 2880 control intervals, tc = 208.3 ns
+  t=   10.0 ms ref 0.1000 u 0.1081 (min 0.1003 max 0.1126) fb 0.0864 iL1   21.60 A (0.0864 pu, p-p over 1 ms 6.00) iL2   19.90 A vdc1  1110.4 vdc2  1115.3 V | P_bat1   23.98 kW P_dc1   30.36 P_ac1   30.23 P_ac2   28.63 P_dc2   28.49 P_bat2   22.20 kW
+  t=   50.0 ms ref 0.1000 u 0.1071 (min 0.1044 max 0.1097) fb 0.0960 iL1   24.01 A (0.0960 pu, p-p over 1 ms 2.72) iL2   22.26 A vdc1  1110.0 vdc2  1115.6 V | P_bat1   26.65 kW P_dc1   27.71 P_ac1   27.58 P_ac2   26.00 P_dc2   25.86 P_bat2   24.82 kW
+  t=  100.0 ms ref 0.1500 u 0.1256 (min 0.1235 max 0.1297) fb 0.1830 iL1   45.76 A (0.1830 pu, p-p over 1 ms 3.47) iL2   43.43 A vdc1  1107.8 vdc2  1117.8 V | P_bat1   50.68 kW P_dc1   47.65 P_ac1   47.52 P_ac2   45.74 P_dc2   45.59 P_bat2   48.59 kW
+  max |iL1| 69 A at 81.58 ms; max vdc1 1116 V; max vdc2 1128 V; max |i1| 132 A; max |i2| 132 A; max |im| 25.7 A; max |vCs1| 16.5 V
+  soc 0.849996 / 0.850004
+  window 79.5 ms: 79.500 .. 80.000 ms (2400 steps, 6.00 periods)
+    u 0.1096 (phase 9.86 deg, min 9.80 max 9.89)
+    vdc1 1109.8 V (p-p 1.18), vdc2 1115.8 V (p-p 1.23)
+    iL1 23.39 A (p-p 0.706), iL2 21.64 A (p-p 0.699)
+    idab1 31.88 A, idab2 29.99 A; P_dc1 35.38 kW, P_dc2 33.46 kW; P_ac1 35.26 kW, P_ac2 33.60 kW
+    i1 rms 33.1 A, peak 42.2 A, dc 0.19 A | i2 rms 33.7 A, peak 47.4 A | im peak 22.4 A, dc -0.03 A | vCs1 dc -0.10 V p-p 6.1 V, vCs2 dc -0.18 V p-p 6.2 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 39.0 mean 40.2 max 42.2 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 47.2 mean 47.3 max 47.4 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== step_light_k0: 0.250 s, 5999 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.1000 u 0.0427 (min 0.0408 max 0.0442) fb 0.0378 iL1    9.44 A (0.0378 pu, p-p over 1 ms 0.63) iL2    7.61 A vdc1  1111.9 vdc2  1113.8 V | P_bat1   10.50 kW P_dc1   10.60 P_ac1   10.48 P_ac2    8.73 P_dc2    8.60 P_bat2    8.48 kW
+  t=   50.0 ms ref 0.1000 u 0.0856 (min 0.0846 max 0.0867) fb 0.0405 iL1   10.12 A (0.0405 pu, p-p over 1 ms 0.05) iL2    8.30 A vdc1  1111.7 vdc2  1113.9 V | P_bat1   11.25 kW P_dc1   11.24 P_ac1   11.12 P_ac2    9.37 P_dc2    9.24 P_bat2    9.24 kW
+  t=  100.0 ms ref 0.1000 u 0.0993 (min 0.0980 max 0.1006) fb 0.0842 iL1   21.05 A (0.0842 pu, p-p over 1 ms 1.09) iL2   18.80 A vdc1  1110.6 vdc2  1115.0 V | P_bat1   23.37 kW P_dc1   22.63 P_ac1   22.51 P_ac2   20.40 P_dc2   20.27 P_bat2   20.98 kW
+  t=  149.0 ms ref 0.1000 u 0.1066 (min 0.1051 max 0.1087) fb 0.0933 iL1   23.31 A (0.0932 pu, p-p over 1 ms 1.89) iL2   21.01 A vdc1  1110.1 vdc2  1115.5 V | P_bat1   25.88 kW P_dc1   26.18 P_ac1   26.06 P_ac2   23.84 P_dc2   23.70 P_bat2   23.41 kW
+  t=  160.0 ms ref 0.1500 u 0.1165 (min 0.1140 max 0.1190) fb 0.1302 iL1   32.56 A (0.1302 pu, p-p over 1 ms 2.63) iL2   29.88 A vdc1  1109.1 vdc2  1116.5 V | P_bat1   36.11 kW P_dc1   37.99 P_ac1   37.86 P_ac2   35.29 P_dc2   35.14 P_bat2   33.35 kW
+  t=  170.0 ms ref 0.1500 u 0.1160 (min 0.1142 max 0.1195) fb 0.1369 iL1   34.21 A (0.1368 pu, p-p over 1 ms 2.49) iL2   31.39 A vdc1  1109.1 vdc2  1116.4 V | P_bat1   37.94 kW P_dc1   36.44 P_ac1   36.32 P_ac2   33.79 P_dc2   33.65 P_bat2   35.09 kW
+  t=  180.0 ms ref 0.1500 u 0.1172 (min 0.1146 max 0.1195) fb 0.1388 iL1   34.71 A (0.1389 pu, p-p over 1 ms 2.61) iL2   31.92 A vdc1  1108.8 vdc2  1116.7 V | P_bat1   38.50 kW P_dc1   39.28 P_ac1   39.16 P_ac2   36.54 P_dc2   36.39 P_bat2   35.63 kW
+  t=  200.0 ms ref 0.1500 u 0.1178 (min 0.1151 max 0.1206) fb 0.1434 iL1   35.85 A (0.1434 pu, p-p over 1 ms 2.83) iL2   33.03 A vdc1  1108.6 vdc2  1116.9 V | P_bat1   39.76 kW P_dc1   40.68 P_ac1   40.55 P_ac2   37.89 P_dc2   37.75 P_bat2   36.86 kW
+  max |iL1| 40 A at 151.75 ms; max vdc1 1113 V; max vdc2 1120 V; max |i1| 87 A; max |i2| 96 A; max |im| 25.9 A; max |vCs1| 9.8 V
+  soc 0.849993 / 0.850006
+  window 149.5 ms: 149.500 .. 149.999 ms (800 steps, 6.00 periods)
+    u 0.1057 (phase 9.51 deg, min 9.46 max 9.59)
+    vdc1 1110.5 V (p-p 0.58), vdc2 1115.1 V (p-p 0.61)
+    iL1 23.67 A (p-p 0.746), iL2 21.33 A (p-p 0.721)
+    idab1 21.05 A, idab2 18.83 A; P_dc1 23.38 kW, P_dc2 20.99 kW; P_ac1 23.26 kW, P_ac2 21.13 kW
+    i1 rms 27.9 A, peak 52.4 A, dc -0.02 A | i2 rms 28.3 A, peak 59.3 A | im peak 23.4 A, dc -0.12 A | vCs1 dc 0.22 V p-p 9.3 V, vCs2 dc -0.19 V p-p 9.2 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 11.2 mean 29.5 max 52.4 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 23.4 mean 35.7 max 59.3 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== step_full_k0: 0.500 s, 12000 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.9000 u 0.2167 (min 0.1918 max 0.2693) fb 0.6161 iL1  154.02 A (0.6161 pu, p-p over 1 ms 35.41) iL2  142.80 A vdc1  1097.7 vdc2  1126.7 V | P_bat1  168.76 kW P_dc1  130.95 P_ac1  130.78 P_ac2  124.92 P_dc2  124.70 P_bat2  161.67 kW
+  t=   50.0 ms ref 0.9000 u 0.3393 (min 0.3373 max 0.3426) fb 0.7302 iL1  182.55 A (0.7302 pu, p-p over 1 ms 1.30) iL2  167.77 A vdc1  1091.6 vdc2  1132.5 V | P_bat1  199.36 kW P_dc1  198.21 P_ac1  197.97 P_ac2  189.40 P_dc2  189.10 P_bat2  189.92 kW
+  t=  100.0 ms ref 0.9000 u 0.3981 (min 0.3968 max 0.3989) fb 0.8230 iL1  205.77 A (0.8231 pu, p-p over 1 ms 1.05) iL2  188.17 A vdc1  1088.9 vdc2  1134.9 V | P_bat1  224.16 kW P_dc1  224.74 P_ac1  224.46 P_ac2  214.66 P_dc2  214.31 P_bat2  213.45 kW
+  t=  149.0 ms ref 0.9000 u 0.4224 (min 0.4221 max 0.4227) fb 0.8661 iL1  216.53 A (0.8661 pu, p-p over 1 ms 0.33) iL2  197.55 A vdc1  1087.7 vdc2  1136.0 V | P_bat1  235.61 kW P_dc1  235.41 P_ac1  235.11 P_ac2  224.71 P_dc2  224.34 P_bat2  224.33 kW
+  t=  160.0 ms ref 0.9000 u 0.4277 (min 0.4271 max 0.4282) fb 0.8688 iL1  217.22 A (0.8689 pu, p-p over 1 ms 0.62) iL2  198.10 A vdc1  1087.6 vdc2  1136.1 V | P_bat1  236.34 kW P_dc1  236.45 P_ac1  236.15 P_ac2  225.63 P_dc2  225.26 P_bat2  224.96 kW
+  t=  170.0 ms ref 0.9000 u 0.4286 (min 0.4278 max 0.4292) fb 0.8767 iL1  219.18 A (0.8767 pu, p-p over 1 ms 0.40) iL2  199.82 A vdc1  1087.4 vdc2  1136.2 V | P_bat1  238.43 kW P_dc1  238.40 P_ac1  238.09 P_ac2  227.48 P_dc2  227.12 P_bat2  226.97 kW
+  t=  180.0 ms ref 0.9000 u 0.4299 (min 0.4296 max 0.4303) fb 0.8816 iL1  220.41 A (0.8816 pu, p-p over 1 ms 0.23) iL2  200.89 A vdc1  1087.2 vdc2  1136.3 V | P_bat1  239.74 kW P_dc1  239.32 P_ac1  239.01 P_ac2  228.41 P_dc2  228.05 P_bat2  228.21 kW
+  t=  200.0 ms ref 0.9000 u 0.4375 (min 0.4371 max 0.4378) fb 0.8804 iL1  220.14 A (0.8806 pu, p-p over 1 ms 0.01) iL2  200.66 A vdc1  1087.3 vdc2  1136.3 V | P_bat1  239.45 kW P_dc1  239.34 P_ac1  239.03 P_ac2  228.40 P_dc2  228.02 P_bat2  227.94 kW
+  t=  250.0 ms ref 0.9000 u 0.4388 (min 0.4380 max 0.4398) fb 0.8962 iL1  224.06 A (0.8962 pu, p-p over 1 ms 1.01) iL2  204.05 A vdc1  1086.7 vdc2  1136.8 V | P_bat1  243.61 kW P_dc1  243.02 P_ac1  242.70 P_ac2  231.77 P_dc2  231.39 P_bat2  231.85 kW
+  t=  300.0 ms ref 0.9000 u 0.4418 (min 0.4417 max 0.4419) fb 0.8965 iL1  224.17 A (0.8967 pu, p-p over 1 ms 0.01) iL2  204.14 A vdc1  1086.8 vdc2  1136.7 V | P_bat1  243.73 kW P_dc1  243.61 P_ac1  243.29 P_ac2  232.44 P_dc2  232.07 P_bat2  231.97 kW
+  t=  400.0 ms ref 0.9500 u 0.4696 (min 0.4674 max 0.4708) fb 0.9365 iL1  234.13 A (0.9365 pu, p-p over 1 ms 1.47) iL2  212.55 A vdc1  1085.8 vdc2  1137.6 V | P_bat1  254.28 kW P_dc1  254.45 P_ac1  254.11 P_ac2  242.34 P_dc2  241.94 P_bat2  241.77 kW
+  max |iL1| 238 A at 499.75 ms; max vdc1 1124 V; max vdc2 1156 V; max |i1| 467 A; max |i2| 472 A; max |im| 32.2 A; max |vCs1| 72.4 V
+  soc 0.849872 / 0.850117
+  window 349.5 ms: 349.500 .. 349.999 ms (800 steps, 6.00 periods)
+    u 0.4449 (phase 40.04 deg, min 40.04 max 40.05)
+    vdc1 1086.8 V (p-p 1.06), vdc2 1136.7 V (p-p 1.62)
+    iL1 224.16 A (p-p 0.036), iL2 204.12 A (p-p 0.037)
+    idab1 224.16 A, idab2 204.11 A; P_dc1 243.60 kW, P_dc2 232.04 kW; P_ac1 243.28 kW, P_ac2 232.43 kW
+    i1 rms 258.1 A, peak 325.4 A, dc 0.45 A | i2 rms 258.0 A, peak 342.8 A | im peak 19.5 A, dc 0.90 A | vCs1 dc 2.57 V p-p 52.5 V, vCs2 dc -2.57 V p-p 52.2 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 233.8 mean 257.8 max 294.8 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 281.9 mean 304.9 max 342.8 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== prop_step_light: 0.250 s, 5999 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.1000 u 0.0351 (min 0.0330 max 0.0376) fb 0.0446 iL1   11.16 A (0.0446 pu, p-p over 1 ms 1.82) iL2    9.27 A vdc1  1111.8 vdc2  1113.9 V | P_bat1   12.40 kW P_dc1   10.51 P_ac1   10.39 P_ac2    8.64 P_dc2    8.51 P_bat2   10.35 kW
+  t=   50.0 ms ref 0.1000 u 0.1061 (min 0.1055 max 0.1067) fb 0.0844 iL1   21.08 A (0.0843 pu, p-p over 1 ms 0.08) iL2   18.84 A vdc1  1110.5 vdc2  1115.1 V | P_bat1   23.41 kW P_dc1   23.32 P_ac1   23.19 P_ac2   21.07 P_dc2   20.93 P_bat2   21.01 kW
+  t=  100.0 ms ref 0.1000 u 0.1078 (min 0.1068 max 0.1087) fb 0.1026 iL1   25.64 A (0.1026 pu, p-p over 1 ms 8.49) iL2   23.41 A vdc1  1109.1 vdc2  1116.5 V | P_bat1   28.47 kW P_dc1   28.03 P_ac1   27.91 P_ac2   25.64 P_dc2   25.50 P_bat2   25.94 kW
+  t=  149.0 ms ref 0.1000 u 0.1077 (min 0.1068 max 0.1087) fb 0.0963 iL1   24.08 A (0.0963 pu, p-p over 1 ms 8.26) iL2   21.55 A vdc1  1111.0 vdc2  1114.7 V | P_bat1   26.73 kW P_dc1   28.17 P_ac1   28.05 P_ac2   25.77 P_dc2   25.63 P_bat2   24.20 kW
+  t=  160.0 ms ref 0.1500 u 0.1178 (min 0.1174 max 0.1182) fb 0.1405 iL1   35.12 A (0.1405 pu, p-p over 1 ms 6.37) iL2   32.41 A vdc1  1108.2 vdc2  1117.3 V | P_bat1   38.95 kW P_dc1   39.41 P_ac1   39.29 P_ac2   36.66 P_dc2   36.52 P_bat2   36.05 kW
+  t=  170.0 ms ref 0.1500 u 0.1182 (min 0.1172 max 0.1190) fb 0.1533 iL1   38.33 A (0.1533 pu, p-p over 1 ms 7.86) iL2   35.53 A vdc1  1107.7 vdc2  1117.8 V | P_bat1   42.49 kW P_dc1   41.24 P_ac1   41.11 P_ac2   38.42 P_dc2   38.28 P_bat2   39.53 kW
+  t=  180.0 ms ref 0.1500 u 0.1186 (min 0.1175 max 0.1190) fb 0.1452 iL1   36.29 A (0.1452 pu, p-p over 1 ms 7.64) iL2   33.57 A vdc1  1107.9 vdc2  1117.6 V | P_bat1   40.24 kW P_dc1   44.74 P_ac1   44.61 P_ac2   41.83 P_dc2   41.68 P_bat2   37.33 kW
+  t=  200.0 ms ref 0.1500 u 0.1183 (min 0.1173 max 0.1190) fb 0.1442 iL1   36.04 A (0.1441 pu, p-p over 1 ms 7.30) iL2   33.03 A vdc1  1109.3 vdc2  1116.3 V | P_bat1   39.95 kW P_dc1   43.14 P_ac1   43.02 P_ac2   40.29 P_dc2   40.15 P_bat2   37.01 kW
+  max |iL1| 42 A at 170.62 ms; max vdc1 1113 V; max vdc2 1119 V; max |i1| 64 A; max |i2| 60 A; max |im| 24.3 A; max |vCs1| 9.0 V
+  soc 0.849992 / 0.850007
+  window 149.5 ms: 149.500 .. 149.999 ms (800 steps, 6.00 periods)
+    u 0.1086 (phase 9.77 deg, min 9.76 max 9.78)
+    vdc1 1110.0 V (p-p 1.81), vdc2 1115.6 V (p-p 1.81)
+    iL1 20.81 A (p-p 0.880), iL2 18.59 A (p-p 0.874)
+    idab1 32.35 A, idab2 29.70 A; P_dc1 35.91 kW, P_dc2 33.14 kW; P_ac1 35.78 kW, P_ac2 33.28 kW
+    i1 rms 37.5 A, peak 59.7 A, dc -0.43 A | i2 rms 37.9 A, peak 59.9 A | im peak 22.9 A, dc 0.13 A | vCs1 dc 0.23 V p-p 14.6 V, vCs2 dc 0.61 V p-p 14.8 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 16.9 mean 40.4 max 59.7 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 23.3 mean 47.5 max 59.9 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== prop_step_full: 0.500 s, 12000 control intervals, tc = 625.0 ns
+  t=   10.0 ms ref 0.9000 u 0.2550 (min 0.2438 max 0.2656) fb 0.5609 iL1  140.24 A (0.5610 pu, p-p over 1 ms 23.19) iL2  130.20 A vdc1  1094.2 vdc2  1130.2 V | P_bat1  153.90 kW P_dc1  155.19 P_ac1  155.00 P_ac2  148.22 P_dc2  147.98 P_bat2  146.30 kW
+  t=   50.0 ms ref 0.9000 u 0.4284 (min 0.4276 max 0.4288) fb 0.8724 iL1  218.11 A (0.8724 pu, p-p over 1 ms 4.68) iL2  198.83 A vdc1  1087.0 vdc2  1136.5 V | P_bat1  237.31 kW P_dc1  238.62 P_ac1  238.31 P_ac2  227.74 P_dc2  227.37 P_bat2  225.72 kW
+  t=  100.0 ms ref 0.9000 u 0.4431 (min 0.4430 max 0.4433) fb 0.8965 iL1  224.16 A (0.8966 pu, p-p over 1 ms 0.02) iL2  204.12 A vdc1  1086.8 vdc2  1136.7 V | P_bat1  243.72 kW P_dc1  243.60 P_ac1  243.28 P_ac2  232.43 P_dc2  232.04 P_bat2  231.95 kW
+  t=  149.0 ms ref 0.9000 u 0.4474 (min 0.4472 max 0.4479) fb 0.9019 iL1  225.49 A (0.9019 pu, p-p over 1 ms 3.96) iL2  205.00 A vdc1  1087.1 vdc2  1136.4 V | P_bat1  245.12 kW P_dc1  243.61 P_ac1  243.29 P_ac2  232.37 P_dc2  231.99 P_bat2  233.06 kW
+  t=  160.0 ms ref 0.9000 u 0.4480 (min 0.4476 max 0.4482) fb 0.8941 iL1  223.52 A (0.8941 pu, p-p over 1 ms 3.96) iL2  203.84 A vdc1  1086.5 vdc2  1137.0 V | P_bat1  243.04 kW P_dc1  245.84 P_ac1  245.51 P_ac2  234.57 P_dc2  234.19 P_bat2  231.55 kW
+  t=  170.0 ms ref 0.9000 u 0.4478 (min 0.4472 max 0.4482) fb 0.8995 iL1  224.87 A (0.8995 pu, p-p over 1 ms 4.80) iL2  205.07 A vdc1  1086.2 vdc2  1137.2 V | P_bat1  244.49 kW P_dc1  245.31 P_ac1  244.99 P_ac2  234.04 P_dc2  233.66 P_bat2  232.94 kW
+  t=  180.0 ms ref 0.9000 u 0.4474 (min 0.4471 max 0.4480) fb 0.9056 iL1  226.40 A (0.9056 pu, p-p over 1 ms 2.58) iL2  206.09 A vdc1  1086.4 vdc2  1137.0 V | P_bat1  246.11 kW P_dc1  243.61 P_ac1  243.29 P_ac2  232.38 P_dc2  231.99 P_bat2  234.20 kW
+  t=  200.0 ms ref 0.9000 u 0.4476 (min 0.4471 max 0.4482) fb 0.8955 iL1  223.88 A (0.8955 pu, p-p over 1 ms 3.93) iL2  203.72 A vdc1  1087.2 vdc2  1136.4 V | P_bat1  243.40 kW P_dc1  244.33 P_ac1  244.01 P_ac2  233.14 P_dc2  232.76 P_bat2  231.57 kW
+  t=  250.0 ms ref 0.9000 u 0.4475 (min 0.4471 max 0.4480) fb 0.8995 iL1  224.88 A (0.8995 pu, p-p over 1 ms 4.29) iL2  204.44 A vdc1  1087.2 vdc2  1136.4 V | P_bat1  244.46 kW P_dc1  243.62 P_ac1  243.30 P_ac2  232.50 P_dc2  232.11 P_bat2  232.42 kW
+  t=  300.0 ms ref 0.9000 u 0.4474 (min 0.4471 max 0.4479) fb 0.9009 iL1  225.22 A (0.9009 pu, p-p over 1 ms 4.22) iL2  204.71 A vdc1  1087.2 vdc2  1136.4 V | P_bat1  244.83 kW P_dc1  243.64 P_ac1  243.32 P_ac2  232.51 P_dc2  232.12 P_bat2  232.74 kW
+  t=  400.0 ms ref 0.9500 u 0.4779 (min 0.4777 max 0.4784) fb 0.9532 iL1  238.32 A (0.9533 pu, p-p over 1 ms 2.53) iL2  216.31 A vdc1  1085.0 vdc2  1138.2 V | P_bat1  258.74 kW P_dc1  256.69 P_ac1  256.34 P_ac2  244.77 P_dc2  244.36 P_bat2  246.08 kW
+  max |iL1| 241 A at 486.12 ms; max vdc1 1113 V; max vdc2 1139 V; max |i1| 415 A; max |i2| 434 A; max |im| 24.7 A; max |vCs1| 51.1 V
+  soc 0.849868 / 0.850120
+  window 349.5 ms: 349.500 .. 349.999 ms (800 steps, 6.00 periods)
+    u 0.4472 (phase 40.25 deg, min 40.24 max 40.25)
+    vdc1 1087.1 V (p-p 1.46), vdc2 1136.4 V (p-p 2.05)
+    iL1 225.98 A (p-p 1.140), iL2 205.39 A (p-p 1.023)
+    idab1 223.92 A, idab2 203.47 A; P_dc1 243.41 kW, P_dc2 231.25 kW; P_ac1 243.09 kW, P_ac2 231.64 kW
+    i1 rms 259.9 A, peak 364.4 A, dc 5.17 A | i2 rms 260.0 A, peak 381.4 A | im peak 19.7 A, dc 0.38 A | vCs1 dc -8.14 V p-p 74.9 V, vCs2 dc 5.76 V p-p 75.4 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 197.6 mean 256.7 max 334.4 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 243.1 mean 305.7 max 381.4 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== step_light_k0_t1200: 0.250 s, 5999 control intervals, tc = 69.4 ns
+  t=   10.0 ms ref 0.1000 u 0.0431 (min 0.0411 max 0.0448) fb 0.0372 iL1    9.30 A (0.0372 pu, p-p over 1 ms 0.72) iL2    7.88 A vdc1  1111.9 vdc2  1113.8 V | P_bat1   10.34 kW P_dc1   10.35 P_ac1   10.23 P_ac2    8.95 P_dc2    8.81 P_bat2    8.79 kW
+  t=   50.0 ms ref 0.1000 u 0.0890 (min 0.0879 max 0.0901) fb 0.0366 iL1    9.12 A (0.0365 pu, p-p over 1 ms 0.04) iL2    7.73 A vdc1  1111.9 vdc2  1113.8 V | P_bat1   10.14 kW P_dc1   10.16 P_ac1   10.04 P_ac2    8.76 P_dc2    8.63 P_bat2    8.61 kW
+  t=  100.0 ms ref 0.1000 u 0.1051 (min 0.1042 max 0.1063) fb 0.0791 iL1   19.78 A (0.0791 pu, p-p over 1 ms 1.21) iL2   18.31 A vdc1  1110.6 vdc2  1115.1 V | P_bat1   21.97 kW P_dc1   21.46 P_ac1   21.34 P_ac2   20.03 P_dc2   19.89 P_bat2   20.40 kW
+  t=  149.0 ms ref 0.1000 u 0.1091 (min 0.1080 max 0.1096) fb 0.0932 iL1   23.30 A (0.0932 pu, p-p over 1 ms 0.86) iL2   21.78 A vdc1  1110.1 vdc2  1115.5 V | P_bat1   25.86 kW P_dc1   26.80 P_ac1   26.68 P_ac2   25.35 P_dc2   25.21 P_bat2   24.28 kW
+  t=  160.0 ms ref 0.1500 u 0.1191 (min 0.1158 max 0.1219) fb 0.1309 iL1   32.73 A (0.1309 pu, p-p over 1 ms 3.27) iL2   31.14 A vdc1  1108.8 vdc2  1116.9 V | P_bat1   36.31 kW P_dc1   37.73 P_ac1   37.60 P_ac2   36.26 P_dc2   36.11 P_bat2   34.71 kW
+  t=  170.0 ms ref 0.1500 u 0.1193 (min 0.1183 max 0.1203) fb 0.1363 iL1   34.07 A (0.1363 pu, p-p over 1 ms 1.20) iL2   32.41 A vdc1  1108.8 vdc2  1116.8 V | P_bat1   37.79 kW P_dc1   38.12 P_ac1   37.99 P_ac2   36.64 P_dc2   36.49 P_bat2   36.16 kW
+  t=  180.0 ms ref 0.1500 u 0.1207 (min 0.1205 max 0.1210) fb 0.1377 iL1   34.44 A (0.1378 pu, p-p over 1 ms 0.02) iL2   32.75 A vdc1  1108.9 vdc2  1116.7 V | P_bat1   38.20 kW P_dc1   38.22 P_ac1   38.09 P_ac2   36.74 P_dc2   36.59 P_bat2   36.57 kW
+  t=  200.0 ms ref 0.1500 u 0.1212 (min 0.1202 max 0.1223) fb 0.1432 iL1   35.81 A (0.1432 pu, p-p over 1 ms 0.96) iL2   34.07 A vdc1  1108.8 vdc2  1116.8 V | P_bat1   39.70 kW P_dc1   39.96 P_ac1   39.84 P_ac2   38.48 P_dc2   38.33 P_bat2   38.06 kW
+  max |iL1| 38 A at 151.62 ms; max vdc1 1113 V; max vdc2 1119 V; max |i1| 65 A; max |i2| 68 A; max |im| 25.0 A; max |vCs1| 7.3 V
+  soc 0.849993 / 0.850006
+  window 149.5 ms: 149.500 .. 150.000 ms (7200 steps, 6.00 periods)
+    u 0.1084 (phase 9.76 deg, min 9.72 max 9.80)
+    vdc1 1110.0 V (p-p 0.09), vdc2 1115.7 V (p-p 0.14)
+    iL1 23.75 A (p-p 0.428), iL2 22.21 A (p-p 0.422)
+    idab1 23.82 A, idab2 22.29 A; P_dc1 26.44 kW, P_dc2 24.86 kW; P_ac1 26.32 kW, P_ac2 25.00 kW
+    i1 rms 25.0 A, peak 32.3 A, dc -0.14 A | i2 rms 25.9 A, peak 39.3 A | im peak 22.5 A, dc 0.03 A | vCs1 dc -0.01 V p-p 4.4 V, vCs2 dc -0.03 V p-p 4.5 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 32.2 mean 32.3 max 32.3 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 35.2 mean 39.0 max 39.3 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+===== prop_step_light_t1200: 0.250 s, 5999 control intervals, tc = 69.4 ns
+  t=   10.0 ms ref 0.1000 u 0.0301 (min 0.0276 max 0.0326) fb 0.0378 iL1    9.44 A (0.0378 pu, p-p over 1 ms 0.42) iL2    8.03 A vdc1  1111.9 vdc2  1113.8 V | P_bat1   10.50 kW P_dc1   10.35 P_ac1   10.23 P_ac2    8.95 P_dc2    8.82 P_bat2    8.94 kW
+  t=   50.0 ms ref 0.1000 u 0.1081 (min 0.1079 max 0.1084) fb 0.0988 iL1   24.68 A (0.0987 pu, p-p over 1 ms 1.77) iL2   23.11 A vdc1  1110.1 vdc2  1115.5 V | P_bat1   27.40 kW P_dc1   25.64 P_ac1   25.51 P_ac2   24.19 P_dc2   24.05 P_bat2   25.79 kW
+  t=  100.0 ms ref 0.1000 u 0.1112 (min 0.1109 max 0.1115) fb 0.0987 iL1   24.67 A (0.0987 pu, p-p over 1 ms 2.31) iL2   23.07 A vdc1  1110.3 vdc2  1115.4 V | P_bat1   27.38 kW P_dc1   27.86 P_ac1   27.74 P_ac2   26.41 P_dc2   26.27 P_bat2   25.78 kW
+  t=  149.0 ms ref 0.1000 u 0.1111 (min 0.1109 max 0.1115) fb 0.0987 iL1   24.67 A (0.0987 pu, p-p over 1 ms 2.29) iL2   23.07 A vdc1  1110.3 vdc2  1115.4 V | P_bat1   27.39 kW P_dc1   27.86 P_ac1   27.74 P_ac2   26.41 P_dc2   26.27 P_bat2   25.79 kW
+  t=  160.0 ms ref 0.1500 u 0.1204 (min 0.1197 max 0.1210) fb 0.1366 iL1   34.15 A (0.1366 pu, p-p over 1 ms 1.12) iL2   32.45 A vdc1  1109.0 vdc2  1116.6 V | P_bat1   37.88 kW P_dc1   38.37 P_ac1   38.24 P_ac2   36.89 P_dc2   36.74 P_bat2   36.26 kW
+  t=  170.0 ms ref 0.1500 u 0.1217 (min 0.1215 max 0.1218) fb 0.1485 iL1   37.13 A (0.1485 pu, p-p over 1 ms 1.92) iL2   35.43 A vdc1  1108.4 vdc2  1117.3 V | P_bat1   41.16 kW P_dc1   41.88 P_ac1   41.75 P_ac2   40.39 P_dc2   40.24 P_bat2   39.53 kW
+  t=  180.0 ms ref 0.1500 u 0.1214 (min 0.1213 max 0.1215) fb 0.1517 iL1   37.93 A (0.1517 pu, p-p over 1 ms 1.19) iL2   36.15 A vdc1  1108.6 vdc2  1117.0 V | P_bat1   42.05 kW P_dc1   41.05 P_ac1   40.92 P_ac2   39.56 P_dc2   39.41 P_bat2   40.40 kW
+  t=  200.0 ms ref 0.1500 u 0.1215 (min 0.1213 max 0.1217) fb 0.1513 iL1   37.83 A (0.1513 pu, p-p over 1 ms 1.39) iL2   36.11 A vdc1  1108.4 vdc2  1117.3 V | P_bat1   41.94 kW P_dc1   41.70 P_ac1   41.57 P_ac2   40.21 P_dc2   40.06 P_bat2   40.31 kW
+  max |iL1| 39 A at 171.75 ms; max vdc1 1113 V; max vdc2 1118 V; max |i1| 47 A; max |i2| 55 A; max |im| 24.1 A; max |vCs1| 3.9 V
+  soc 0.849992 / 0.850008
+  window 149.5 ms: 149.500 .. 150.000 ms (7200 steps, 6.00 periods)
+    u 0.1114 (phase 10.03 deg, min 10.02 max 10.03)
+    vdc1 1110.1 V (p-p 0.60), vdc2 1115.6 V (p-p 0.68)
+    iL1 23.74 A (p-p 0.187), iL2 22.20 A (p-p 0.190)
+    idab1 27.80 A, idab2 26.22 A; P_dc1 30.86 kW, P_dc2 29.25 kW; P_ac1 30.74 kW, P_ac2 29.39 kW
+    i1 rms 29.1 A, peak 37.5 A, dc -0.01 A | i2 rms 29.9 A, peak 43.3 A | im peak 22.5 A, dc 0.01 A | vCs1 dc -0.14 V p-p 5.4 V, vCs2 dc -0.17 V p-p 5.5 V
+    bridge 1: 12 turn-off events, |i| at turn-off min 33.1 mean 36.2 max 37.5 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 12/12
+    bridge 2: 12 turn-off events, |i| at turn-off min 43.2 mean 43.3 max 43.3 A, current in the ZVS direction 12/12, current back to zero inside the dead time (bridge floats, hard turn-on at its end) 0/12
+    switch/diode iterations per step: max 2, steps with > 3: 0
+
+------------------------------------------------------------------ ripple of iL1 (average over one PWM period) at light and full load
+nominal                100-150 ms: mean  25.44 A, p-p  3.93 A, std 1.24 A, main frequency 380 Hz, u 0.1073 | 550-600 ms: mean 250.13 A, p-p  1.08 A, std 0.31 A, main frequency 400 Hz, u 0.5176
+kff_05                 100-150 ms: mean  23.05 A, p-p  4.60 A, std 1.41 A, main frequency 380 Hz, u 0.1063 | 550-600 ms: mean 249.99 A, p-p  1.47 A, std 0.39 A, main frequency 340 Hz, u 0.5175
+proposal               100-150 ms: mean  25.00 A, p-p  9.39 A, std 3.08 A, main frequency 280 Hz, u 0.1076 | 550-600 ms: mean 250.00 A, p-p  4.97 A, std 1.68 A, main frequency 220 Hz, u 0.5177
+kff_05_fine            100-150 ms: mean  23.03 A, p-p  4.83 A, std 1.39 A, main frequency 380 Hz, u 0.1064 | 550-600 ms: mean 249.99 A, p-p  1.53 A, std 0.48 A, main frequency 300 Hz, u 0.5270
+proposal_fine          100-150 ms: mean  24.88 A, p-p  9.36 A, std 3.15 A, main frequency 280 Hz, u 0.1077 | 550-600 ms: mean 249.99 A, p-p  4.18 A, std 1.44 A, main frequency 220 Hz, u 0.5276
+step_light_k0          100-150 ms: mean  21.69 A, p-p  3.67 A, std 1.02 A, main frequency 20 Hz, u 0.1048 | 200-250 ms: mean  36.67 A, p-p  4.12 A, std 1.13 A, main frequency 420 Hz, u 0.1180
+prop_step_light        100-150 ms: mean  25.02 A, p-p  8.52 A, std 3.02 A, main frequency 280 Hz, u 0.1077 | 200-250 ms: mean  37.43 A, p-p  7.97 A, std 2.83 A, main frequency 280 Hz, u 0.1182
+step_light_k0_t1200    100-150 ms: mean  21.90 A, p-p  4.53 A, std 1.16 A, main frequency 20 Hz, u 0.1076 | 200-250 ms: mean  36.59 A, p-p  2.27 A, std 0.48 A, main frequency 420 Hz, u 0.1216
+prop_step_light_t1200  100-150 ms: mean  24.98 A, p-p  2.64 A, std 0.87 A, main frequency 260 Hz, u 0.1111 | 200-250 ms: mean  37.50 A, p-p  1.73 A, std 0.61 A, main frequency 240 Hz, u 0.1215
+
+------------------------------------------------------------------ static characteristic, fixed u (dab_sweep.py)
+tc625 u 0.000 (phi   0.0 deg): vdc1  1112.8 vdc2  1112.8 iL1    0.83 A (0.0033 pu) P_dc1    0.93 P_dc2   -0.93 kW loss   1.87 kW | harmonic P1    0.61 P2   -0.61 kW loss  1.22 | I1rms    6.7 (harm    6.7) A, iL1 ripple p-p 0.00 A
+tc625 u 0.010 (phi   0.9 deg): vdc1  1112.5 vdc2  1113.1 iL1    3.52 A (0.0141 pu) P_dc1    3.91 P_dc2    2.01 kW loss   1.90 kW | harmonic P1    7.49 P2    6.28 kW loss  1.21 | I1rms   11.6 (harm    9.4) A, iL1 ripple p-p 0.01 A
+tc625 u 0.020 (phi   1.8 deg): vdc1  1112.5 vdc2  1113.2 iL1    3.77 A (0.0151 pu) P_dc1    4.23 P_dc2    2.33 kW loss   1.90 kW | harmonic P1   14.31 P2   13.11 kW loss  1.20 | I1rms   11.8 (harm   14.5) A, iL1 ripple p-p 0.01 A
+tc625 u 0.030 (phi   2.7 deg): vdc1  1111.8 vdc2  1113.8 iL1    9.53 A (0.0381 pu) P_dc1   10.60 P_dc2    8.59 kW loss   2.01 kW | harmonic P1   21.06 P2   19.86 kW loss  1.20 | I1rms   11.1 (harm   20.2) A, iL1 ripple p-p 0.00 A
+tc625 u 0.040 (phi   3.6 deg): vdc1  1111.8 vdc2  1113.8 iL1    9.51 A (0.0380 pu) P_dc1   10.58 P_dc2    8.56 kW loss   2.01 kW | harmonic P1   27.75 P2   26.55 kW loss  1.20 | I1rms   11.1 (harm   26.2) A, iL1 ripple p-p 0.00 A
+tc625 u 0.050 (phi   4.5 deg): vdc1  1111.8 vdc2  1113.8 iL1    9.48 A (0.0379 pu) P_dc1   10.55 P_dc2    8.54 kW loss   2.01 kW | harmonic P1   34.36 P2   33.17 kW loss  1.19 | I1rms   11.1 (harm   32.2) A, iL1 ripple p-p 0.00 A
+tc625 u 0.060 (phi   5.4 deg): vdc1  1111.8 vdc2  1113.8 iL1    9.46 A (0.0378 pu) P_dc1   10.52 P_dc2    8.51 kW loss   2.01 kW | harmonic P1   40.92 P2   39.73 kW loss  1.19 | I1rms   11.1 (harm   38.3) A, iL1 ripple p-p 0.00 A
+tc625 u 0.080 (phi   7.2 deg): vdc1  1111.7 vdc2  1113.9 iL1   10.15 A (0.0406 pu) P_dc1   11.30 P_dc2    9.28 kW loss   2.02 kW | harmonic P1   53.82 P2   52.63 kW loss  1.18 | I1rms   11.7 (harm   50.5) A, iL1 ripple p-p 0.00 A
+tc625 u 0.100 (phi   9.0 deg): vdc1  1110.5 vdc2  1115.1 iL1   21.04 A (0.0842 pu) P_dc1   23.40 P_dc2   21.00 kW loss   2.40 kW | harmonic P1   66.44 P2   65.26 kW loss  1.18 | I1rms   27.9 (harm   62.5) A, iL1 ripple p-p 0.02 A
+tc625 u 0.120 (phi  10.8 deg): vdc1  1108.0 vdc2  1117.5 iL1   41.99 A (0.1680 pu) P_dc1   46.53 P_dc2   43.41 kW loss   3.12 kW | harmonic P1   78.79 P2   77.61 kW loss  1.18 | I1rms   43.2 (harm   74.5) A, iL1 ripple p-p 0.01 A
+tc625 u 0.150 (phi  13.5 deg): vdc1  1104.4 vdc2  1120.9 iL1   72.96 A (0.2918 pu) P_dc1   80.59 P_dc2   76.27 kW loss   4.32 kW | harmonic P1   96.80 P2   95.62 kW loss  1.18 | I1rms   75.5 (harm   92.4) A, iL1 ripple p-p 0.02 A
+tc625 u 0.200 (phi  18.0 deg): vdc1  1099.9 vdc2  1125.0 iL1  111.57 A (0.4463 pu) P_dc1  122.79 P_dc2  116.94 kW loss   5.85 kW | harmonic P1  125.44 P2  124.25 kW loss  1.18 | I1rms  119.8 (harm  122.0) A, iL1 ripple p-p 0.15 A
+tc625 u 0.250 (phi  22.5 deg): vdc1  1096.5 vdc2  1128.2 iL1  141.22 A (0.5649 pu) P_dc1  154.80 P_dc2  147.70 kW loss   7.11 kW | harmonic P1  152.37 P2  151.17 kW loss  1.20 | I1rms  153.2 (harm  151.1) A, iL1 ripple p-p 0.32 A
+tc625 u 0.300 (phi  27.0 deg): vdc1  1093.7 vdc2  1130.7 iL1  165.29 A (0.6612 pu) P_dc1  180.78 P_dc2  172.53 kW loss   8.25 kW | harmonic P1  177.58 P2  176.35 kW loss  1.23 | I1rms  179.8 (harm  179.6) A, iL1 ripple p-p 0.50 A
+tc625 u 0.400 (phi  36.0 deg): vdc1  1088.7 vdc2  1135.1 iL1  208.41 A (0.8336 pu) P_dc1  226.85 P_dc2  216.35 kW loss  10.51 kW | harmonic P1  222.82 P2  221.51 kW loss  1.31 | I1rms  236.4 (harm  235.0) A, iL1 ripple p-p 0.66 A
+tc625 u 0.500 (phi  45.0 deg): vdc1  1084.3 vdc2  1138.8 iL1  245.76 A (0.9830 pu) P_dc1  266.54 P_dc2  253.61 kW loss  12.93 kW | harmonic P1  261.11 P2  259.69 kW loss  1.42 | I1rms  289.6 (harm  288.0) A, iL1 ripple p-p 0.79 A
+tc625 u 0.600 (phi  54.0 deg): vdc1  1080.7 vdc2  1141.8 iL1  276.59 A (1.1063 pu) P_dc1  299.00 P_dc2  283.66 kW loss  15.33 kW | harmonic P1  292.44 P2  290.88 kW loss  1.56 | I1rms  339.0 (harm  338.6) A, iL1 ripple p-p 0.86 A
+tc625 u 0.700 (phi  63.0 deg): vdc1  1077.9 vdc2  1144.1 iL1  300.81 A (1.2032 pu) P_dc1  324.31 P_dc2  306.61 kW loss  17.71 kW | harmonic P1  316.80 P2  315.10 kW loss  1.71 | I1rms  387.7 (harm  386.8) A, iL1 ripple p-p 0.94 A
+tc625 u 0.800 (phi  72.0 deg): vdc1  1075.8 vdc2  1145.7 iL1  318.86 A (1.2754 pu) P_dc1  343.20 P_dc2  322.90 kW loss  20.30 kW | harmonic P1  334.20 P2  332.33 kW loss  1.88 | I1rms  433.6 (harm  432.3) A, iL1 ripple p-p 1.00 A
+tc625 u 0.900 (phi  81.0 deg): vdc1  1074.5 vdc2  1146.6 iL1  330.07 A (1.3203 pu) P_dc1  354.90 P_dc2  332.10 kW loss  22.80 kW | harmonic P1  344.64 P2  342.59 kW loss  2.06 | I1rms  475.6 (harm  475.1) A, iL1 ripple p-p 1.01 A
+tc625 u 1.000 (phi  90.0 deg): vdc1  1074.0 vdc2  1146.8 iL1  334.41 A (1.3376 pu) P_dc1  359.39 P_dc2  334.20 kW loss  25.19 kW | harmonic P1  348.13 P2  345.89 kW loss  2.24 | I1rms  516.1 (harm  515.1) A, iL1 ripple p-p 1.03 A
+tc208 u 0.000 (phi   0.0 deg): vdc1  1112.8 vdc2  1112.8 iL1    0.72 A (0.0029 pu) P_dc1    0.80 P_dc2   -0.80 kW loss   1.60 kW | harmonic P1    0.61 P2   -0.61 kW loss  1.22 | I1rms    6.7 (harm    6.7) A, iL1 ripple p-p 0.00 A
+tc208 u 0.010 (phi   0.9 deg): vdc1  1112.1 vdc2  1113.6 iL1    6.94 A (0.0277 pu) P_dc1    7.71 P_dc2    6.05 kW loss   1.66 kW | harmonic P1    7.49 P2    6.28 kW loss  1.21 | I1rms    9.2 (harm    9.2) A, iL1 ripple p-p 0.02 A
+tc208 u 0.020 (phi   1.8 deg): vdc1  1111.8 vdc2  1113.9 iL1    9.44 A (0.0378 pu) P_dc1   10.50 P_dc2    8.83 kW loss   1.67 kW | harmonic P1   14.31 P2   13.11 kW loss  1.20 | I1rms   11.1 (harm   14.3) A, iL1 ripple p-p 0.00 A
+tc208 u 0.030 (phi   2.7 deg): vdc1  1111.8 vdc2  1113.8 iL1    9.41 A (0.0376 pu) P_dc1   10.46 P_dc2    8.79 kW loss   1.67 kW | harmonic P1   21.06 P2   19.86 kW loss  1.20 | I1rms   11.0 (harm   20.2) A, iL1 ripple p-p 0.00 A
+tc208 u 0.040 (phi   3.6 deg): vdc1  1111.8 vdc2  1113.8 iL1    9.37 A (0.0375 pu) P_dc1   10.42 P_dc2    8.75 kW loss   1.67 kW | harmonic P1   27.75 P2   26.55 kW loss  1.20 | I1rms   11.0 (harm   26.2) A, iL1 ripple p-p 0.00 A
+tc208 u 0.050 (phi   4.5 deg): vdc1  1111.8 vdc2  1113.8 iL1    9.34 A (0.0373 pu) P_dc1   10.38 P_dc2    8.71 kW loss   1.67 kW | harmonic P1   34.37 P2   33.17 kW loss  1.19 | I1rms   11.0 (harm   32.2) A, iL1 ripple p-p 0.00 A
+tc208 u 0.060 (phi   5.4 deg): vdc1  1111.8 vdc2  1113.8 iL1    9.30 A (0.0372 pu) P_dc1   10.34 P_dc2    8.67 kW loss   1.67 kW | harmonic P1   40.92 P2   39.73 kW loss  1.19 | I1rms   11.0 (harm   38.3) A, iL1 ripple p-p 0.00 A
+tc208 u 0.080 (phi   7.2 deg): vdc1  1111.8 vdc2  1113.8 iL1    9.34 A (0.0374 pu) P_dc1   10.38 P_dc2    8.71 kW loss   1.67 kW | harmonic P1   53.82 P2   52.64 kW loss  1.18 | I1rms   11.0 (harm   50.5) A, iL1 ripple p-p 0.00 A
+tc208 u 0.100 (phi   9.0 deg): vdc1  1110.5 vdc2  1115.2 iL1   20.85 A (0.0834 pu) P_dc1   23.15 P_dc2   21.36 kW loss   1.79 kW | harmonic P1   66.45 P2   65.27 kW loss  1.18 | I1rms   21.9 (harm   62.5) A, iL1 ripple p-p 0.00 A
+tc208 u 0.120 (phi  10.8 deg): vdc1  1108.1 vdc2  1117.5 iL1   41.65 A (0.1666 pu) P_dc1   46.15 P_dc2   44.10 kW loss   2.04 kW | harmonic P1   78.80 P2   77.62 kW loss  1.18 | I1rms   43.2 (harm   74.5) A, iL1 ripple p-p 0.01 A
+tc208 u 0.150 (phi  13.5 deg): vdc1  1104.5 vdc2  1121.0 iL1   72.41 A (0.2897 pu) P_dc1   79.98 P_dc2   77.56 kW loss   2.42 kW | harmonic P1   96.81 P2   95.64 kW loss  1.18 | I1rms   75.7 (harm   92.4) A, iL1 ripple p-p 0.02 A
+tc208 u 0.200 (phi  18.0 deg): vdc1  1099.5 vdc2  1125.7 iL1  114.90 A (0.4596 pu) P_dc1  126.31 P_dc2  123.30 kW loss   3.01 kW | harmonic P1  125.47 P2  124.28 kW loss  1.19 | I1rms  122.1 (harm  122.0) A, iL1 ripple p-p 0.31 A
+tc208 u 0.250 (phi  22.5 deg): vdc1  1096.6 vdc2  1128.4 iL1  139.96 A (0.5598 pu) P_dc1  153.45 P_dc2  150.04 kW loss   3.41 kW | harmonic P1  152.42 P2  151.22 kW loss  1.20 | I1rms  151.2 (harm  151.1) A, iL1 ripple p-p 0.43 A
+tc208 u 0.300 (phi  27.0 deg): vdc1  1093.9 vdc2  1131.0 iL1  163.55 A (0.6542 pu) P_dc1  178.86 P_dc2  175.05 kW loss   3.82 kW | harmonic P1  177.66 P2  176.43 kW loss  1.23 | I1rms  179.7 (harm  179.7) A, iL1 ripple p-p 0.52 A
+tc208 u 0.400 (phi  36.0 deg): vdc1  1088.9 vdc2  1135.5 iL1  206.25 A (0.8250 pu) P_dc1  224.53 P_dc2  219.86 kW loss   4.67 kW | harmonic P1  222.94 P2  221.63 kW loss  1.31 | I1rms  235.2 (harm  235.1) A, iL1 ripple p-p 0.68 A
+tc208 u 0.500 (phi  45.0 deg): vdc1  1084.7 vdc2  1139.3 iL1  242.79 A (0.9712 pu) P_dc1  263.27 P_dc2  257.70 kW loss   5.57 kW | harmonic P1  261.29 P2  259.87 kW loss  1.42 | I1rms  288.3 (harm  288.1) A, iL1 ripple p-p 0.80 A
+tc208 u 0.600 (phi  54.0 deg): vdc1  1081.1 vdc2  1142.3 iL1  273.01 A (1.0920 pu) P_dc1  295.06 P_dc2  288.57 kW loss   6.50 kW | harmonic P1  292.68 P2  291.13 kW loss  1.56 | I1rms  339.0 (harm  338.8) A, iL1 ripple p-p 0.90 A
+tc208 u 0.700 (phi  63.0 deg): vdc1  1078.4 vdc2  1144.7 iL1  296.77 A (1.1871 pu) P_dc1  319.90 P_dc2  312.45 kW loss   7.45 kW | harmonic P1  317.11 P2  315.40 kW loss  1.71 | I1rms  387.2 (harm  386.9) A, iL1 ripple p-p 0.97 A
+tc208 u 0.800 (phi  72.0 deg): vdc1  1076.4 vdc2  1146.4 iL1  313.96 A (1.2558 pu) P_dc1  337.78 P_dc2  329.35 kW loss   8.43 kW | harmonic P1  334.58 P2  332.70 kW loss  1.88 | I1rms  432.8 (harm  432.5) A, iL1 ripple p-p 1.02 A
+tc208 u 0.900 (phi  81.0 deg): vdc1  1075.1 vdc2  1147.3 iL1  324.50 A (1.2980 pu) P_dc1  348.69 P_dc2  339.27 kW loss   9.42 kW | harmonic P1  345.08 P2  343.02 kW loss  2.06 | I1rms  475.7 (harm  475.4) A, iL1 ripple p-p 1.05 A
+tc208 u 1.000 (phi  90.0 deg): vdc1  1074.7 vdc2  1147.6 iL1  328.34 A (1.3134 pu) P_dc1  352.64 P_dc2  342.22 kW loss  10.42 kW | harmonic P1  348.62 P2  346.38 kW loss  2.24 | I1rms  515.8 (harm  515.5) A, iL1 ripple p-p 1.07 A
+dt05 u 0.000 (phi   0.0 deg): vdc1  1112.8 vdc2  1112.8 iL1    0.68 A (0.0027 pu) P_dc1    0.75 P_dc2   -0.75 kW loss   1.50 kW | harmonic P1    0.61 P2   -0.61 kW loss  1.22 | I1rms    6.7 (harm    6.7) A, iL1 ripple p-p 0.00 A
+dt05 u 0.010 (phi   0.9 deg): vdc1  1112.1 vdc2  1113.6 iL1    6.88 A (0.0275 pu) P_dc1    7.65 P_dc2    6.12 kW loss   1.52 kW | harmonic P1    7.49 P2    6.28 kW loss  1.21 | I1rms    9.2 (harm    9.2) A, iL1 ripple p-p 0.02 A
+dt05 u 0.020 (phi   1.8 deg): vdc1  1111.7 vdc2  1114.0 iL1   10.29 A (0.0412 pu) P_dc1   11.44 P_dc2    9.91 kW loss   1.53 kW | harmonic P1   14.31 P2   13.11 kW loss  1.20 | I1rms   11.8 (harm   14.3) A, iL1 ripple p-p 0.00 A
+dt05 u 0.030 (phi   2.7 deg): vdc1  1110.8 vdc2  1114.9 iL1   18.03 A (0.0721 pu) P_dc1   20.03 P_dc2   18.48 kW loss   1.55 kW | harmonic P1   21.06 P2   19.86 kW loss  1.20 | I1rms   18.9 (harm   20.0) A, iL1 ripple p-p 0.00 A
+dt05 u 0.040 (phi   3.6 deg): vdc1  1110.0 vdc2  1115.7 iL1   25.16 A (0.1007 pu) P_dc1   27.93 P_dc2   26.35 kW loss   1.58 kW | harmonic P1   27.74 P2   26.55 kW loss  1.20 | I1rms   25.9 (harm   25.9) A, iL1 ripple p-p 0.06 A
+dt05 u 0.050 (phi   4.5 deg): vdc1  1109.3 vdc2  1116.4 iL1   31.15 A (0.1246 pu) P_dc1   34.55 P_dc2   32.96 kW loss   1.60 kW | harmonic P1   34.36 P2   33.17 kW loss  1.19 | I1rms   32.0 (harm   32.0) A, iL1 ripple p-p 0.08 A
+dt05 u 0.060 (phi   5.4 deg): vdc1  1108.6 vdc2  1117.0 iL1   37.09 A (0.1484 pu) P_dc1   41.11 P_dc2   39.50 kW loss   1.62 kW | harmonic P1   40.91 P2   39.72 kW loss  1.19 | I1rms   38.0 (harm   38.0) A, iL1 ripple p-p 0.10 A
+dt05 u 0.080 (phi   7.2 deg): vdc1  1107.2 vdc2  1118.4 iL1   48.81 A (0.1952 pu) P_dc1   54.03 P_dc2   52.37 kW loss   1.66 kW | harmonic P1   53.80 P2   52.62 kW loss  1.18 | I1rms   50.2 (harm   50.2) A, iL1 ripple p-p 0.13 A
+dt05 u 0.100 (phi   9.0 deg): vdc1  1105.9 vdc2  1119.7 iL1   60.31 A (0.2412 pu) P_dc1   66.68 P_dc2   64.98 kW loss   1.70 kW | harmonic P1   66.43 P2   65.25 kW loss  1.18 | I1rms   62.3 (harm   62.3) A, iL1 ripple p-p 0.17 A
+dt05 u 0.120 (phi  10.8 deg): vdc1  1104.6 vdc2  1121.0 iL1   71.59 A (0.2863 pu) P_dc1   79.06 P_dc2   77.31 kW loss   1.75 kW | harmonic P1   78.78 P2   77.61 kW loss  1.18 | I1rms   74.4 (harm   74.4) A, iL1 ripple p-p 0.20 A
+dt05 u 0.150 (phi  13.5 deg): vdc1  1102.7 vdc2  1122.8 iL1   88.09 A (0.3524 pu) P_dc1   97.12 P_dc2   95.29 kW loss   1.82 kW | harmonic P1   96.81 P2   95.63 kW loss  1.18 | I1rms   92.4 (harm   92.4) A, iL1 ripple p-p 0.26 A
+dt05 u 0.200 (phi  18.0 deg): vdc1  1099.6 vdc2  1125.7 iL1  114.48 A (0.4579 pu) P_dc1  125.85 P_dc2  123.90 kW loss   1.95 kW | harmonic P1  125.48 P2  124.30 kW loss  1.19 | I1rms  122.1 (harm  122.0) A, iL1 ripple p-p 0.35 A
+dt05 u 0.250 (phi  22.5 deg): vdc1  1096.7 vdc2  1128.5 iL1  139.43 A (0.5577 pu) P_dc1  152.88 P_dc2  150.78 kW loss   2.10 kW | harmonic P1  152.44 P2  151.24 kW loss  1.20 | I1rms  151.2 (harm  151.1) A, iL1 ripple p-p 0.44 A
+dt05 u 0.300 (phi  27.0 deg): vdc1  1094.0 vdc2  1131.0 iL1  162.92 A (0.6517 pu) P_dc1  178.19 P_dc2  175.94 kW loss   2.25 kW | harmonic P1  177.68 P2  176.45 kW loss  1.23 | I1rms  179.7 (harm  179.7) A, iL1 ripple p-p 0.53 A
+dt05 u 0.400 (phi  36.0 deg): vdc1  1089.0 vdc2  1135.6 iL1  205.41 A (0.8216 pu) P_dc1  223.63 P_dc2  221.05 kW loss   2.58 kW | harmonic P1  222.98 P2  221.67 kW loss  1.31 | I1rms  235.2 (harm  235.1) A, iL1 ripple p-p 0.69 A
+dt05 u 0.500 (phi  45.0 deg): vdc1  1084.8 vdc2  1139.4 iL1  241.73 A (0.9669 pu) P_dc1  262.15 P_dc2  259.20 kW loss   2.95 kW | harmonic P1  261.35 P2  259.93 kW loss  1.42 | I1rms  288.3 (harm  288.2) A, iL1 ripple p-p 0.81 A
+dt05 u 0.600 (phi  54.0 deg): vdc1  1081.3 vdc2  1142.5 iL1  271.73 A (1.0869 pu) P_dc1  293.71 P_dc2  290.37 kW loss   3.34 kW | harmonic P1  292.77 P2  291.21 kW loss  1.56 | I1rms  339.0 (harm  338.8) A, iL1 ripple p-p 0.91 A
+dt05 u 0.700 (phi  63.0 deg): vdc1  1078.5 vdc2  1144.9 iL1  295.26 A (1.1810 pu) P_dc1  318.32 P_dc2  314.56 kW loss   3.76 kW | harmonic P1  317.22 P2  315.51 kW loss  1.71 | I1rms  387.2 (harm  387.0) A, iL1 ripple p-p 0.99 A
+dt05 u 0.800 (phi  72.0 deg): vdc1  1076.6 vdc2  1146.6 iL1  312.21 A (1.2488 pu) P_dc1  335.95 P_dc2  331.76 kW loss   4.19 kW | harmonic P1  334.71 P2  332.83 kW loss  1.88 | I1rms  432.9 (harm  432.6) A, iL1 ripple p-p 1.04 A
+dt05 u 0.900 (phi  81.0 deg): vdc1  1075.4 vdc2  1147.6 iL1  322.51 A (1.2900 pu) P_dc1  346.62 P_dc2  341.99 kW loss   4.63 kW | harmonic P1  345.24 P2  343.18 kW loss  2.06 | I1rms  475.8 (harm  475.5) A, iL1 ripple p-p 1.07 A
+dt05 u 1.000 (phi  90.0 deg): vdc1  1075.0 vdc2  1147.9 iL1  326.11 A (1.3044 pu) P_dc1  350.32 P_dc2  345.24 kW loss   5.08 kW | harmonic P1  348.79 P2  346.55 kW loss  2.24 | I1rms  516.0 (harm  515.6) A, iL1 ripple p-p 1.08 A
+
+------------------------------------------------------------------ current loop, small signal (dab_loop.py)
+DC networks (both sides, DAB as ideal current sources): poles
+       -208.2    +1122.6j rad/s  f =   181.7 Hz  zeta = 0.182
+       -208.2    +1122.6j rad/s  f =   181.7 Hz  zeta = 0.182
+      -1354.5       +0.0j rad/s  f =   215.6 Hz  zeta = 1.000
+      -1354.5       +0.0j rad/s  f =   215.6 Hz  zeta = 1.000
+     -19203.5       +0.0j rad/s  f =  3056.3 Hz  zeta = 1.000
+     -19203.5       +0.0j rad/s  f =  3056.3 Hz  zeta = 1.000
+|iL1/i_dab1| (side 1 network): 20 Hz 1.01, 100 Hz 1.35, 168 Hz 2.59, 200 Hz 2.07, 300 Hz 0.50, 1000 Hz 0.03
+
+################ PI of the model (kp 0.5, ki 18)
+
+== full load (u 0.518, harmonic gain): V1 1083.7 V, V2 1139.4 V, phi 46.6 deg; d i_dab1/du 311 A per unit u (1.25 pu/pu), plant DC gain 1.27 pu/pu, modulator delay 31.6 us
+   crossover     4.7 Hz, phase margin  128.8 deg
+   crossover   217.2 Hz, phase margin   28.2 deg
+   phase -180 at   312.5 Hz, gain margin   11.2 dB
+   peak of the sensitivity |1/(1+L)| 8.5 dB at 231 Hz
+   k_ff 1.0: largest |closed-loop pole| 0.99941; unit reference step (no filter): peak 2.01 at 2.29 ms, y(1 ms) 0.82, y(5 ms) 0.66, y(20 ms) 1.23, y(50 ms) 1.09, 2 % band from 100.0 ms
+      pole pair 226 Hz, zeta 0.083
+      pole pair 183 Hz, zeta 0.205
+   k_ff 0.5: largest |closed-loop pole| 0.99941; unit reference step (no filter): peak 1.35 at 2.29 ms, y(1 ms) 0.55, y(5 ms) 0.46, y(20 ms) 0.90, y(50 ms) 0.89, 2 % band from 100.0 ms
+      pole pair 226 Hz, zeta 0.083
+      pole pair 183 Hz, zeta 0.205
+   k_ff 0.0: largest |closed-loop pole| 0.99941; unit reference step (no filter): peak 0.85 at 99.96 ms, y(1 ms) 0.27, y(5 ms) 0.26, y(20 ms) 0.57, y(50 ms) 0.70, 2 % band from 100.0 ms
+      pole pair 226 Hz, zeta 0.083
+      pole pair 183 Hz, zeta 0.205
+
+== light load (u 0.105, harmonic gain): V1 1110.5 V, V2 1115.1 V, phi 9.4 deg; d i_dab1/du 560 A per unit u (2.24 pu/pu), plant DC gain 2.25 pu/pu, modulator delay 23.0 us
+   crossover   250.6 Hz, phase margin   15.1 deg
+   phase -180 at   336.1 Hz, gain margin    7.9 dB
+   peak of the sensitivity |1/(1+L)| 12.7 dB at 259 Hz
+   k_ff 1.0: largest |closed-loop pole| 0.99920; unit reference step (no filter): peak 2.80 at 2.00 ms, y(1 ms) 1.42, y(5 ms) 1.58, y(20 ms) 1.25, y(50 ms) 1.23, 2 % band from 100.0 ms
+      pole pair 256 Hz, zeta 0.064
+      pole pair 182 Hz, zeta 0.188
+   k_ff 0.5: largest |closed-loop pole| 0.99920; unit reference step (no filter): peak 1.88 at 2.00 ms, y(1 ms) 0.95, y(5 ms) 1.08, y(20 ms) 0.94, y(50 ms) 1.02, 2 % band from 61.5 ms
+      pole pair 256 Hz, zeta 0.064
+      pole pair 182 Hz, zeta 0.188
+   k_ff 0.0: largest |closed-loop pole| 0.99920; unit reference step (no filter): peak 0.96 at 2.04 ms, y(1 ms) 0.48, y(5 ms) 0.58, y(20 ms) 0.63, y(50 ms) 0.82, 2 % band from 100.0 ms
+      pole pair 256 Hz, zeta 0.064
+      pole pair 182 Hz, zeta 0.188
+
+== light load (u 0.105, gain of the switched simulation): V1 1110.5 V, V2 1115.1 V, phi 9.4 deg; d i_dab1/du 1024 A per unit u (4.10 pu/pu), plant DC gain 4.12 pu/pu, modulator delay 23.0 us
+   crossover   301.7 Hz, phase margin    4.2 deg
+   phase -180 at   336.1 Hz, gain margin    2.6 dB
+   peak of the sensitivity |1/(1+L)| 23.3 dB at 304 Hz
+   k_ff 1.0: largest |closed-loop pole| 0.99899; unit reference step (no filter): peak 3.78 at 1.67 ms, y(1 ms) 2.43, y(5 ms) 3.47, y(20 ms) 0.87, y(50 ms) 1.20, 2 % band from 100.0 ms
+      pole pair 304 Hz, zeta 0.022
+      pole pair 182 Hz, zeta 0.188
+   k_ff 0.5: largest |closed-loop pole| 0.99899; unit reference step (no filter): peak 2.53 at 1.67 ms, y(1 ms) 1.63, y(5 ms) 2.35, y(20 ms) 0.71, y(50 ms) 1.03, 2 % band from 100.0 ms
+      pole pair 304 Hz, zeta 0.022
+      pole pair 182 Hz, zeta 0.188
+   k_ff 0.0: largest |closed-loop pole| 0.99899; unit reference step (no filter): peak 1.29 at 1.71 ms, y(1 ms) 0.82, y(5 ms) 1.23, y(20 ms) 0.55, y(50 ms) 0.87, 2 % band from 100.0 ms
+      pole pair 304 Hz, zeta 0.022
+      pole pair 182 Hz, zeta 0.188
+
+################ candidate PI (kp 0.05, ki 40)
+
+== full load (u 0.518, harmonic gain): V1 1083.7 V, V2 1139.4 V, phi 46.6 deg; d i_dab1/du 311 A per unit u (1.25 pu/pu), plant DC gain 1.27 pu/pu, modulator delay 31.6 us
+   crossover     8.1 Hz, phase margin   92.3 deg
+   phase -180 at   216.7 Hz, gain margin   18.5 dB
+   peak of the sensitivity |1/(1+L)| 1.6 dB at 192 Hz
+   k_ff 1.0: largest |closed-loop pole| 0.99797; unit reference step (no filter): peak 2.03 at 2.83 ms, y(1 ms) 0.60, y(5 ms) 0.84, y(20 ms) 1.14, y(50 ms) 1.02, 2 % band from 54.5 ms
+      pole pair 187 Hz, zeta 0.142
+      pole pair 181 Hz, zeta 0.195
+   k_ff 0.5: largest |closed-loop pole| 0.99797; unit reference step (no filter): peak 1.12 at 2.88 ms, y(1 ms) 0.32, y(5 ms) 0.54, y(20 ms) 0.89, y(50 ms) 0.97, 2 % band from 57.4 ms
+      pole pair 187 Hz, zeta 0.142
+      pole pair 181 Hz, zeta 0.195
+   k_ff 0.0: largest |closed-loop pole| 0.99797; unit reference step (no filter): peak 0.99 at 99.96 ms, y(1 ms) 0.04, y(5 ms) 0.25, y(20 ms) 0.64, y(50 ms) 0.92, 2 % band from 79.0 ms
+      pole pair 187 Hz, zeta 0.142
+      pole pair 181 Hz, zeta 0.195
+
+== light load (u 0.105, harmonic gain): V1 1110.5 V, V2 1115.1 V, phi 9.4 deg; d i_dab1/du 560 A per unit u (2.24 pu/pu), plant DC gain 2.25 pu/pu, modulator delay 23.0 us
+   crossover    14.5 Hz, phase margin   94.0 deg
+   phase -180 at   222.9 Hz, gain margin   14.8 dB
+   peak of the sensitivity |1/(1+L)| 2.7 dB at 195 Hz
+   k_ff 1.0: largest |closed-loop pole| 0.99652; unit reference step (no filter): peak 3.35 at 2.71 ms, y(1 ms) 1.07, y(5 ms) 1.01, y(20 ms) 1.26, y(50 ms) 1.02, 2 % band from 48.5 ms
+      pole pair 188 Hz, zeta 0.129
+      pole pair 182 Hz, zeta 0.188
+   k_ff 0.5: largest |closed-loop pole| 0.99652; unit reference step (no filter): peak 1.84 at 2.75 ms, y(1 ms) 0.57, y(5 ms) 0.69, y(20 ms) 1.05, y(50 ms) 1.00, 2 % band from 30.3 ms
+      pole pair 188 Hz, zeta 0.129
+      pole pair 182 Hz, zeta 0.188
+   k_ff 0.0: largest |closed-loop pole| 0.99652; unit reference step (no filter): peak 1.00 at 99.96 ms, y(1 ms) 0.07, y(5 ms) 0.38, y(20 ms) 0.83, y(50 ms) 0.99, 2 % band from 45.7 ms
+      pole pair 188 Hz, zeta 0.129
+      pole pair 182 Hz, zeta 0.188
+
+== light load (u 0.105, gain of the switched simulation): V1 1110.5 V, V2 1115.1 V, phi 9.4 deg; d i_dab1/du 1024 A per unit u (4.10 pu/pu), plant DC gain 4.12 pu/pu, modulator delay 23.0 us
+   crossover    27.4 Hz, phase margin   97.4 deg
+   phase -180 at   222.9 Hz, gain margin    9.6 dB
+   peak of the sensitivity |1/(1+L)| 5.5 dB at 198 Hz
+   k_ff 1.0: largest |closed-loop pole| 0.99517; unit reference step (no filter): peak 5.58 at 2.54 ms, y(1 ms) 1.94, y(5 ms) 0.49, y(20 ms) 0.97, y(50 ms) 1.01, 2 % band from 44.6 ms
+      pole pair 194 Hz, zeta 0.095
+      pole pair 182 Hz, zeta 0.188
+   k_ff 0.5: largest |closed-loop pole| 0.99517; unit reference step (no filter): peak 3.05 at 2.58 ms, y(1 ms) 1.03, y(5 ms) 0.51, y(20 ms) 0.96, y(50 ms) 1.00, 2 % band from 39.4 ms
+      pole pair 194 Hz, zeta 0.095
+      pole pair 182 Hz, zeta 0.188
+   k_ff 0.0: largest |closed-loop pole| 0.99517; unit reference step (no filter): peak 1.00 at 60.08 ms, y(1 ms) 0.12, y(5 ms) 0.52, y(20 ms) 0.95, y(50 ms) 1.00, 2 % band from 27.4 ms
+      pole pair 194 Hz, zeta 0.095
+      pole pair 182 Hz, zeta 0.188
