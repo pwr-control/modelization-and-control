@@ -1,0 +1,332 @@
+Design check of ps_isop_rail: switched simulation (isop_sim.py), results
+Generated 2026-11-01 from the npz files of the cases below.
+
+Cases (see isop_sim.py, __main__):
+  nominal           the model as it is, start from the steady state of the network (DoDC on), 1.75 s
+  zero_init         string capacitors at their 0 V targets (if DoDC is off), 0.5 s
+  mismatch          module 1 turns +2 %, module 2 leakage +20 %, module 3 Cin -10 %, module 4 Lm -20 %
+  mm_*              one mismatch at a time (n1: module 1 turns +2 %, n2: module 2 turns +2 %, L1/L2: module 1/2
+                    leakage +20 %, L2s: module 2 leakage +5 %, C3: module 3 Cin -10 %, Lm4: module 4 Lm -20 %)
+  split_in_pair(_ss) modules 2 and 3 (same rectifier) start 160 V apart (_ss: fixed phase shift 0.7823, no PI)
+  split_pairs(_ss)  pair 1+4 starts 160 V above pair 2+3 (_ss: fixed phase shift, no PI)
+  catenary_3kV      battery emulator scaled to an open-circuit voltage of 3 kV (nominal catenary)
+
+------------------------------------------------------------------ run logs
+catenary_3kV: 0.800 s, 1280000 steps in 2.0 s, LU factorizations 1163, steps without diode convergence 0
+mismatch: 1.000 s, 1600000 steps in 2.7 s, LU factorizations 19780, steps without diode convergence 0
+mm_C3: 1.000 s, 1600000 steps in 7.0 s, LU factorizations 8037, steps without diode convergence 0
+mm_L1: 1.000 s, 1600000 steps in 2.6 s, LU factorizations 19750, steps without diode convergence 0
+mm_L2: 1.000 s, 1600000 steps in 7.6 s, LU factorizations 19750, steps without diode convergence 0
+mm_L2s: 1.000 s, 1600000 steps in 2.8 s, LU factorizations 18955, steps without diode convergence 0
+mm_Lm4: 1.000 s, 1600000 steps in 7.1 s, LU factorizations 8036, steps without diode convergence 0
+mm_n1: 1.000 s, 1600000 steps in 7.1 s, LU factorizations 8041, steps without diode convergence 0
+mm_n2: 1.000 s, 1600000 steps in 2.6 s, LU factorizations 8041, steps without diode convergence 0
+nominal: 1.750 s, 2800000 steps in 4.3 s, LU factorizations 14029, steps without diode convergence 0
+split_in_pair: 1.000 s, 1600000 steps in 7.1 s, LU factorizations 8205, steps without diode convergence 0
+split_in_pair_ss: 0.300 s, 480000 steps in 5.6 s, LU factorizations 2432, steps without diode convergence 0
+split_pairs: 1.000 s, 1600000 steps in 6.9 s, LU factorizations 8049, steps without diode convergence 0
+zero_init: 0.500 s, 800000 steps in 1.4 s, LU factorizations 4047, steps without diode convergence 0
+
+------------------------------------------------------------------ control-interval records
+===== nominal: 1.750 s, 14000 control samples
+  vout: max 750.5 V at 427.2 ms; 95% at 177.9 ms, 99% at 295.0 ms
+  t=    5.0 ms vout=  323.3 pd=0.3395 iLin=   10.7 iout=  654.2 (r1  327.1 r2  327.1) vcin=1161.3, 1161.3, 1161.3, 1161.3 iLm_dc=-21.42, -21.42, -21.42, -21.42 ipri_dc=-21.37, -21.37, -21.37, -21.37
+  t=   10.0 ms vout=  353.7 pd=0.3674 iLin=   25.6 iout=  704.3 (r1  352.2 r2  352.2) vcin=1159.7, 1159.7, 1159.7, 1159.7 iLm_dc=-21.40, -21.40, -21.40, -21.40 ipri_dc=-21.51, -21.51, -21.51, -21.51
+  t=   20.0 ms vout=  404.5 pd=0.4220 iLin=   52.6 iout=  807.3 (r1  403.6 r2  403.6) vcin=1158.8, 1158.8, 1158.8, 1158.8 iLm_dc=-22.87, -22.87, -22.87, -22.87 ipri_dc=-22.86, -22.86, -22.86, -22.86
+  t=   50.0 ms vout=  522.5 pd=0.5449 iLin=  117.3 iout= 1048.0 (r1  524.0 r2  524.0) vcin=1163.4, 1163.4, 1163.4, 1163.4 iLm_dc=-15.92, -15.92, -15.92, -15.92 ipri_dc=-15.95, -15.95, -15.95, -15.95
+  t=  100.0 ms vout=  636.9 pd=0.6634 iLin=  177.7 iout= 1277.8 (r1  638.9 r2  638.9) vcin=1169.2, 1169.2, 1169.2, 1169.2 iLm_dc=-14.68, -14.68, -14.68, -14.68 ipri_dc=-14.73, -14.73, -14.73, -14.73
+  t=  200.0 ms vout=  721.9 pd=0.7534 iLin=  228.1 iout= 1446.3 (r1  723.2 r2  723.2) vcin=1170.5, 1170.5, 1170.5, 1170.5 iLm_dc=-7.11, -7.11, -7.11, -7.11 ipri_dc=-7.35, -7.35, -7.35, -7.35
+  t=  300.0 ms vout=  742.9 pd=0.7766 iLin=  240.8 iout= 1488.3 (r1  744.1 r2  744.1) vcin=1170.6, 1170.6, 1170.6, 1170.6 iLm_dc=-7.11, -7.11, -7.11, -7.11 ipri_dc=-7.01, -7.01, -7.01, -7.01
+  t=  500.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1171.0, 1171.0, 1171.0 iLm_dc=-7.69, -7.69, -7.69, -7.69 ipri_dc=-7.87, -7.87, -7.87, -7.87
+  t=  750.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1170.9, 1170.9, 1170.9, 1170.9 iLm_dc=-2.23, -2.23, -2.23, -2.23 ipri_dc=-2.34, -2.34, -2.34, -2.34
+  t= 1000.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1170.9, 1170.9, 1170.9, 1170.9 iLm_dc=-0.66, -0.66, -0.66, -0.66 ipri_dc=-0.56, -0.56, -0.56, -0.56
+  t= 1250.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1170.9, 1170.9, 1170.9, 1170.9 iLm_dc=-0.21, -0.21, -0.21, -0.21 ipri_dc=-0.25, -0.25, -0.25, -0.25
+  t= 1500.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1170.9, 1170.9, 1170.9, 1170.9 iLm_dc=-0.08, -0.08, -0.08, -0.08 ipri_dc=-0.11, -0.11, -0.11, -0.11
+  t= 1749.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1170.9, 1170.9, 1170.9, 1170.9 iLm_dc=-0.01, -0.01, -0.01, -0.01 ipri_dc=-0.11, -0.11, -0.11, -0.11
+  max |iLin| 246 A at 440.87 ms; max vcin 1208 V at 3.50 ms; max |ipri| 472 A; max |isec| 408 A; max |iLm| 67.7 A
+  soc 0.85000 -> 0.84995, hyst -0.00005, vCb 4696 -> 4685 V
+===== zero_init: 0.500 s, 4000 control samples
+  vout: max 750.6 V at 441.0 ms; 95% at 175.5 ms, 99% at 291.9 ms
+  t=    5.0 ms vout=  130.8 pd=0.4610 iLin=  -35.3 iout=  151.1 (r1   75.5 r2   75.5) vcin=388.0, 388.0, 388.0, 388.0 iLm_dc=-1.50, -1.50, -1.50, -1.50 ipri_dc=-1.27, -1.27, -1.27, -1.27
+  t=   10.0 ms vout=  157.7 pd=0.4998 iLin=  116.2 iout=  256.3 (r1  128.1 r2  128.1) vcin=475.9, 475.9, 475.9, 475.9 iLm_dc=-0.72, -0.72, -0.72, -0.72 ipri_dc=-1.01, -1.01, -1.01, -1.01
+  t=   20.0 ms vout=  244.5 pd=0.5413 iLin=  300.7 iout=  502.9 (r1  251.5 r2  251.5) vcin=650.4, 650.4, 650.4, 650.4 iLm_dc=2.30, 2.30, 2.30, 2.30 ipri_dc=1.94, 1.94, 1.94, 1.94
+  t=   50.0 ms vout=  464.0 pd=0.6030 iLin=  374.7 iout=  989.4 (r1  494.7 r2  494.7) vcin=994.5, 994.5, 994.5, 994.5 iLm_dc=4.39, 4.39, 4.39, 4.39 ipri_dc=4.10, 4.10, 4.10, 4.10
+  t=  100.0 ms vout=  631.6 pd=0.6771 iLin=  246.9 iout= 1287.1 (r1  643.5 r2  643.5) vcin=1149.3, 1149.3, 1149.3, 1149.3 iLm_dc=-2.22, -2.22, -2.22, -2.22 ipri_dc=-2.34, -2.34, -2.34, -2.34
+  t=  200.0 ms vout=  722.3 pd=0.7554 iLin=  229.6 iout= 1448.3 (r1  724.1 r2  724.1) vcin=1171.2, 1171.2, 1171.2, 1171.2 iLm_dc=1.21, 1.21, 1.21, 1.21 ipri_dc=0.98, 0.98, 0.98, 0.98
+  t=  300.0 ms vout=  743.0 pd=0.7770 iLin=  241.1 iout= 1487.5 (r1  743.7 r2  743.7) vcin=1171.3, 1171.3, 1171.3, 1171.3 iLm_dc=-1.78, -1.78, -1.78, -1.78 ipri_dc=-1.71, -1.71, -1.71, -1.71
+  t=  500.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1171.0, 1171.0, 1171.0 iLm_dc=-0.38, -0.38, -0.38, -0.38 ipri_dc=5.37, 5.37, 5.37, 5.37
+  max |iLin| 1809 A at 1.25 ms; max vcin 2290 V at 2.50 ms; max |ipri| 466 A; max |isec| 408 A; max |iLm| 57.7 A
+  soc 0.85000 -> 0.84999, hyst -0.00001, vCb 4668 -> 4685 V
+===== catenary_3kV: 0.800 s, 6400 control samples
+  vout: max 603.7 V at 128.1 ms; 95% at nan ms, 99% at nan ms
+  t=    5.0 ms vout=  244.4 pd=0.4003 iLin=   12.1 iout=  487.1 (r1  243.6 r2  243.6) vcin=743.3, 743.3, 743.3, 743.3 iLm_dc=-18.59, -18.59, -18.59, -18.59 ipri_dc=-18.63, -18.63, -18.63, -18.63
+  t=   10.0 ms vout=  270.8 pd=0.4416 iLin=   26.2 iout=  539.2 (r1  269.6 r2  269.6) vcin=742.0, 742.0, 742.0, 742.0 iLm_dc=-18.29, -18.29, -18.29, -18.29 ipri_dc=-18.38, -18.38, -18.38, -18.38
+  t=   20.0 ms vout=  317.7 pd=0.5194 iLin=   54.2 iout=  635.1 (r1  317.6 r2  317.6) vcin=741.8, 741.8, 741.8, 741.8 iLm_dc=-17.22, -17.22, -17.22, -17.22 ipri_dc=-17.22, -17.22, -17.22, -17.22
+  t=   50.0 ms vout=  432.3 pd=0.7105 iLin=  125.7 iout=  868.1 (r1  434.1 r2  434.1) vcin=745.4, 745.4, 745.4, 745.4 iLm_dc=-15.38, -15.38, -15.38, -15.38 ipri_dc=-15.41, -15.41, -15.41, -15.41
+  t=  100.0 ms vout=  558.9 pd=0.9245 iLin=  213.8 iout= 1120.6 (r1  560.3 r2  560.3) vcin=746.8, 746.8, 746.8, 746.8 iLm_dc=-12.98, -12.98, -12.98, -12.98 ipri_dc=-13.05, -13.05, -13.05, -13.05
+  t=  200.0 ms vout=  603.1 pd=1.0000 iLin=  248.0 iout= 1207.3 (r1  603.6 r2  603.6) vcin=747.0, 747.0, 747.0, 747.0 iLm_dc=-8.47, -8.47, -8.47, -8.47 ipri_dc=-8.72, -8.72, -8.72, -8.72
+  t=  300.0 ms vout=  603.1 pd=1.0000 iLin=  248.0 iout= 1207.3 (r1  603.6 r2  603.6) vcin=747.0, 747.0, 747.0, 747.0 iLm_dc=-4.95, -4.95, -4.95, -4.95 ipri_dc=-4.91, -4.91, -4.91, -4.91
+  t=  500.0 ms vout=  603.1 pd=1.0000 iLin=  248.0 iout= 1207.3 (r1  603.6 r2  603.6) vcin=747.0, 747.0, 747.0, 747.0 iLm_dc=-1.76, -1.76, -1.76, -1.76 ipri_dc=-1.91, -1.91, -1.91, -1.91
+  t=  750.0 ms vout=  603.1 pd=1.0000 iLin=  248.0 iout= 1207.3 (r1  603.6 r2  603.6) vcin=747.0, 747.0, 747.0, 747.0 iLm_dc=-0.46, -0.46, -0.46, -0.46 ipri_dc=-0.54, -0.54, -0.54, -0.54
+  max |iLin| 249 A at 126.88 ms; max vcin 777 V at 3.50 ms; max |ipri| 370 A; max |isec| 315 A; max |iLm| 54.6 A
+  soc 0.85000 -> 0.84998, hyst -0.00002, vCb 3000 -> 2989 V
+===== mismatch: 1.000 s, 8000 control samples
+  vout: max 751.8 V at 809.5 ms; 95% at 179.9 ms, 99% at 289.9 ms
+  t=    5.0 ms vout=  322.5 pd=0.3402 iLin=   12.6 iout=  653.8 (r1  337.5 r2  316.3) vcin=1151.1, 1183.9, 1149.2, 1152.7 iLm_dc=-21.51, -20.91, -20.68, -27.04 ipri_dc=-29.83, -28.12, -13.55, -18.94
+  t=   10.0 ms vout=  351.7 pd=0.3691 iLin=   29.2 iout=  700.9 (r1  353.7 r2  347.3) vcin=1142.3, 1205.5, 1132.1, 1144.8 iLm_dc=-20.93, -20.43, -20.17, -26.32 ipri_dc=-25.89, -25.93, -14.83, -21.61
+  t=   20.0 ms vout=  401.8 pd=0.4244 iLin=   61.2 iout=  804.1 (r1  400.4 r2  403.7) vcin=1135.3, 1255.9, 1088.4, 1139.8 iLm_dc=-19.40, -18.85, -18.55, -24.39 ipri_dc=-21.48, -23.96, -13.33, -22.31
+  t=   50.0 ms vout=  518.2 pd=0.5508 iLin=  126.3 iout= 1043.1 (r1  510.6 r2  532.4) vcin=1126.5, 1387.4, 1007.6, 1138.0 iLm_dc=-15.84, -13.72, -12.45, -19.75 ipri_dc=-17.37, -25.81, -0.38, -18.35
+  t=  100.0 ms vout=  634.1 pd=0.6731 iLin=  179.8 iout= 1273.9 (r1  618.3 r2  655.5) vcin=1122.8, 1433.8, 983.3, 1145.5 iLm_dc=-14.51, -11.69, -9.48, -17.89 ipri_dc=-15.81, -21.50, 0.21, -16.70
+  t=  200.0 ms vout=  720.6 pd=0.7683 iLin=  226.7 iout= 1444.4 (r1  700.0 r2  744.4) vcin=1114.6, 1451.4, 966.6, 1149.4 iLm_dc=-9.64, -6.61, -3.45, -11.47 ipri_dc=-10.54, -10.64, 0.10, -11.06
+  t=  300.0 ms vout=  743.3 pd=0.7927 iLin=  241.5 iout= 1489.5 (r1  721.5 r2  767.9) vcin=1113.2, 1456.4, 963.8, 1151.6 iLm_dc=-5.75, -3.14, 0.51, -6.38 ipri_dc=-5.94, -2.27, -0.19, -6.09
+  t=  500.0 ms vout=  749.5 pd=0.8020 iLin=  245.0 iout= 1502.4 (r1  727.7 r2  774.7) vcin=1112.5, 1457.6, 962.8, 1152.1 iLm_dc=-4.32, -3.41, 0.85, -4.44 ipri_dc=-4.63, -3.25, 0.22, -4.53
+  t=  750.0 ms vout=  750.1 pd=0.8023 iLin=  246.2 iout= 1504.5 (r1  728.8 r2  775.7) vcin=1112.2, 1457.4, 962.5, 1151.8 iLm_dc=-4.35, -5.32, -1.23, -4.52 ipri_dc=-4.43, -6.82, 0.01, -4.68
+  t= 1000.0 ms vout=  749.7 pd=0.8023 iLin=  246.0 iout= 1500.8 (r1  727.0 r2  773.9) vcin=1112.2, 1457.3, 962.3, 1151.8 iLm_dc=0.42, 0.33, 3.98, 1.61 ipri_dc=5.80, 34.43, -14.82, 8.16
+  max |iLin| 248 A at 502.75 ms; max vcin 1465 V at 499.00 ms; max |ipri| 912 A; max |isec| 842 A; max |iLm| 84.8 A
+  soc 0.85000 -> 0.84997, hyst -0.00003, vCb 4696 -> 4685 V
+===== mm_n1: 1.000 s, 8000 control samples
+  vout: max 752.6 V at 594.1 ms; 95% at 180.5 ms, 99% at 286.1 ms
+  t=    5.0 ms vout=  323.8 pd=0.3392 iLin=   10.7 iout=  655.3 (r1  332.2 r2  323.1) vcin=1157.3, 1164.3, 1164.3, 1159.7 iLm_dc=-22.53, -21.55, -21.55, -22.74 ipri_dc=-29.08, -21.49, -21.49, -16.26
+  t=   10.0 ms vout=  354.5 pd=0.3669 iLin=   25.3 iout=  706.5 (r1  353.7 r2  352.8) vcin=1153.2, 1164.7, 1164.7, 1156.2 iLm_dc=-21.50, -20.30, -20.30, -21.74 ipri_dc=-24.41, -20.41, -20.41, -19.10
+  t=   20.0 ms vout=  405.5 pd=0.4209 iLin=   52.3 iout=  810.0 (r1  403.1 r2  406.9) vcin=1150.9, 1164.9, 1164.9, 1155.3 iLm_dc=-19.75, -18.60, -18.60, -20.00 ipri_dc=-20.05, -18.57, -18.57, -19.65
+  t=   50.0 ms vout=  523.2 pd=0.5433 iLin=  116.0 iout= 1048.1 (r1  521.4 r2  526.7) vcin=1152.9, 1169.1, 1169.1, 1161.8 iLm_dc=-17.96, -16.96, -16.96, -18.18 ipri_dc=-17.82, -17.00, -17.00, -18.38
+  t=  100.0 ms vout=  637.4 pd=0.6612 iLin=  179.8 iout= 1277.9 (r1  635.8 r2  642.1) vcin=1155.7, 1175.2, 1175.2, 1171.3 iLm_dc=-14.02, -13.22, -13.22, -14.17 ipri_dc=-14.06, -13.25, -13.25, -14.20
+  t=  200.0 ms vout=  720.8 pd=0.7514 iLin=  226.4 iout= 1444.3 (r1  718.6 r2  725.7) vcin=1154.2, 1176.8, 1176.8, 1176.2 iLm_dc=-8.99, -8.48, -8.48, -9.05 ipri_dc=-9.19, -8.72, -8.72, -9.34
+  t=  300.0 ms vout=  744.1 pd=0.7726 iLin=  241.6 iout= 1490.9 (r1  741.8 r2  749.1) vcin=1153.6, 1177.0, 1177.0, 1177.2 iLm_dc=-7.30, -7.00, -7.00, -7.33 ipri_dc=-7.19, -6.94, -6.94, -7.32
+  t=  500.0 ms vout=  748.5 pd=0.7818 iLin=  244.7 iout= 1499.8 (r1  746.2 r2  753.6) vcin=1153.2, 1176.7, 1176.7, 1177.2 iLm_dc=-2.66, -2.52, -2.52, -2.62 ipri_dc=-2.80, -2.70, -2.70, -2.84
+  t=  750.0 ms vout=  749.3 pd=0.7821 iLin=  249.3 iout= 1501.4 (r1  747.0 r2  754.4) vcin=1152.2, 1175.8, 1175.8, 1176.3 iLm_dc=0.94, 1.04, 1.04, 1.04 ipri_dc=0.87, 0.94, 0.94, 0.91
+  t= 1000.0 ms vout=  750.8 pd=0.7810 iLin=  246.1 iout= 1502.8 (r1  747.7 r2  755.1) vcin=1155.9, 1179.5, 1179.5, 1179.9 iLm_dc=2.74, 2.84, 2.84, 2.86 ipri_dc=8.76, 8.87, 8.87, 8.93
+  max |iLin| 252 A at 608.50 ms; max vcin 1212 V at 8.25 ms; max |ipri| 471 A; max |isec| 413 A; max |iLm| 68.0 A
+  soc 0.85000 -> 0.84997, hyst -0.00003, vCb 4696 -> 4685 V
+===== mm_n2: 1.000 s, 8000 control samples
+  vout: max 752.6 V at 594.1 ms; 95% at 180.5 ms, 99% at 286.1 ms
+  t=    5.0 ms vout=  323.8 pd=0.3392 iLin=   10.7 iout=  655.3 (r1  323.1 r2  332.2) vcin=1164.3, 1157.3, 1159.7, 1164.3 iLm_dc=-21.55, -22.53, -22.74, -21.55 ipri_dc=-21.49, -29.08, -16.26, -21.49
+  t=   10.0 ms vout=  354.5 pd=0.3669 iLin=   25.3 iout=  706.5 (r1  352.8 r2  353.7) vcin=1164.7, 1153.2, 1156.2, 1164.7 iLm_dc=-20.30, -21.50, -21.74, -20.30 ipri_dc=-20.41, -24.41, -19.10, -20.41
+  t=   20.0 ms vout=  405.5 pd=0.4209 iLin=   52.3 iout=  810.0 (r1  406.9 r2  403.1) vcin=1164.9, 1150.9, 1155.3, 1164.9 iLm_dc=-18.60, -19.75, -20.00, -18.60 ipri_dc=-18.57, -20.05, -19.65, -18.57
+  t=   50.0 ms vout=  523.2 pd=0.5433 iLin=  116.0 iout= 1048.1 (r1  526.7 r2  521.4) vcin=1169.1, 1152.9, 1161.8, 1169.1 iLm_dc=-16.96, -17.96, -18.18, -16.96 ipri_dc=-17.00, -17.82, -18.38, -17.00
+  t=  100.0 ms vout=  637.4 pd=0.6612 iLin=  179.8 iout= 1277.9 (r1  642.1 r2  635.8) vcin=1175.2, 1155.7, 1171.3, 1175.2 iLm_dc=-13.22, -14.02, -14.17, -13.22 ipri_dc=-13.25, -14.06, -14.20, -13.25
+  t=  200.0 ms vout=  720.8 pd=0.7514 iLin=  226.4 iout= 1444.3 (r1  725.7 r2  718.6) vcin=1176.8, 1154.2, 1176.2, 1176.8 iLm_dc=-8.48, -8.99, -9.05, -8.48 ipri_dc=-8.72, -9.19, -9.34, -8.72
+  t=  300.0 ms vout=  744.1 pd=0.7726 iLin=  241.6 iout= 1490.9 (r1  749.1 r2  741.8) vcin=1177.0, 1153.6, 1177.2, 1177.0 iLm_dc=-7.00, -7.30, -7.33, -7.00 ipri_dc=-6.94, -7.19, -7.32, -6.94
+  t=  500.0 ms vout=  748.5 pd=0.7818 iLin=  244.7 iout= 1499.8 (r1  753.6 r2  746.2) vcin=1176.7, 1153.2, 1177.2, 1176.7 iLm_dc=-2.52, -2.66, -2.62, -2.52 ipri_dc=-2.70, -2.80, -2.84, -2.70
+  t=  750.0 ms vout=  749.3 pd=0.7821 iLin=  249.3 iout= 1501.4 (r1  754.4 r2  747.0) vcin=1175.8, 1152.2, 1176.3, 1175.8 iLm_dc=1.04, 0.94, 1.04, 1.04 ipri_dc=0.94, 0.87, 0.91, 0.94
+  t= 1000.0 ms vout=  750.8 pd=0.7810 iLin=  246.1 iout= 1502.8 (r1  755.1 r2  747.7) vcin=1179.5, 1155.9, 1179.9, 1179.5 iLm_dc=2.84, 2.74, 2.86, 2.84 ipri_dc=8.87, 8.76, 8.93, 8.87
+  max |iLin| 252 A at 608.50 ms; max vcin 1212 V at 8.25 ms; max |ipri| 471 A; max |isec| 413 A; max |iLm| 68.0 A
+  soc 0.85000 -> 0.84997, hyst -0.00003, vCb 4696 -> 4685 V
+===== mm_L1: 1.000 s, 8000 control samples
+  vout: max 752.1 V at 978.6 ms; 95% at 183.1 ms, 99% at 302.1 ms
+  t=    5.0 ms vout=  322.0 pd=0.3407 iLin=   11.0 iout=  652.8 (r1  319.2 r2  333.6) vcin=1183.5, 1156.2, 1156.2, 1151.0 iLm_dc=-21.26, -21.35, -21.35, -21.03 ipri_dc=-28.42, -21.36, -21.36, -13.99
+  t=   10.0 ms vout=  351.7 pd=0.3692 iLin=   25.1 iout=  701.1 (r1  348.1 r2  353.0) vcin=1204.2, 1150.6, 1150.6, 1134.5 iLm_dc=-20.79, -20.70, -20.70, -20.57 ipri_dc=-25.24, -20.77, -20.77, -16.29
+  t=   20.0 ms vout=  402.7 pd=0.4240 iLin=   52.4 iout=  804.6 (r1  403.5 r2  401.1) vcin=1252.2, 1145.7, 1145.7, 1092.6 iLm_dc=-19.61, -19.62, -19.62, -19.38 ipri_dc=-22.79, -19.57, -19.57, -16.07
+  t=   50.0 ms vout=  517.9 pd=0.5513 iLin=  114.7 iout= 1038.9 (r1  528.4 r2  510.5) vcin=1378.9, 1136.1, 1136.1, 1004.1 iLm_dc=-14.28, -16.13, -16.13, -13.00 ipri_dc=-27.31, -16.17, -16.17, -0.02
+  t=  100.0 ms vout=  632.8 pd=0.6751 iLin=  175.8 iout= 1269.2 (r1  650.4 r2  618.8) vcin=1424.8, 1136.9, 1136.9, 977.8 iLm_dc=-7.44, -11.00, -11.00, -5.51 ipri_dc=-12.71, -11.05, -11.05, -0.27
+  t=  200.0 ms vout=  719.0 pd=0.7715 iLin=  225.6 iout= 1441.6 (r1  739.9 r2  701.7) vcin=1444.7, 1137.0, 1137.0, 963.8 iLm_dc=-5.14, -8.72, -8.72, -2.25 ipri_dc=-7.57, -8.97, -8.97, -0.25
+  t=  300.0 ms vout=  741.0 pd=0.7968 iLin=  240.2 iout= 1485.6 (r1  762.7 r2  722.8) vcin=1449.1, 1137.0, 1137.0, 960.7 iLm_dc=-6.34, -8.61, -8.61, -2.94 ipri_dc=-8.92, -8.58, -8.58, -0.21
+  t=  500.0 ms vout=  749.7 pd=0.8031 iLin=  245.9 iout= 1502.2 (r1  771.4 r2  730.8) vcin=1450.6, 1136.9, 1136.9, 959.3 iLm_dc=-2.35, -3.15, -3.15, 1.07 ipri_dc=-1.69, -3.32, -3.32, 0.04
+  t=  750.0 ms vout=  749.7 pd=0.8053 iLin=  245.9 iout= 1502.2 (r1  771.4 r2  730.8) vcin=1450.6, 1136.9, 1136.9, 959.3 iLm_dc=-1.55, -0.90, -0.90, 1.23 ipri_dc=-0.39, -1.00, -1.00, -0.13
+  t= 1000.0 ms vout=  750.4 pd=0.8063 iLin=  248.3 iout= 1505.4 (r1  773.1 r2  732.3) vcin=1450.9, 1137.2, 1137.2, 959.6 iLm_dc=4.19, 4.50, 4.50, 5.53 ipri_dc=40.37, 10.36, 10.36, -15.37
+  max |iLin| 250 A at 978.75 ms; max vcin 1460 V at 979.88 ms; max |ipri| 902 A; max |isec| 839 A; max |iLm| 67.7 A
+  soc 0.85000 -> 0.84997, hyst -0.00003, vCb 4696 -> 4684 V
+===== mm_L2: 1.000 s, 8000 control samples
+  vout: max 752.1 V at 978.6 ms; 95% at 183.1 ms, 99% at 302.1 ms
+  t=    5.0 ms vout=  322.0 pd=0.3407 iLin=   11.0 iout=  652.8 (r1  333.6 r2  319.2) vcin=1156.2, 1183.5, 1151.0, 1156.2 iLm_dc=-21.35, -21.26, -21.03, -21.35 ipri_dc=-21.36, -28.42, -13.99, -21.36
+  t=   10.0 ms vout=  351.7 pd=0.3692 iLin=   25.1 iout=  701.1 (r1  353.0 r2  348.1) vcin=1150.6, 1204.2, 1134.5, 1150.6 iLm_dc=-20.70, -20.79, -20.57, -20.70 ipri_dc=-20.77, -25.24, -16.29, -20.77
+  t=   20.0 ms vout=  402.7 pd=0.4240 iLin=   52.4 iout=  804.6 (r1  401.1 r2  403.5) vcin=1145.7, 1252.2, 1092.6, 1145.7 iLm_dc=-19.62, -19.61, -19.38, -19.62 ipri_dc=-19.57, -22.79, -16.07, -19.57
+  t=   50.0 ms vout=  517.9 pd=0.5513 iLin=  114.7 iout= 1038.9 (r1  510.5 r2  528.4) vcin=1136.1, 1378.9, 1004.1, 1136.1 iLm_dc=-16.13, -14.28, -13.00, -16.13 ipri_dc=-16.17, -27.31, -0.02, -16.17
+  t=  100.0 ms vout=  632.8 pd=0.6751 iLin=  175.8 iout= 1269.2 (r1  618.8 r2  650.4) vcin=1136.9, 1424.8, 977.8, 1136.9 iLm_dc=-11.00, -7.44, -5.51, -11.00 ipri_dc=-11.05, -12.71, -0.27, -11.05
+  t=  200.0 ms vout=  719.0 pd=0.7715 iLin=  225.6 iout= 1441.6 (r1  701.7 r2  739.9) vcin=1137.0, 1444.7, 963.8, 1137.0 iLm_dc=-8.72, -5.14, -2.25, -8.72 ipri_dc=-8.97, -7.57, -0.25, -8.97
+  t=  300.0 ms vout=  741.0 pd=0.7968 iLin=  240.2 iout= 1485.6 (r1  722.8 r2  762.7) vcin=1137.0, 1449.1, 960.7, 1137.0 iLm_dc=-8.61, -6.34, -2.94, -8.61 ipri_dc=-8.58, -8.92, -0.21, -8.58
+  t=  500.0 ms vout=  749.7 pd=0.8031 iLin=  245.9 iout= 1502.2 (r1  730.8 r2  771.4) vcin=1136.9, 1450.6, 959.3, 1136.9 iLm_dc=-3.15, -2.35, 1.07, -3.15 ipri_dc=-3.32, -1.69, 0.04, -3.32
+  t=  750.0 ms vout=  749.7 pd=0.8053 iLin=  245.9 iout= 1502.2 (r1  730.8 r2  771.4) vcin=1136.9, 1450.6, 959.3, 1136.9 iLm_dc=-0.90, -1.55, 1.23, -0.90 ipri_dc=-1.00, -0.39, -0.13, -1.00
+  t= 1000.0 ms vout=  750.4 pd=0.8063 iLin=  248.3 iout= 1505.4 (r1  732.3 r2  773.1) vcin=1137.2, 1450.9, 959.6, 1137.2 iLm_dc=4.50, 4.19, 5.53, 4.50 ipri_dc=10.36, 40.37, -15.37, 10.36
+  max |iLin| 250 A at 978.75 ms; max vcin 1460 V at 979.88 ms; max |ipri| 902 A; max |isec| 839 A; max |iLm| 67.7 A
+  soc 0.85000 -> 0.84997, hyst -0.00003, vCb 4696 -> 4684 V
+===== mm_L2s: 1.000 s, 8000 control samples
+  vout: max 752.3 V at 770.3 ms; 95% at 179.5 ms, 99% at 306.4 ms
+  t=    5.0 ms vout=  323.0 pd=0.3399 iLin=   10.7 iout=  653.9 (r1  328.7 r2  325.2) vcin=1160.0, 1167.4, 1158.5, 1160.0 iLm_dc=-22.43, -22.46, -22.39, -22.43 ipri_dc=-22.36, -24.64, -20.10, -22.36
+  t=   10.0 ms vout=  353.4 pd=0.3678 iLin=   25.1 iout=  704.1 (r1  352.5 r2  351.7) vcin=1157.4, 1171.7, 1152.7, 1157.4 iLm_dc=-21.96, -22.07, -22.01, -21.96 ipri_dc=-22.05, -23.66, -20.61, -22.05
+  t=   20.0 ms vout=  404.2 pd=0.4223 iLin=   52.8 iout=  806.5 (r1  402.5 r2  404.0) vcin=1155.7, 1183.5, 1140.3, 1155.7 iLm_dc=-21.47, -21.58, -21.53, -21.47 ipri_dc=-21.45, -22.05, -21.02, -21.45
+  t=   50.0 ms vout=  522.1 pd=0.5457 iLin=  117.3 iout= 1047.5 (r1  522.6 r2  524.9) vcin=1159.6, 1236.2, 1098.1, 1159.6 iLm_dc=-17.17, -17.22, -17.24, -17.17 ipri_dc=-17.20, -15.45, -19.08, -17.20
+  t=  100.0 ms vout=  635.6 pd=0.6657 iLin=  178.8 iout= 1275.5 (r1  635.9 r2  639.6) vcin=1162.9, 1324.8, 1024.3, 1162.9 iLm_dc=-11.51, -10.71, -10.22, -11.51 ipri_dc=-11.57, -20.92, -0.09, -11.57
+  t=  200.0 ms vout=  721.1 pd=0.7572 iLin=  228.3 iout= 1446.7 (r1  720.0 r2  726.8) vcin=1164.2, 1345.2, 1009.8, 1164.2 iLm_dc=-11.27, -8.23, -6.12, -11.27 ipri_dc=-11.56, -14.25, -0.54, -11.56
+  t=  300.0 ms vout=  741.8 pd=0.7808 iLin=  240.6 iout= 1486.5 (r1  739.7 r2  746.8) vcin=1164.3, 1349.0, 1006.6, 1164.3 iLm_dc=-5.77, -2.74, -0.17, -5.77 ipri_dc=-5.72, -2.63, -0.14, -5.72
+  t=  500.0 ms vout=  749.8 pd=0.7876 iLin=  245.7 iout= 1503.2 (r1  748.0 r2  755.2) vcin=1164.2, 1350.2, 1005.3, 1164.2 iLm_dc=-4.50, -6.49, -5.48, -4.50 ipri_dc=-4.68, -12.54, 0.18, -4.68
+  t=  750.0 ms vout=  750.2 pd=0.7873 iLin=  243.5 iout= 1501.8 (r1  747.3 r2  754.6) vcin=1166.2, 1352.3, 1007.1, 1166.2 iLm_dc=-6.57, -4.84, -1.23, -6.57 ipri_dc=-6.68, -6.30, 0.02, -6.68
+  t= 1000.0 ms vout=  749.4 pd=0.7879 iLin=  245.7 iout= 1499.6 (r1  746.3 r2  753.3) vcin=1161.1, 1347.2, 1002.2, 1161.1 iLm_dc=3.39, 3.65, 6.15, 3.39 ipri_dc=9.37, 32.75, -10.36, 9.37
+  max |iLin| 251 A at 768.38 ms; max vcin 1359 V at 734.00 ms; max |ipri| 804 A; max |isec| 734 A; max |iLm| 70.3 A
+  soc 0.85000 -> 0.84997, hyst -0.00003, vCb 4696 -> 4684 V
+===== mm_C3: 1.000 s, 8000 control samples
+  vout: max 750.4 V at 428.1 ms; 95% at 178.4 ms, 99% at 295.2 ms
+  t=    5.0 ms vout=  322.8 pd=0.3400 iLin=   12.1 iout=  653.7 (r1  326.5 r2  327.2) vcin=1159.5, 1159.6, 1157.8, 1159.5 iLm_dc=-23.35, -23.38, -23.38, -23.35 ipri_dc=-23.25, -23.34, -23.24, -23.25
+  t=   10.0 ms vout=  352.9 pd=0.3680 iLin=   29.3 iout=  703.2 (r1  351.5 r2  351.8) vcin=1156.7, 1156.7, 1154.6, 1156.7 iLm_dc=-21.07, -21.11, -21.08, -21.07 ipri_dc=-21.15, -21.84, -20.49, -21.15
+  t=   20.0 ms vout=  403.5 pd=0.4227 iLin=   60.6 iout=  807.4 (r1  403.8 r2  403.6) vcin=1155.5, 1155.7, 1153.2, 1155.5 iLm_dc=-19.38, -19.41, -19.40, -19.38 ipri_dc=-19.38, -19.52, -19.27, -19.38
+  t=   50.0 ms vout=  522.4 pd=0.5451 iLin=  127.4 iout= 1050.8 (r1  525.8 r2  525.0) vcin=1164.3, 1165.2, 1162.3, 1164.3 iLm_dc=-14.61, -14.63, -14.61, -14.61 ipri_dc=-14.66, -14.70, -14.64, -14.66
+  t=  100.0 ms vout=  638.4 pd=0.6626 iLin=  181.7 iout= 1282.6 (r1  641.4 r2  641.2) vcin=1172.6, 1175.4, 1170.0, 1172.6 iLm_dc=-12.08, -12.09, -12.08, -12.08 ipri_dc=-12.12, -12.14, -12.13, -12.12
+  t=  200.0 ms vout=  721.8 pd=0.7534 iLin=  228.1 iout= 1446.5 (r1  723.3 r2  723.2) vcin=1170.9, 1176.0, 1165.7, 1170.9 iLm_dc=-11.24, -11.25, -11.22, -11.24 ipri_dc=-11.49, -11.57, -11.40, -11.49
+  t=  300.0 ms vout=  743.0 pd=0.7766 iLin=  240.7 iout= 1489.3 (r1  744.7 r2  744.6) vcin=1170.8, 1176.7, 1164.7, 1170.8 iLm_dc=-9.44, -9.44, -9.41, -9.44 ipri_dc=-9.39, -9.48, -9.27, -9.39
+  t=  500.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1177.2, 1164.7, 1171.0 iLm_dc=-6.88, -6.88, -6.84, -6.88 ipri_dc=-7.06, -7.07, -7.02, -7.06
+  t=  750.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1177.2, 1164.7, 1171.0 iLm_dc=-2.00, -2.00, -1.97, -2.00 ipri_dc=-2.10, -2.10, -2.08, -2.10
+  t= 1000.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1177.2, 1164.7, 1171.0 iLm_dc=2.92, 2.92, 2.93, 2.92 ipri_dc=8.91, 9.67, 8.17, 8.91
+  max |iLin| 246 A at 440.38 ms; max vcin 1212 V at 3.50 ms; max |ipri| 481 A; max |isec| 420 A; max |iLm| 67.7 A
+  soc 0.85000 -> 0.84997, hyst -0.00003, vCb 4696 -> 4685 V
+===== mm_Lm4: 1.000 s, 8000 control samples
+  vout: max 752.0 V at 954.1 ms; 95% at 177.1 ms, 99% at 292.4 ms
+  t=    5.0 ms vout=  323.5 pd=0.3395 iLin=   10.6 iout=  655.5 (r1  326.9 r2  328.6) vcin=1161.7, 1160.7, 1160.7, 1161.7 iLm_dc=-22.28, -22.78, -22.78, -27.78 ipri_dc=-23.72, -22.70, -22.70, -26.17
+  t=   10.0 ms vout=  353.5 pd=0.3676 iLin=   25.1 iout=  704.1 (r1  351.9 r2  352.2) vcin=1160.4, 1158.8, 1158.8, 1160.6 iLm_dc=-22.02, -22.59, -22.59, -27.42 ipri_dc=-23.95, -22.70, -22.70, -25.73
+  t=   20.0 ms vout=  404.3 pd=0.4222 iLin=   52.5 iout=  807.2 (r1  403.8 r2  403.3) vcin=1159.3, 1157.7, 1157.7, 1160.1 iLm_dc=-22.57, -23.20, -23.20, -28.04 ipri_dc=-24.73, -23.18, -23.18, -25.83
+  t=   50.0 ms vout=  522.1 pd=0.5453 iLin=  117.0 iout= 1047.5 (r1  524.1 r2  523.3) vcin=1162.9, 1162.4, 1162.4, 1166.1 iLm_dc=-16.32, -17.10, -17.10, -20.10 ipri_dc=-17.97, -17.13, -17.13, -18.52
+  t=  100.0 ms vout=  636.6 pd=0.6639 iLin=  177.5 iout= 1277.0 (r1  639.0 r2  638.0) vcin=1166.1, 1167.9, 1167.9, 1173.9 iLm_dc=-14.66, -15.57, -15.57, -17.87 ipri_dc=-16.00, -15.62, -15.62, -16.64
+  t=  200.0 ms vout=  721.6 pd=0.7541 iLin=  229.1 iout= 1446.8 (r1  723.9 r2  722.8) vcin=1165.2, 1170.1, 1170.1, 1179.0 iLm_dc=-8.90, -9.80, -9.80, -10.46 ipri_dc=-9.79, -10.05, -10.05, -10.07
+  t=  300.0 ms vout=  743.2 pd=0.7769 iLin=  240.7 iout= 1489.0 (r1  745.1 r2  743.9) vcin=1164.1, 1170.1, 1170.1, 1180.1 iLm_dc=-1.63, -2.31, -2.31, -1.28 ipri_dc=-1.84, -2.23, -2.23, -0.90
+  t=  500.0 ms vout=  749.5 pd=0.7832 iLin=  245.4 iout= 1501.9 (r1  751.5 r2  750.3) vcin=1163.6, 1169.9, 1169.9, 1180.4 iLm_dc=0.00, -0.10, -0.10, 0.64 ipri_dc=0.11, -0.27, -0.27, 0.19
+  t=  750.0 ms vout=  749.6 pd=0.7854 iLin=  245.4 iout= 1501.9 (r1  751.5 r2  750.3) vcin=1163.5, 1169.9, 1169.9, 1180.4 iLm_dc=-0.14, -0.01, -0.01, 0.33 ipri_dc=-0.05, -0.12, -0.12, 0.03
+  t= 1000.0 ms vout=  750.2 pd=0.7864 iLin=  249.2 iout= 1505.2 (r1  753.2 r2  752.0) vcin=1163.3, 1169.7, 1169.7, 1180.2 iLm_dc=-1.60, -1.50, -1.50, -1.56 ipri_dc=3.66, 4.48, 4.48, 5.15
+  max |iLin| 250 A at 974.25 ms; max vcin 1209 V at 8.25 ms; max |ipri| 493 A; max |isec| 423 A; max |iLm| 84.4 A
+  soc 0.85000 -> 0.84997, hyst -0.00003, vCb 4696 -> 4684 V
+===== split_in_pair: 1.000 s, 8000 control samples
+  vout: max 750.6 V at 719.8 ms; 95% at 178.0 ms, 99% at 295.1 ms
+  t=    5.0 ms vout=  322.2 pd=0.3405 iLin=   10.2 iout=  653.2 (r1  331.1 r2  322.1) vcin=1159.4, 1229.0, 1098.4, 1159.4 iLm_dc=-23.54, -30.48, -29.53, -23.54 ipri_dc=-23.45, -58.23, -1.75, -23.45
+  t=   10.0 ms vout=  353.5 pd=0.3677 iLin=   24.7 iout=  705.0 (r1  350.5 r2  354.5) vcin=1156.4, 1219.9, 1106.7, 1156.4 iLm_dc=-22.41, -29.22, -28.01, -22.41 ipri_dc=-22.50, -56.23, -1.11, -22.50
+  t=   20.0 ms vout=  404.5 pd=0.4220 iLin=   52.2 iout=  807.2 (r1  402.7 r2  404.5) vcin=1158.4, 1211.0, 1107.3, 1158.4 iLm_dc=-22.61, -28.57, -27.39, -22.61 ipri_dc=-22.60, -39.57, -16.33, -22.60
+  t=   50.0 ms vout=  522.5 pd=0.5450 iLin=  117.2 iout= 1048.0 (r1  524.0 r2  524.0) vcin=1163.3, 1202.7, 1124.0, 1163.3 iLm_dc=-14.98, -20.10, -19.21, -14.98 ipri_dc=-15.01, -18.32, -21.05, -15.01
+  t=  100.0 ms vout=  637.2 pd=0.6632 iLin=  177.6 iout= 1278.3 (r1  639.1 r2  639.1) vcin=1169.2, 1190.8, 1147.6, 1169.2 iLm_dc=-13.35, -17.50, -16.61, -13.35 ipri_dc=-13.41, -17.57, -16.66, -13.41
+  t=  200.0 ms vout=  722.1 pd=0.7532 iLin=  228.6 iout= 1446.7 (r1  723.4 r2  723.4) vcin=1170.4, 1175.6, 1165.3, 1170.4 iLm_dc=-8.89, -11.59, -10.77, -8.89 ipri_dc=-9.13, -11.54, -11.30, -9.13
+  t=  300.0 ms vout=  742.9 pd=0.7766 iLin=  240.8 iout= 1489.2 (r1  744.6 r2  744.6) vcin=1170.7, 1171.8, 1169.6, 1170.7 iLm_dc=-5.44, -7.23, -6.47, -5.44 ipri_dc=-5.39, -6.85, -6.74, -5.39
+  t=  500.0 ms vout=  750.4 pd=0.7820 iLin=  245.4 iout= 1503.4 (r1  751.7 r2  751.7) vcin=1171.3, 1171.3, 1171.2, 1171.3 iLm_dc=2.02, 1.18, 1.81, 2.02 ipri_dc=1.86, 1.28, 1.38, 1.86
+  t=  750.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1171.0, 1171.0, 1171.0 iLm_dc=1.15, 0.74, 1.25, 1.15 ipri_dc=1.05, 0.85, 0.94, 1.05
+  t= 1000.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1170.9, 1170.9, 1170.9, 1170.9 iLm_dc=3.84, 3.58, 4.01, 3.84 ipri_dc=9.84, 9.76, 9.83, 9.84
+  max |iLin| 247 A at 671.00 ms; max vcin 1280 V at 3.50 ms; max |ipri| 544 A; max |isec| 484 A; max |iLm| 70.0 A
+  soc 0.85000 -> 0.84997, hyst -0.00003, vCb 4696 -> 4685 V
+===== split_pairs: 1.000 s, 8000 control samples
+  vout: max 750.6 V at 444.2 ms; 95% at 177.9 ms, 99% at 295.1 ms
+  t=    5.0 ms vout=  322.5 pd=0.3400 iLin=    9.1 iout=  652.7 (r1  417.0 r2  235.7) vcin=1205.5, 1117.1, 1117.1, 1205.5 iLm_dc=-30.89, -15.77, -15.77, -30.89 ipri_dc=-30.99, -15.25, -15.25, -30.99
+  t=   10.0 ms vout=  353.8 pd=0.3673 iLin=   24.5 iout=  704.7 (r1  384.3 r2  320.4) vcin=1173.0, 1146.4, 1146.4, 1173.0 iLm_dc=-31.76, -11.46, -11.46, -31.76 ipri_dc=-31.85, -11.59, -11.59, -31.85
+  t=   20.0 ms vout=  404.5 pd=0.4219 iLin=   52.1 iout=  807.1 (r1  405.4 r2  401.7) vcin=1159.2, 1158.1, 1158.1, 1159.2 iLm_dc=-32.80, -13.35, -13.35, -32.80 ipri_dc=-32.79, -13.34, -13.34, -32.79
+  t=   50.0 ms vout=  522.3 pd=0.5450 iLin=  116.9 iout= 1048.1 (r1  524.1 r2  524.1) vcin=1163.4, 1163.4, 1163.4, 1163.4 iLm_dc=-25.28, -8.29, -8.29, -25.28 ipri_dc=-25.32, -8.32, -8.32, -25.32
+  t=  100.0 ms vout=  636.9 pd=0.6634 iLin=  177.7 iout= 1277.8 (r1  638.9 r2  638.9) vcin=1169.2, 1169.2, 1169.2, 1169.2 iLm_dc=-20.21, -6.74, -6.74, -20.21 ipri_dc=-20.27, -6.79, -6.79, -20.27
+  t=  200.0 ms vout=  721.9 pd=0.7534 iLin=  228.1 iout= 1446.3 (r1  723.2 r2  723.2) vcin=1170.5, 1170.5, 1170.5, 1170.5 iLm_dc=-9.91, -1.59, -1.59, -9.91 ipri_dc=-10.16, -1.82, -1.82, -10.16
+  t=  300.0 ms vout=  743.0 pd=0.7766 iLin=  240.7 iout= 1489.2 (r1  744.6 r2  744.6) vcin=1170.7, 1170.7, 1170.7, 1170.7 iLm_dc=-5.31, -0.20, -0.20, -5.31 ipri_dc=-5.25, -0.13, -0.13, -5.25
+  t=  500.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1171.0, 1171.0, 1171.0 iLm_dc=-5.20, -3.28, -3.28, -5.20 ipri_dc=-5.38, -3.46, -3.46, -5.38
+  t=  750.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1170.9, 1170.9, 1170.9, 1170.9 iLm_dc=-1.51, -0.94, -0.94, -1.51 ipri_dc=-1.61, -1.05, -1.05, -1.61
+  t= 1000.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1170.9, 1170.9, 1170.9, 1170.9 iLm_dc=3.06, 3.23, 3.23, 3.06 ipri_dc=9.06, 9.22, 9.22, 9.06
+  max |iLin| 247 A at 447.13 ms; max vcin 1268 V at 3.25 ms; max |ipri| 483 A; max |isec| 423 A; max |iLm| 72.3 A
+  soc 0.85000 -> 0.84997, hyst -0.00003, vCb 4696 -> 4685 V
+===== split_in_pair_ss: 0.300 s, 2400 control samples
+  vout: max 853.1 V at 3.9 ms; 95% at 1.0 ms, 99% at 1.0 ms
+  t=    5.0 ms vout=  781.8 pd=0.7823 iLin=  118.1 iout= 1485.0 (r1  742.2 r2  742.8) vcin=1183.2, 1252.9, 1113.5, 1183.2 iLm_dc=-16.39, -16.72, -15.44, -16.39 ipri_dc=-15.66, -46.16, 15.46, -15.66
+  t=   10.0 ms vout=  765.7 pd=0.7823 iLin=  177.1 iout= 1492.9 (r1  746.5 r2  746.4) vcin=1176.0, 1240.4, 1111.5, 1176.0 iLm_dc=-16.09, -16.26, -15.33, -16.09 ipri_dc=-15.92, -25.85, -5.39, -15.92
+  t=   20.0 ms vout=  753.9 pd=0.7823 iLin=  226.0 iout= 1498.4 (r1  749.2 r2  749.2) vcin=1171.4, 1226.5, 1116.4, 1171.4 iLm_dc=-15.41, -15.52, -14.74, -15.41 ipri_dc=-15.29, -16.19, -13.83, -15.29
+  t=   50.0 ms vout=  750.1 pd=0.7823 iLin=  245.2 iout= 1502.7 (r1  751.4 r2  751.4) vcin=1170.9, 1205.2, 1136.6, 1170.9 iLm_dc=-13.28, -13.40, -12.67, -13.28 ipri_dc=-13.27, -13.03, -13.02, -13.27
+  t=  100.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1186.6, 1155.3, 1171.0 iLm_dc=-10.42, -10.59, -9.88, -10.42 ipri_dc=-10.48, -10.34, -10.23, -10.48
+  t=  200.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1174.2, 1167.7, 1171.0 iLm_dc=-6.44, -6.65, -6.00, -6.44 ipri_dc=-6.69, -6.63, -6.51, -6.69
+  t=  300.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1171.6, 1170.3, 1171.0 iLm_dc=-0.35, -0.58, 0.02, -0.35 ipri_dc=5.52, 5.62, 5.56, 5.52
+  max |iLin| 485 A at 2.50 ms; max vcin 1375 V at 3.75 ms; max |ipri| 885 A; max |isec| 822 A; max |iLm| 76.0 A
+  soc 0.85000 -> 0.84999, hyst -0.00001, vCb 4696 -> 4685 V
+===== split_pairs_ss: 0.100 s, 800 control samples
+  vout: max 852.8 V at 3.9 ms; 95% at 1.0 ms, 99% at 1.0 ms
+  t=    5.0 ms vout=  781.0 pd=0.7823 iLin=  118.5 iout= 1483.4 (r1  740.0 r2  743.4) vcin=1172.1, 1192.3, 1192.3, 1172.1 iLm_dc=-17.52, -15.25, -15.25, -17.52 ipri_dc=-16.53, -14.78, -14.78, -16.53
+  t=   10.0 ms vout=  765.3 pd=0.7823 iLin=  177.4 iout= 1492.1 (r1  747.8 r2  744.3) vcin=1176.7, 1174.2, 1174.2, 1176.7 iLm_dc=-17.19, -14.99, -14.99, -17.19 ipri_dc=-17.05, -14.79, -14.79, -17.05
+  t=   20.0 ms vout=  753.8 pd=0.7823 iLin=  226.1 iout= 1498.2 (r1  749.1 r2  749.0) vcin=1171.3, 1171.3, 1171.3, 1171.3 iLm_dc=-16.46, -14.36, -14.36, -16.46 ipri_dc=-16.35, -14.24, -14.24, -16.35
+  t=   50.0 ms vout=  750.1 pd=0.7823 iLin=  245.2 iout= 1502.7 (r1  751.4 r2  751.4) vcin=1170.9, 1170.9, 1170.9, 1170.9 iLm_dc=-14.19, -12.37, -12.37, -14.19 ipri_dc=-14.18, -12.36, -12.36, -14.18
+  t=  100.0 ms vout=  750.1 pd=0.7823 iLin=  245.7 iout= 1503.0 (r1  751.5 r2  751.5) vcin=1171.0, 1171.0, 1171.0, 1171.0 iLm_dc=-7.65, -6.23, -6.23, -7.65 ipri_dc=-1.92, -0.50, -0.50, -1.92
+  max |iLin| 483 A at 2.50 ms; max vcin 1309 V at 3.75 ms; max |ipri| 734 A; max |isec| 669 A; max |iLm| 74.3 A
+  soc 0.85000 -> 0.85000, hyst -0.00000, vCb 4696 -> 4685 V
+
+------------------------------------------------------------------ last PWM periods (full-period averages)
+===== nominal: window 1746.001..1750.000 ms (16 periods)
+  vout mean 751.5 ripple p-p 3.26 V
+  module 1: vcin  1170.9 V (p-p  9.39) | ipri rms  380.1 A peak  459.5 A dc  -0.02 A | isec rms  361.6 dc   0.00 | iLm dc  -0.02 A peak  51.9 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  module 2: vcin  1170.9 V (p-p  9.39) | ipri rms  380.1 A peak  459.5 A dc  -0.02 A | isec rms  361.6 dc   0.00 | iLm dc  -0.02 A peak  51.9 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  module 3: vcin  1170.9 V (p-p  9.39) | ipri rms  380.1 A peak  459.5 A dc  -0.02 A | isec rms  361.6 dc   0.00 | iLm dc  -0.02 A peak  51.9 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  module 4: vcin  1170.9 V (p-p  9.39) | ipri rms  380.1 A peak  459.5 A dc  -0.02 A | isec rms  361.6 dc   0.00 | iLm dc  -0.02 A peak  51.9 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  rectifier output currents: r1 751.5 A (p-p 124.9), r2 751.5 A (p-p 124.9); pd 0.7823
+===== catenary_3kV: window 796.001..800.000 ms (16 periods)
+  vout mean 603.6 ripple p-p 1.34 V
+  module 1: vcin   747.0 V (p-p  5.14) | ipri rms  290.7 A peak  357.7 A dc  -0.36 A | isec rms  284.4 dc   0.00 | iLm dc  -0.36 A peak  42.3 A | |vAB|>0 fraction 1.000 | vAB dc   0.00 V
+  module 2: vcin   747.0 V (p-p  5.14) | ipri rms  290.7 A peak  357.7 A dc  -0.36 A | isec rms  284.4 dc   0.00 | iLm dc  -0.36 A peak  42.3 A | |vAB|>0 fraction 1.000 | vAB dc   0.00 V
+  module 3: vcin   747.0 V (p-p  5.14) | ipri rms  290.7 A peak  357.7 A dc  -0.36 A | isec rms  284.4 dc   0.00 | iLm dc  -0.36 A peak  42.3 A | |vAB|>0 fraction 1.000 | vAB dc   0.00 V
+  module 4: vcin   747.0 V (p-p  5.14) | ipri rms  290.7 A peak  357.7 A dc  -0.36 A | isec rms  284.4 dc   0.00 | iLm dc  -0.36 A peak  42.3 A | |vAB|>0 fraction 1.000 | vAB dc   0.00 V
+  rectifier output currents: r1 603.6 A (p-p 51.3), r2 603.6 A (p-p 51.3); pd 1.0000
+===== mismatch: window 996.001..1000.000 ms (16 periods)
+  vout mean 751.4 ripple p-p 6.52 V
+  module 1: vcin  1112.2 V (p-p  9.89) | ipri rms  364.9 A peak  439.6 A dc  -2.61 A | isec rms  341.7 dc  -0.25 | iLm dc  -2.87 A peak  53.9 A | |vAB|>0 fraction 0.803 | vAB dc  -0.17 V
+  module 2: vcin  1457.4 V (p-p 17.97) | ipri rms  609.0 A peak  901.6 A dc  -2.90 A | isec rms  574.8 dc  -0.64 | iLm dc  -3.53 A peak  63.8 A | |vAB|>0 fraction 0.803 | vAB dc  -0.22 V
+  module 3: vcin   962.4 V (p-p 11.08) | ipri rms  312.6 A peak  594.3 A dc   0.18 A | isec rms  323.1 dc   0.69 | iLm dc   0.87 A peak  48.2 A | |vAB|>0 fraction 0.781 | vAB dc  -0.20 V
+  module 4: vcin  1151.8 V (p-p 10.35) | ipri rms  381.6 A peak  481.7 A dc  -2.87 A | isec rms  358.5 dc   0.25 | iLm dc  -2.61 A peak  68.3 A | |vAB|>0 fraction 0.803 | vAB dc  -0.17 V
+  rectifier output currents: r1 727.7 A (p-p 127.8), r2 774.7 A (p-p 136.8); pd 0.8022
+===== mm_n1: window 996.001..1000.000 ms (16 periods)
+  vout mean 751.4 ripple p-p 6.83 V
+  module 1: vcin  1152.9 V (p-p 15.57) | ipri rms  381.2 A peak  462.7 A dc  -0.69 A | isec rms  356.0 dc  -0.03 | iLm dc  -0.72 A peak  52.0 A | |vAB|>0 fraction 0.782 | vAB dc  -0.19 V
+  module 2: vcin  1176.5 V (p-p 15.58) | ipri rms  382.1 A peak  464.5 A dc  -0.70 A | isec rms  363.4 dc   0.00 | iLm dc  -0.69 A peak  53.1 A | |vAB|>0 fraction 0.782 | vAB dc  -0.20 V
+  module 3: vcin  1176.5 V (p-p 15.58) | ipri rms  382.1 A peak  464.5 A dc  -0.70 A | isec rms  363.4 dc   0.00 | iLm dc  -0.69 A peak  53.1 A | |vAB|>0 fraction 0.782 | vAB dc  -0.20 V
+  module 4: vcin  1176.9 V (p-p 15.60) | ipri rms  382.5 A peak  465.7 A dc  -0.71 A | isec rms  363.8 dc   0.04 | iLm dc  -0.67 A peak  53.1 A | |vAB|>0 fraction 0.782 | vAB dc  -0.20 V
+  rectifier output currents: r1 747.8 A (p-p 135.7), r2 755.2 A (p-p 135.7); pd 0.7817
+===== mm_n2: window 996.001..1000.000 ms (16 periods)
+  vout mean 751.4 ripple p-p 6.83 V
+  module 1: vcin  1176.5 V (p-p 15.58) | ipri rms  382.1 A peak  464.5 A dc  -0.70 A | isec rms  363.4 dc   0.00 | iLm dc  -0.69 A peak  53.1 A | |vAB|>0 fraction 0.782 | vAB dc  -0.20 V
+  module 2: vcin  1152.9 V (p-p 15.57) | ipri rms  381.2 A peak  462.7 A dc  -0.69 A | isec rms  356.0 dc  -0.03 | iLm dc  -0.72 A peak  52.0 A | |vAB|>0 fraction 0.782 | vAB dc  -0.19 V
+  module 3: vcin  1176.9 V (p-p 15.60) | ipri rms  382.5 A peak  465.7 A dc  -0.71 A | isec rms  363.8 dc   0.04 | iLm dc  -0.67 A peak  53.1 A | |vAB|>0 fraction 0.782 | vAB dc  -0.20 V
+  module 4: vcin  1176.5 V (p-p 15.58) | ipri rms  382.1 A peak  464.5 A dc  -0.70 A | isec rms  363.4 dc   0.00 | iLm dc  -0.69 A peak  53.1 A | |vAB|>0 fraction 0.782 | vAB dc  -0.20 V
+  rectifier output currents: r1 755.2 A (p-p 135.7), r2 747.8 A (p-p 135.7); pd 0.7817
+===== mm_L1: window 996.001..1000.000 ms (16 periods)
+  vout mean 751.3 ripple p-p 5.70 V
+  module 1: vcin  1450.3 V (p-p 19.90) | ipri rms  605.5 A peak  899.8 A dc   2.30 A | isec rms  571.5 dc  -2.19 | iLm dc   0.11 A peak  60.5 A | |vAB|>0 fraction 0.806 | vAB dc  -0.01 V
+  module 2: vcin  1136.5 V (p-p 11.88) | ipri rms  369.0 A peak  450.2 A dc   0.96 A | isec rms  351.6 dc  -0.00 | iLm dc   0.96 A peak  53.4 A | |vAB|>0 fraction 0.806 | vAB dc  -0.00 V
+  module 3: vcin  1136.5 V (p-p 11.88) | ipri rms  369.0 A peak  450.2 A dc   0.96 A | isec rms  351.6 dc  -0.00 | iLm dc   0.96 A peak  53.4 A | |vAB|>0 fraction 0.806 | vAB dc  -0.00 V
+  module 4: vcin   958.9 V (p-p 11.34) | ipri rms  312.2 A peak  592.2 A dc   0.03 A | isec rms  322.7 dc   2.20 | iLm dc   2.23 A peak  49.5 A | |vAB|>0 fraction 0.785 | vAB dc  -0.02 V
+  rectifier output currents: r1 771.7 A (p-p 132.2), r2 731.2 A (p-p 123.6); pd 0.8065
+===== mm_L2: window 996.001..1000.000 ms (16 periods)
+  vout mean 751.3 ripple p-p 5.70 V
+  module 1: vcin  1136.5 V (p-p 11.88) | ipri rms  369.0 A peak  450.2 A dc   0.96 A | isec rms  351.6 dc  -0.00 | iLm dc   0.96 A peak  53.4 A | |vAB|>0 fraction 0.806 | vAB dc  -0.00 V
+  module 2: vcin  1450.3 V (p-p 19.90) | ipri rms  605.5 A peak  899.8 A dc   2.30 A | isec rms  571.5 dc  -2.19 | iLm dc   0.11 A peak  60.5 A | |vAB|>0 fraction 0.806 | vAB dc  -0.01 V
+  module 3: vcin   958.9 V (p-p 11.34) | ipri rms  312.2 A peak  592.2 A dc   0.03 A | isec rms  322.7 dc   2.20 | iLm dc   2.23 A peak  49.5 A | |vAB|>0 fraction 0.785 | vAB dc  -0.02 V
+  module 4: vcin  1136.5 V (p-p 11.88) | ipri rms  369.0 A peak  450.2 A dc   0.96 A | isec rms  351.6 dc  -0.00 | iLm dc   0.96 A peak  53.4 A | |vAB|>0 fraction 0.806 | vAB dc  -0.00 V
+  rectifier output currents: r1 731.2 A (p-p 123.6), r2 771.7 A (p-p 132.2); pd 0.8065
+===== mm_L2s: window 996.001..1000.000 ms (16 periods)
+  vout mean 751.6 ripple p-p 6.47 V
+  module 1: vcin  1164.3 V (p-p 15.85) | ipri rms  378.0 A peak  460.1 A dc  -0.48 A | isec rms  359.7 dc   0.02 | iLm dc  -0.46 A peak  53.6 A | |vAB|>0 fraction 0.789 | vAB dc   0.38 V
+  module 2: vcin  1350.5 V (p-p 20.96) | ipri rms  541.2 A peak  781.9 A dc   2.29 A | isec rms  510.4 dc  -2.82 | iLm dc  -0.53 A peak  58.3 A | |vAB|>0 fraction 0.789 | vAB dc   0.43 V
+  module 3: vcin  1005.4 V (p-p 14.23) | ipri rms  305.8 A peak  523.8 A dc  -0.29 A | isec rms  309.6 dc   2.80 | iLm dc   2.51 A peak  50.9 A | |vAB|>0 fraction 0.784 | vAB dc   0.41 V
+  module 4: vcin  1164.3 V (p-p 15.85) | ipri rms  378.0 A peak  460.1 A dc  -0.48 A | isec rms  359.7 dc   0.02 | iLm dc  -0.46 A peak  53.6 A | |vAB|>0 fraction 0.789 | vAB dc   0.38 V
+  rectifier output currents: r1 747.7 A (p-p 132.0), r2 754.9 A (p-p 133.9); pd 0.7875
+===== mm_C3: window 996.001..1000.000 ms (16 periods)
+  vout mean 751.5 ripple p-p 3.26 V
+  module 1: vcin  1171.0 V (p-p  9.43) | ipri rms  380.1 A peak  460.1 A dc  -0.59 A | isec rms  361.6 dc   0.00 | iLm dc  -0.59 A peak  52.5 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  module 2: vcin  1177.2 V (p-p  9.55) | ipri rms  385.0 A peak  472.0 A dc  -0.59 A | isec rms  365.9 dc  -0.01 | iLm dc  -0.60 A peak  52.7 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  module 3: vcin  1164.7 V (p-p 10.34) | ipri rms  375.3 A peak  448.2 A dc  -0.58 A | isec rms  357.4 dc   0.01 | iLm dc  -0.57 A peak  52.3 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  module 4: vcin  1171.0 V (p-p  9.43) | ipri rms  380.1 A peak  460.1 A dc  -0.59 A | isec rms  361.6 dc   0.00 | iLm dc  -0.59 A peak  52.5 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  rectifier output currents: r1 751.5 A (p-p 124.9), r2 751.5 A (p-p 124.9); pd 0.7823
+===== mm_Lm4: window 996.001..1000.000 ms (16 periods)
+  vout mean 751.5 ripple p-p 5.94 V
+  module 1: vcin  1163.0 V (p-p 14.10) | ipri rms  374.8 A peak  453.5 A dc  -4.40 A | isec rms  357.0 dc   0.00 | iLm dc  -4.39 A peak  57.0 A | |vAB|>0 fraction 0.786 | vAB dc  -0.35 V
+  module 2: vcin  1169.4 V (p-p 14.22) | ipri rms  379.8 A peak  465.8 A dc  -4.30 A | isec rms  361.3 dc  -0.00 | iLm dc  -4.30 A peak  57.1 A | |vAB|>0 fraction 0.786 | vAB dc  -0.35 V
+  module 3: vcin  1169.4 V (p-p 14.22) | ipri rms  379.8 A peak  465.8 A dc  -4.30 A | isec rms  361.3 dc  -0.00 | iLm dc  -4.30 A peak  57.1 A | |vAB|>0 fraction 0.786 | vAB dc  -0.35 V
+  module 4: vcin  1179.8 V (p-p 14.54) | ipri rms  391.0 A peak  493.3 A dc  -5.07 A | isec rms  366.9 dc  -0.01 | iLm dc  -5.07 A peak  71.3 A | |vAB|>0 fraction 0.786 | vAB dc  -0.35 V
+  rectifier output currents: r1 752.1 A (p-p 131.9), r2 750.9 A (p-p 131.8); pd 0.7863
+===== split_in_pair: window 996.001..1000.000 ms (16 periods)
+  vout mean 751.5 ripple p-p 3.26 V
+  module 1: vcin  1170.9 V (p-p  9.41) | ipri rms  380.1 A peak  459.8 A dc   0.34 A | isec rms  361.6 dc  -0.00 | iLm dc   0.34 A peak  52.3 A | |vAB|>0 fraction 0.785 | vAB dc  -0.00 V
+  module 2: vcin  1170.9 V (p-p  9.40) | ipri rms  380.1 A peak  459.7 A dc   0.26 A | isec rms  361.6 dc  -0.18 | iLm dc   0.08 A peak  52.0 A | |vAB|>0 fraction 0.785 | vAB dc  -0.00 V
+  module 3: vcin  1170.9 V (p-p  9.41) | ipri rms  380.1 A peak  459.8 A dc   0.33 A | isec rms  361.6 dc   0.18 | iLm dc   0.50 A peak  52.4 A | |vAB|>0 fraction 0.785 | vAB dc  -0.00 V
+  module 4: vcin  1170.9 V (p-p  9.41) | ipri rms  380.1 A peak  459.8 A dc   0.34 A | isec rms  361.6 dc  -0.00 | iLm dc   0.34 A peak  52.3 A | |vAB|>0 fraction 0.785 | vAB dc  -0.00 V
+  rectifier output currents: r1 751.5 A (p-p 124.9), r2 751.5 A (p-p 124.9); pd 0.7823
+===== split_pairs: window 996.001..1000.000 ms (16 periods)
+  vout mean 751.5 ripple p-p 3.26 V
+  module 1: vcin  1170.9 V (p-p  9.42) | ipri rms  380.1 A peak  459.9 A dc  -0.45 A | isec rms  361.6 dc   0.00 | iLm dc  -0.45 A peak  52.4 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  module 2: vcin  1170.9 V (p-p  9.41) | ipri rms  380.1 A peak  459.8 A dc  -0.28 A | isec rms  361.6 dc   0.00 | iLm dc  -0.28 A peak  52.2 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  module 3: vcin  1170.9 V (p-p  9.41) | ipri rms  380.1 A peak  459.8 A dc  -0.28 A | isec rms  361.6 dc   0.00 | iLm dc  -0.28 A peak  52.2 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  module 4: vcin  1170.9 V (p-p  9.42) | ipri rms  380.1 A peak  459.9 A dc  -0.45 A | isec rms  361.6 dc   0.00 | iLm dc  -0.45 A peak  52.4 A | |vAB|>0 fraction 0.785 | vAB dc   0.00 V
+  rectifier output currents: r1 751.5 A (p-p 124.9), r2 751.5 A (p-p 124.9); pd 0.7823
+===== split_in_pair_ss: window 296.001..300.000 ms (16 periods)
+  vout mean 751.5 ripple p-p 3.26 V
+  module 1: vcin  1171.0 V (p-p  9.66) | ipri rms  380.1 A peak  463.4 A dc  -3.94 A | isec rms  361.6 dc   0.01 | iLm dc  -3.93 A peak  55.9 A | |vAB|>0 fraction 0.785 | vAB dc   0.02 V
+  module 2: vcin  1171.6 V (p-p  9.71) | ipri rms  380.7 A peak  464.8 A dc  -3.92 A | isec rms  362.1 dc  -0.24 | iLm dc  -4.16 A peak  56.1 A | |vAB|>0 fraction 0.785 | vAB dc   0.02 V
+  module 3: vcin  1170.3 V (p-p  9.68) | ipri rms  379.5 A peak  462.0 A dc  -3.81 A | isec rms  361.1 dc   0.26 | iLm dc  -3.56 A peak  55.5 A | |vAB|>0 fraction 0.785 | vAB dc   0.01 V
+  module 4: vcin  1171.0 V (p-p  9.66) | ipri rms  380.1 A peak  463.4 A dc  -3.94 A | isec rms  361.6 dc   0.01 | iLm dc  -3.93 A peak  55.9 A | |vAB|>0 fraction 0.785 | vAB dc   0.02 V
+  rectifier output currents: r1 751.5 A (p-p 124.9), r2 751.5 A (p-p 124.9); pd 0.7823
+===== split_pairs_ss: window 96.001..100.000 ms (16 periods)
+  vout mean 751.5 ripple p-p 3.27 V
+  module 1: vcin  1171.0 V (p-p 10.18) | ipri rms  380.2 A peak  470.8 A dc -11.24 A | isec rms  361.6 dc   0.02 | iLm dc -11.22 A peak  63.2 A | |vAB|>0 fraction 0.785 | vAB dc   0.04 V
+  module 2: vcin  1171.0 V (p-p 10.08) | ipri rms  380.2 A peak  469.4 A dc  -9.80 A | isec rms  361.6 dc   0.02 | iLm dc  -9.78 A peak  61.8 A | |vAB|>0 fraction 0.785 | vAB dc   0.04 V
+  module 3: vcin  1171.0 V (p-p 10.08) | ipri rms  380.2 A peak  469.4 A dc  -9.80 A | isec rms  361.6 dc   0.02 | iLm dc  -9.78 A peak  61.8 A | |vAB|>0 fraction 0.785 | vAB dc   0.04 V
+  module 4: vcin  1171.0 V (p-p 10.18) | ipri rms  380.2 A peak  470.8 A dc -11.24 A | isec rms  361.6 dc   0.02 | iLm dc -11.22 A peak  63.2 A | |vAB|>0 fraction 0.785 | vAB dc   0.04 V
+  rectifier output currents: r1 751.5 A (p-p 124.9), r2 751.5 A (p-p 124.9); pd 0.7823
