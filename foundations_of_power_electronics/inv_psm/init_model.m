@@ -45,19 +45,22 @@ param = struct();
 local_functions = dir(fullfile(fileparts(mfilename('fullpath')), 'private', '*.m'));
 fprintf('%s init: local parameter functions in private/: %s\n', model, strjoin({local_functions.name}, ', '));
 clear local_functions library_path
+
 %[text] ## Simulation
-param.sim.simlength = 2.25;                 % [s] model StopTime
-param.sim.tc = 0.5e-6;                      % [s] logging base, MaxStep of the solver (ode23tb) and step of the
-                                            %     Simscape local solver (glb_time.tc): ts/250
+param.sim.simlength = 2.25;               % [s] model StopTime
+param.sim.tc = 1e-6;                      % [s] logging base, MaxStep of the solver (ode23tb) and step of the
+                                          % Simscape local solver (glb_time.tc): ts/25
+
 % inverter model: exactly one of the three inverter blocks of inv_psm_mod1/inverter/inverter is active
 param.sim.use_mosfet_thermal_model = 0;     % (variant) MOSFET bridge with thermal model (values are literals in the block)
-param.sim.use_thermal_model = 1;            % (variant) 1: IGBT bridge with loss and thermal model, 0: ideal switches
+param.sim.use_thermal_model = 0;            % (variant) 1: IGBT bridge with loss and thermal model, 0: ideal switches
 param.sim.nonlinear_iterations = 3;         % Simscape Solver Configuration (block battery_1/Solver Configuration1)
 if param.sim.use_mosfet_thermal_model || param.sim.use_thermal_model
     param.sim.nonlinear_iterations = 5;
 end
 param.sim.load_step_time = 1.25;            % [s] step time of the load torque (motor_load_setting, speed control only)
 param.sim.check_param_refs = true;          % at the end: check that every param.* read by the model exists
+
 %[text] ## Timing
 % one converter clock domain (inverter and control): 4 kHz PWM, double update -> ts = 125 us
 param.time.fpwm = 4e3;                              % [Hz] switching frequency of the inverter
@@ -73,6 +76,7 @@ param.time.fpwm_dab = 3*param.time.fpwm;            % [Hz]
 param.time.trgo_dab = 1;
 
 param.glb_time = timing_param(param.time);
+
 %[text] ## Inverter
 %[text] ### Hardware
 % 250 kW data set of the library for the 690 V class (inv690V_250kW: udc_nom 1070 V), output inductor 230 uH
@@ -81,6 +85,7 @@ param.glb_time = timing_param(param.time);
 param.inv.application_voltage = 690;                % [V] voltage class of the data sets
 param.inv.pwr_nom = 250e3;                          % [W]
 param.inv.hw = inv_hw_param(param.inv.application_voltage, param.inv.pwr_nom, param.time.fpwm);
+
 %[text] ### Behaviour of the clocks and of the PWM
 % local clock of the inverter: time = k*t (block global timing/time_inv1). The block reads the gain of
 % module 2 (1.001, legacy time_gain_inv_module_2), so the PWM carrier runs at 4004 Hz while the control
@@ -88,8 +93,10 @@ param.inv.hw = inv_hw_param(param.inv.application_voltage, param.inv.pwr_nom, pa
 param.inv.behav.time_gain_module_1 = 1.0005;        % legacy value, read by no block
 param.inv.behav.time_gain_module_2 = 1.001;         % read by global timing/time_inv1
 param.inv.behav.pwm_phase_shift_mod1 = 0;           % [rad] phase of the PWM carrier (sv_pwm/Constant1)
+
 % clock of an AFE that this model does not have (block global timing/time_afe1, output not used)
 param.afe.behav.time_gain_module_1 = 1.0002;
+
 %[text] ### Power semiconductors
 % IGBT bridge (default): six igbt_simple_2th cells with loss and thermal model, Infineon FF1200R17IP5
 % (1700 V / 1200 A, values at 125 degC). The data set is embedded in private/device_igbt_param; any other data
@@ -104,6 +111,7 @@ clear dev
 % ideal-switch bridge (variant use_thermal_model = 0)
 param.dev.used_device_ideal_switch = 'silicon_high_power_ideal_switch';
 param.inv.ideal_switch = device_ideal_switch_param(param.dev.used_device_ideal_switch, param.glb_time.fPWM_INV, param.inv.hw.udc_nom);
+
 %[text] ### Thermal model of the IGBT bridge
 % aluminium plate, liquid cooled, sized for PrimePACK2, liquid flow > 28 l/min. "A" (ambient) is the water:
 % HA is the temperature rise from water to heatsink surface; water in/out rise max 5 K with 2 kW total losses
@@ -129,6 +137,7 @@ param.thermal.heatsink.Rth_mosfet_HA = param.thermal.Rth_switch_HA;
 param.thermal.heatsink.Rth_diode_HA = param.thermal.Rth_diode_HA;
 param.thermal.heatsink.Tambient = param.thermal.Tambient;
 param.thermal.heatsink.DThs_init = param.thermal.DThs_init;
+
 %[text] ## Battery on the DC link (block battery_1/litium_ion_battery)
 % lithium-ion pack across the whole DC link: 1070 V nominal (udc_nom of the 690 V AFE data set in the legacy
 % init), 750 kW, initial state of charge 0.85. The library block reads battery_voltage_init_m =
@@ -144,6 +153,7 @@ param.battery.pack_1 = battery_param(b.nominal_battery_voltage_1, b.nominal_batt
     b.initial_battery_soc, param.glb_time.ts_dab, b.plot_ocv);
 param.battery.pack_2 = param.battery.pack_1;                    % block battery_2 (commented out)
 clear b
+
 %[text] ## Permanent magnet synchronous machine
 % data of psm_calculus of the library (WindGen): six three-phase systems on one rotor; Ld, Lq, Jm of the whole
 % machine. The per-system values and the bases are computed in private/psm_machine_param (pmsm_setup):
@@ -165,6 +175,7 @@ param.psm.machine = psm_machine_param(param.psm.machine_in);
 % voltage scales of the observers: control voltage (pu) -> machine voltage (pu of ubez)
 param.psm.u_psm_scale = 2/3*param.inv.hw.udc_nom/param.psm.machine.ubez;                 % back-EMF observers (not active)
 param.psm.u_psm_scale_ekf = sqrt(3)/2*2/3*param.inv.hw.udc_nom/param.psm.machine.ubez;   % EKF: udc/sqrt(3)/ubez
+
 %[text] ## Mechanical side: torque curve, fixed speed, speed reference
 % energy production (default): the shaft turns at rpm_sim (block fixed_speed_setting: step at t = 0, 0.1 s lag);
 % the torque reference is the torque curve of the 1.5 MW generic generator (legacy library script
@@ -179,6 +190,7 @@ param.load.rpm_sim = 17.8;                          % [rpm] speed of the shaft (
 % filter; the load is the inertia external_load_inertia plus a 1 Nm torque (motor_load_setting)
 param.load.omega_m_sim = param.psm.machine.omega_m_bez;     % [rad/s] speed reference
 param.load.external_load_inertia = 1;                       % [kg m^2] (block motor_load_setting/Inertia)
+
 %[text] ## Control
 %[text] ### Mode of operation
 param.psm.mode.use_torque_curve = 1;                                        % (variant) energy production
@@ -186,11 +198,13 @@ param.psm.mode.use_speed_control = 1 - param.psm.mode.use_torque_curve;     % (v
 param.psm.mode.use_mtpa = 1;                                                % (variant) d current from MTPA, else 0
 param.psm.mode.use_psm_encoder = 0;                                         % (variant) 1: encoder, 0: sensorless
 param.psm.mode.time_start_motor_control = 0.25;                             % [s] step of the speed reference
+
 %[text] ### C-Caller versus Simulink implementation
 % back-EMF observer: exactly one of the three is active (Variant Source blocks of current_ctrl/bemf_observer)
-param.psm.impl.use_ekf_bemf_module_1 = 1;                                   % (variant) EKF
-param.psm.impl.use_observer_from_simulink_module_1 = 0;                     % (variant) Simulink back-EMF observer
+param.psm.impl.use_ekf_bemf_module_1 = 0;                                   % (variant) EKF
+param.psm.impl.use_observer_from_simulink_module_1 = 1;                     % (variant) Simulink back-EMF observer
 param.psm.impl.use_observer_from_ccaller_module_1 = 0;                      % (variant) C-Caller back-EMF observer
+
 % current controller (dq_pi_with_vector_antiwindup mod1)
 param.psm.impl.use_current_controller_from_simulink_module_1 = 0;           % (variant)
 param.psm.impl.use_current_controller_from_ccaller_module_1 = 1;            % (variant)
@@ -214,8 +228,9 @@ ctrl_in.emf_fb_p = 0.2;                             % gains of the two non-EKF b
 ctrl_in.emf_p = ctrl_in.emf_fb_p*4/10;
 ctrl_in.omega_th = 0;                               % [pu] speed threshold of the encoder-sensorless switch
 ctrl_in.jm_ekf = 1e6;                               % inertia of the EKF model: the speed is a free state
-ctrl_in.q_ekf = 1/10;                               % EKF noise (ekf_pmsm_setup): Q = ts*q_ekf*diag(q_ekf_diag),
-ctrl_in.q_ekf_diag = [param.glb_time.ts_inv^2 param.glb_time.ts_inv^2 1/2 1/2 1 1];   % R = ts*r_ekf*eye(2)
+ctrl_in.q_ekf = 1;                               % EKF noise (ekf_pmsm_setup): Q = ts*q_ekf*diag(q_ekf_diag),
+% ctrl_in.q_ekf_diag = [param.glb_time.ts_inv^2 param.glb_time.ts_inv^2 1/2 1/2 1 1];   % R = ts*r_ekf*eye(2)
+ctrl_in.q_ekf_diag = [param.glb_time.ts_inv param.glb_time.ts_inv 1/2 1/2 1 1];   % R = ts*r_ekf*eye(2)
 ctrl_in.r_ekf = 1;
 param.psm.ctrl = psm_ctrl_param(param.glb_time.ts_inv, param.psm.machine.omega_bez, param.psm.machine.Jm_norm, ...
     param.psm.u_psm_scale, param.psm.machine, ctrl_in);
@@ -243,6 +258,7 @@ param.ctrl.filters.inv.SOF_50Hz.fcut = 50;          % [Hz]
 param.ctrl.filters.inv.SOF_50Hz.time_constant = tau_sof;
 param.ctrl.filters.inv.SOF_50Hz.ss_c = ss(1/(tau_sof*s + 1)^2);
 clear ts tau_sof s
+
 %[text] ### Design figures (informative)
 % per-unit chain: currents in pu of ibez of the machine (one system), current PI output in pu of udc/sqrt(3)
 % (linear limit of the space vector modulator; the C-Caller sv_pwm has no udc input, so 1 pu is udc/sqrt(3) of
@@ -258,6 +274,7 @@ d.u_ctrl_bez = d.udc/sqrt(3);                                   % [V] 1 pu of th
 d.Ld = mc.Ld_m + hw.LFi;                                        % [H] d axis inductance seen by the current loop
 d.Lq = mc.Lq_m + hw.LFi;                                        % [H]
 d.R = mc.Rs_m + hw.RLFi;                                        % [Ohm]
+
 % current open loop (w in rad/s): PI of dqvector_pi (u = kp*e + x, x = x + ki*ts*e), R-L plant, 2.5 samples of
 % delay (1 sample of current measurement delay, 1 sample of voltage output delay, half a sample of PWM hold)
 z_w = @(w) exp(1i*w*ts);
@@ -266,6 +283,7 @@ d.wc_d = fzero(@(w) abs(L_i(w, d.Ld)) - 1, [1 pi/ts]);          % [rad/s] crosso
 d.pm_d = 180 + angle(L_i(d.wc_d, d.Ld))*180/pi;                 % [deg] phase margin
 d.wc_q = fzero(@(w) abs(L_i(w, d.Lq)) - 1, [1 pi/ts]);
 d.pm_q = 180 + angle(L_i(d.wc_q, d.Lq))*180/pi;
+
 % operating point at rated speed
 d.T_curve = interp1(param.load.rpm_base, param.load.torque_base, mc.rpm_nom);    % [Nm] torque curve, per system
 d.iq_ref = -param.load.torque_overload_factor*d.T_curve/mc.tau_bez;              % [pu] torque reference = iq reference
@@ -290,6 +308,7 @@ fprintf('Current loop: Ld = %.2f mH, Lq = %.2f mH (with LFi), R = %.1f mOhm | cr
 fprintf('Rated speed: iq_ref = %.3f pu, id_ref = %.3f pu (MTPA block; textbook MTPA %.3f pu) | torque %.1f kNm, %.0f kW per system, %.0f A rms, %.0f V peak (%.2f pu), cos(phi) %.2f\n', ...
     d.iq_ref, d.id_ref_block, d.id_ref_mtpa, d.torque/1e3, d.P_gen/1e3, d.i_rms, d.u_inv, d.u_inv_pu, d.cosphi);
 clear mc hw c ts d a a_ok id iq we ud uq L_i z_w
+
 %[text] ## Sensors end scale and quantization
 param.meas.adc_quantization = 1/2^11;               % [pu] quantizer of the acquisitions (pu signals, 12 bit)
 param.meas.adc12_quantization = param.meas.adc_quantization;
@@ -298,15 +317,18 @@ param.meas.Imax_adc = 1049.835;                     % [A]
 param.meas.CurrentQuantization = param.meas.Imax_adc/2^11;
 param.meas.Umax_adc = 1500;                         % [V]
 param.meas.VoltageQuantization = param.meas.Umax_adc/2^11;
+
 %[text] ## Model setup
 open_system(model);
 Simulink.importExternalCTypes(model, 'Names', {'bemf_obsv_output_t', 'dqvector_pi_output_t', 'sv_pwm_output_t'});
+
 %[text] ### Scopes closed at start
 open_scopes = find_system(model, 'BlockType', 'Scope');
 for k = 1:numel(open_scopes)
     set_param(open_scopes{k}, 'Open', 'off');
 end
 clear open_scopes k
+
 %[text] ### Active inverter and mechanical setting
 % the three inverter blocks and the two mechanical settings are switched by commenting them in and out (as the
 % legacy init). The blocks that read the voltages of the ideal-switch inverter (Goto inverter_voltage_ee_phase_*
@@ -345,6 +367,7 @@ else
     set_param([model '/motor_load_setting'], 'Commented', 'off');
 end
 clear inv_blocks inv_active name ideal_switch_readers k
+
 %[text] ### Check of the param.* references of the model
 if param.sim.check_param_refs
     [missing_refs, model_refs] = check_model_param_refs(model, param);
