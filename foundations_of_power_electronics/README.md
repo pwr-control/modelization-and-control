@@ -65,12 +65,18 @@ Recurring building blocks across the projects:
   4 × 250 kW) inherited from the shared hardware library.
 
 ### `afe_inv_psm_cascaded`
-- Two (up to four) cascaded AFE + inverter + PMSM modules with independent time domains: each
-  module generates its own sampling/PWM trigger, so sliding PWM and clock deviation between
-  modules can be analysed.
-- Hard-parallelization features: common-mode voltage control, per-module reactive current
-  references, double moving-average filtering.
+- Two AFE + inverter modules (250 kW each, 690 V, fPWM = 4 kHz, ideal switches) connected in parallel
+  on both sides ("hard parallel"): grid side on one 1 MVA Dyn11 transformer, machine side on one PMSM
+  wind generator (two of the six WindGen systems, fixed speed). The folder name says "cascaded", but the
+  modules are in parallel (model `afe_inv_psm_n.slx`).
+- Independent time domains: each converter has its own clock with an alignment loop to the master time,
+  so sliding PWM and clock deviation between modules can be analysed.
+- Hard-parallelization features: zero-sequence (circulating) current control through the common-mode
+  voltage of module 2, per-module reactive current references, double moving-average filtering.
 - The most advanced model of the repository in terms of time-distribution modelling.
+- Parameters in `param` (`init_model.m` + `private/`); design check and open points in its README (with
+  the legacy setting the inverter of module 2 has no current controller; with two modules the LCL
+  resonance is above the band the AFE current loop can damp).
 
 ### `distributed_ctrl`
 - Same plant as `afe_inv_psm` but with the control distributed over two controllers and an
