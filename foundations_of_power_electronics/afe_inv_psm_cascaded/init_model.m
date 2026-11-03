@@ -6,7 +6,7 @@
 clear;
 model = 'afe_inv_psm_n';
 prv = afe_inv_psm_cascaded_private();   % handles to the functions of ./private (the Live Editor does not see ./private)
-prv.library_setup();                    % pwr-control/library on the path (blocks, examples), cloned when missing
+prv.library_setup();                    % pwr-control/library on the path (blocks, examples), cloned when missing %[output:158291a7]
 
 % environment (was init_environment of the library)
 close all; clc; beep off;
@@ -18,7 +18,7 @@ catch ME
     end
 end
 param = struct();
-fprintf('%s init: functions of ./private, called as prv.<name>: %s\n', model, strjoin(fieldnames(prv)', ', '));
+fprintf('%s init: functions of ./private, called as prv.<name>: %s\n', model, strjoin(fieldnames(prv)', ', ')); %[output:1243faa5]
 %%
 %[text] ## Simulation
 param.sim.simlength = 1.25;                 % [s] model StopTime
@@ -41,7 +41,7 @@ param.time.t_measure = param.sim.simlength; % [s] logging window
 param.time.tc_factor = 200;                 % ts_afe/tc: glb_time.tc = 125 us/200 = 0.625 us
 param.time.tc_decimation = 1;
 param.time.delay_pwm = 0;
-param.glb_time = prv.timing_param(param.time);
+param.glb_time = prv.timing_param(param.time); %[output:36073821]
 %%
 %[text] ## Grid
 %[text] Three-phase grid emulator (ideal voltage sources) and a Dyn11 1 MVA 690/690 V transformer made of three single-phase transformer blocks, star point of the secondary grounded. Its leakage, 77 uH at the secondary, is the grid-side inductor of the LCL filters of the two AFEs. The turns 24/14 give 697 V at the secondary (1 percent above 690 V).
@@ -72,7 +72,7 @@ param.grid.fault_in.deepNEGxi = 0.4;                % [pu] negative sequence xi 
 param.grid.fault_in.deepNEGeta = 0.4;               % [pu] negative sequence eta during the fault: 0 - deepNEGeta
 param.grid.fault_in.t_ramp = 20e-3;                 % [s]
 param.grid.frt = prv.grid_fault_param(param.grid.fault_in);
-param.grid.emu = prv.grid_emulator_param(param.grid, param.grid.frt);
+param.grid.emu = prv.grid_emulator_param(param.grid, param.grid.frt); %[output:818fe05d]
 %%
 %[text] ## AFE modules (grid\_following\_dqctrl\_mod1)
 %[text] Same hardware as the AFE of the old modules: LCL filter 500 uH, 200 uF in star with 50 mOhm. The grid-side inductor of the block is only a 1 uH connection (L2p = L20 = 0, Lls2 = 1 uH; L2 must stay above zero) because the transformer leakage plays that role. The 7.2 mF DC link of the old module is split: 3.6 mF in the AFE block and 3.6 mF in the inverter block (each block has its own capacitor; Udc+ and Udc- connect the two). There is no brake chopper in the new architecture.
@@ -178,10 +178,10 @@ param.afe_follower(2).ctrl.u_cm = -1;           % module 2: the zero-sequence PI
 param.afe.hw = a.hw;                            % bases ubez, ibez for the scopes (scopes/Gain2, Gain3, ...)
 param.afe.behav.time_gain_module_1 = 1;         % global timing/time_afe1 and time_afe2: 1, the clock ratio is
 param.afe.behav.time_gain_module_2 = 1;         % now k_time of the blocks (not applied twice)
-fprintf('AFE modules: L1 %.0f uH, Cf %.0f uF, Cdc %.1f mF, ubez %.1f V, ibez %.1f A, udc_nom %.0f V | k_time %.4f / %.4f, u_cm %g / %g\n', ...
-    a.hw.L1p*1e6, a.hw.Cf*1e6, a.hw.Cdc*1e3, a.hw.ubez, a.hw.ibez, a.hw.udc_nom, ...
-    param.afe_follower(1).ctrl.k_time, param.afe_follower(2).ctrl.k_time, ...
-    param.afe_follower(1).ctrl.u_cm, param.afe_follower(2).ctrl.u_cm);
+fprintf('AFE modules: L1 %.0f uH, Cf %.0f uF, Cdc %.1f mF, ubez %.1f V, ibez %.1f A, udc_nom %.0f V | k_time %.4f / %.4f, u_cm %g / %g\n', ... %[output:group:2686a478] %[output:400786c3]
+    a.hw.L1p*1e6, a.hw.Cf*1e6, a.hw.Cdc*1e3, a.hw.ubez, a.hw.ibez, a.hw.udc_nom, ... %[output:400786c3]
+    param.afe_follower(1).ctrl.k_time, param.afe_follower(2).ctrl.k_time, ... %[output:400786c3]
+    param.afe_follower(1).ctrl.u_cm, param.afe_follower(2).ctrl.u_cm); %[output:group:2686a478] %[output:400786c3]
 clear a
 %%
 %[text] ## Machine
@@ -198,7 +198,7 @@ param.psm.machine_in.Lq = 1.26e-3;                 % [H]
 param.psm.machine_in.Jm = 900e3/6;                 % [kg m^2]
 param.psm.machine_in.h5_percent = 0;               % [%] 5th and 7th flux harmonics (the block uses literals 0)
 param.psm.machine_in.h7_percent = 0;
-param.psm.machine = prv.psm_machine_param(param.psm.machine_in);
+param.psm.machine = prv.psm_machine_param(param.psm.machine_in); %[output:14e8855f]
 param.psm.number_of_modules = 2;                   % systems in parallel in the machine block = converter modules
 %%
 %[text] ## Mechanical side
@@ -273,7 +273,7 @@ v.ctrl.psi_m   = mc.psi_m*mc.omega_bez/mc.ubez;   % 1 with the bases of the mach
 % operation
 v.ctrl.mode      = 2;                       % 0 torque reference, 1 speed control, 2 torque curve (generator)
 v.ctrl.mtpa      = 1;                       % 1 MTPA, 0 id = 0
-v.ctrl.angle_src = 0;                       % 0 encoder (as the old model), 1 back-EMF observer, 2 EKF
+v.ctrl.angle_src = 2;                       % 0 encoder (as the old model), 1 back-EMF observer, 2 EKF
 v.ctrl.omega_th  = 0;                       % [pu] encoder below this speed with angle_src 1 or 2 (0: never)
 v.ctrl.t_enable  = 0.25;                    % [s] gates off before: DC links charged, shaft at about 90 % speed
 v.ctrl.k_delay   = 1.5;                     % [periods] angle advance of the voltage (delay compensation)
@@ -322,10 +322,10 @@ param.inv.ref = [1; param.load.torque_overload_factor];
 % read by the model outside the blocks
 param.inv.behav.time_gain_module_1 = 1;     % global timing/time_inv1 and time_inv2 (see the AFE modules)
 param.inv.behav.time_gain_module_2 = 1;
-fprintf('Inverter modules: L %.0f uH, Cdc %.1f mF, ubez %.1f V, ibez %.1f A | pu: rs %.4f, ld %.4f, lq %.4f, filter %.4f | kp_i %.2f, ki_i %.1f | k_time %.4f / %.4f\n', ...
-    v.hw.L1p*1e6, v.hw.Cdc*1e3, v.hw.ubez, v.hw.ibez, v.ctrl.rs, v.ctrl.ld, v.ctrl.lq, ...
-    (v.hw.L1p + v.hw.Lls1 + v.hw.L2p + v.hw.Lls2)/mc.Lbez, v.ctrl.kp_i, v.ctrl.ki_i, ...
-    param.inv_mod(1).ctrl.k_time, param.inv_mod(2).ctrl.k_time);
+fprintf('Inverter modules: L %.0f uH, Cdc %.1f mF, ubez %.1f V, ibez %.1f A | pu: rs %.4f, ld %.4f, lq %.4f, filter %.4f | kp_i %.2f, ki_i %.1f | k_time %.4f / %.4f\n', ... %[output:group:95b6b356] %[output:05f73f26]
+    v.hw.L1p*1e6, v.hw.Cdc*1e3, v.hw.ubez, v.hw.ibez, v.ctrl.rs, v.ctrl.ld, v.ctrl.lq, ... %[output:05f73f26]
+    (v.hw.L1p + v.hw.Lls1 + v.hw.L2p + v.hw.Lls2)/mc.Lbez, v.ctrl.kp_i, v.ctrl.ki_i, ... %[output:05f73f26]
+    param.inv_mod(1).ctrl.k_time, param.inv_mod(2).ctrl.k_time); %[output:group:95b6b356] %[output:05f73f26]
 clear v mc nm
 %%
 %[text] ## Scope filters
@@ -351,18 +351,18 @@ for k = 1:numel(blk)
             'multiple of tc and equal to 1/(fpwm*(1 + double_update))'], k, p.pwm.tc, p.ctrl.ts, param.glb_time.tc); %#ok<SAGROW>
     end
 end
-if isempty(issues)
-    fprintf('%s init: the structs of the four blocks have the fields of the library examples, timing consistent\n', model);
+if isempty(issues) %[output:group:57dc18ac]
+    fprintf('%s init: the structs of the four blocks have the fields of the library examples, timing consistent\n', model); %[output:7070ccfc]
 else
     warning('%s init: %d point(s) in the block structs:\n  %s', model, numel(issues), strjoin(issues, '\n  '));
-end
+end %[output:group:57dc18ac]
 clear issues blk k p n_tc t_ctrl
 %%
 %[text] ## Design figures
 %[text] Discrete-time loops with the timing of the blocks (sample of the previous trigger, output held for one period), for the gains above: inverter current loop (machine current and circulating current), AFE current loop with the LCL filter (two modules, one module, difference of the two AFEs), DC-link voltage loop, zero-sequence loop, operating point at rpm\_sim. Change a gain and run this section again.
-if param.sim.design_figures
-    param.design = prv.loop_design_check(param, param.sim.design_plots);
-end
+if param.sim.design_figures %[output:group:5e49b468]
+    param.design = prv.loop_design_check(param, param.sim.design_plots); %[output:36024d03]
+end %[output:group:5e49b468]
 %%
 %[text] ## Model setup
 open_system(model);
@@ -385,30 +385,95 @@ end
 clear inv_modes
 %[text] ### Checks of the model
 %[text] Every param.\* read by the active blocks must exist. Then the connections of the four library blocks (struct of their own module, master time, inverter ref and enc inputs, logged outputs) and the From blocks without an active Goto.
-if param.sim.check_model
-    [missing_refs, model_refs] = prv.check_model_param_refs(model, param);
+if param.sim.check_model %[output:group:0131d822]
+    [missing_refs, model_refs] = prv.check_model_param_refs(model, param); %[output:6b83bb23]
     if isempty(missing_refs)
-        fprintf('%s init: all %d param.* references of the active blocks resolve\n', model, numel(model_refs));
+        fprintf('%s init: all %d param.* references of the active blocks resolve\n', model, numel(model_refs)); %[output:3ca92eda]
     else
         warning('%s init: %d param.* references of the active blocks do not exist in param:\n  %s', model, ...
             numel(missing_refs), strjoin(missing_refs', '\n  '));
     end
     try
-        issues = prv.check_model_wiring(model);
+        issues = prv.check_model_wiring(model); %[output:860d587c] %[output:3535db85]
         if isempty(issues)
             fprintf('%s init: connections of the four library blocks as expected\n', model);
         else
-            warning('%s init: %d point(s) to fix in the model before running it (README, Model check):\n  %s', ...
-                model, numel(issues), strjoin(issues, '\n  '));
+            warning('%s init: %d point(s) to fix in the model before running it (README, Model check):\n  %s', ... %[output:80009551]
+                model, numel(issues), strjoin(issues, '\n  ')); %[output:80009551]
         end
     catch ME
         warning('%s init: the check of the connections stopped: %s', model, ME.message);
     end
     clear missing_refs model_refs issues
+end %[output:group:0131d822]
+
+
+%[text] ### 
+%[text] ### CREATE\\\_POWER\\\_METER\\\_BUS
+%[text] Simulink.Bus for output "m" of the MATLAB Function block three\_phase\_power\_meter\_iec
+%[text] (Symbols pane: Type = Bus: PowerMeterIecBus). Bus objects stay in the base workspace.
+names = {'Q1p', 'Q1n', 'P1n', 'P1p', 'U1n', 'U1p', ...
+    'i_act_1n', 'i_react_1n', 'i_act_1p', 'i_react_1p'};
+
+elems = Simulink.BusElement.empty(0,1);
+for k = 1:numel(names)
+    e            = Simulink.BusElement;
+    e.Name       = names{k};
+    e.Dimensions = 1;
+    e.DataType   = 'double';
+    e.Complexity = 'real';
+    elems(k,1)   = e;
 end
+
+PowerMeterIecBus          = Simulink.Bus;
+PowerMeterIecBus.Elements = elems;
+assignin('base', 'PowerMeterIecBus', PowerMeterIecBus);
+clear names elems e k
 
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
 %   data: {"layout":"onright","rightPanelPercent":33.8}
+%---
+%[output:158291a7]
+%   data: {"dataType":"text","outputData":{"text":"library_setup: library already on the path (C:\\github\\pwr-control\\library)\n","truncated":false}}
+%---
+%[output:1243faa5]
+%   data: {"dataType":"text","outputData":{"text":"afe_inv_psm_n init: functions of .\/private, called as prv.<name>: check_block_struct, check_model_param_refs, check_model_wiring, fht_gains, grid_emulator_param, grid_fault_param, library_setup, loop_design_check, observer_gains, psm_machine_param, timing_param\n","truncated":false}}
+%---
+%[output:36073821]
+%   data: {"dataType":"text","outputData":{"text":"Timing: AFE fPWM = 4000 Hz, double update = 1, ts = 125.0 us, dead time = 3.0 us | INV fPWM = 4000 Hz, double update = 1, ts = 125.0 us, dead time = 3.0 us\n        tc = 0.6250 us, logging window 1.250 s (Nc = 2000000, Ns_afe = 10000, Ns_inv = 10000)\n","truncated":false}}
+%---
+%[output:818fe05d]
+%   data: {"dataType":"text","outputData":{"text":"Transformer Dyn11_690V_690V_1000kVA: Ld1 = 113.7 uH, Rd1 = 11.9 mOhm, Ld2 = 37.9 uH, Rd2 = 11.9 mOhm, Lm1 = 144.8 mH (i1m = 8.8 A), Rfe1 = 265 Ohm, n1\/n2 = 24\/14\nGrid emulator: grid_690V_1000kVA_Dyn11, 50 Hz, ugrid_bez = 563.4 V, igrid_bez = 381.8 A, L_eq = 76 uH (ucc 5 %, the transformer leakage is in the model)\nFault test: two_phase_D, enable_frt_1 = 0 (amplitudes [0.250 0.875 0.875], phase shift -0.380 rad), enable_frt_2 = 0 (positive sequence 0.00+0.40j, negative sequence -0.40-0.40j during the fault), from 0.750 s to 1.665 s\n---------------------------\n","truncated":false}}
+%---
+%[output:400786c3]
+%   data: {"dataType":"text","outputData":{"text":"AFE modules: L1 500 uH, Cf 200 uF, Cdc 3.6 mF, ubez 563.4 V, ibez 328.7 A, udc_nom 1070 V | k_time 1.0002 \/ 1.0015, u_cm 0 \/ -1\n","truncated":false}}
+%---
+%[output:14e8855f]
+%   data: {"dataType":"text","outputData":{"text":"PSM: WindGen, 6 systems, 1600 kW, 17.8 rpm, 104 poles | per system: ubez = 365.8 V, ibez = 486.0 A, tau_bez = 143061 Nm, psi_m = 3.774 Vs, f = 15.43 Hz\n     per system: Rs = 30.10 mOhm, Ld = 6.24 mH, Lq = 7.56 mH | pu: Rs = 0.0400, Ld = 0.8036, Lq = 0.9736, Ls = 0.8886\n","truncated":false}}
+%---
+%[output:05f73f26]
+%   data: {"dataType":"text","outputData":{"text":"Inverter modules: L 230 uH, Cdc 3.6 mF, ubez 365.8 V, ibez 486.0 A | pu: rs 0.0400, ld 0.8049, lq 0.9749, filter 0.0298 | kp_i 1.00, ki_i 150.0 | k_time 1.0005 \/ 1.0010\n","truncated":false}}
+%---
+%[output:7070ccfc]
+%   data: {"dataType":"text","outputData":{"text":"afe_inv_psm_n init: the structs of the four blocks have the fields of the library examples, timing consistent\n","truncated":false}}
+%---
+%[output:36024d03]
+%   data: {"dataType":"text","outputData":{"text":"1. Inverter current loop: kp_i = 1, ki_i = 150 1\/s, ts = 125.0 us, filter 231 uH = 0.0298 pu\n   mode                           l\/pu    fc\/Hz   PM\/deg    GM\/dB    |z|max   kp limit\n   sum (machine), q axis        1.0047     22.5     43.7     38.2    0.9937       > 20\n   sum (machine), d axis        0.8347     25.5     47.1     36.6    0.9924       > 20\n   difference (circulating)     0.0298    527.6     52.0      7.6    0.9808       2.45\n   The difference mode sees only the filter of one module: it sets the limit of kp_i (the gains of pmsm_inverter_param_example, 250 Hz on the machine, are unstable here).\n   machine current with the dq cross-coupling (w*L at 1.00 pu speed, not in the feed-forward of the error): slowest pole -33.5 +77.2j rad\/s (time constant 30 ms); step of the q current: 2 % settling 89 ms, overshoot 27 %, peak |id| 0.29 pu (the torque reference has a slew limit, so steps do not occur)\n\n2. AFE current loop: kp_i = 0.75, ki_i = 35 1\/s, L1 = 500 uH, Cf = 200 uF, Rcf = 50 mOhm, transformer leakage 76.6 uH at the secondary\n   mode                            Lg\/uH  fres\/Hz    fc\/Hz   PM\/deg    GM\/dB         LCL mode  kp limit\n   two modules (sum)               154.1     1037    333.1     68.2      7.1    1122 Hz   6.9 %      1.72\n   one module alone                 77.6     1373    386.4     63.8      6.7    1418 Hz   4.7 %      1.63\n   difference of the two AFEs        1.0    11265    451.4     58.8      9.0    4722 Hz  84.4 %      2.13\n   A loop on the converter current with 1.5 periods of delay damps the LCL resonance only below fs\/6 = 1333 Hz: the two-module resonance is above it, its damping comes from Rcf and R1.\n\n3. DC-link voltage loop: C = 3.6 + 3.6 mF, 1 pu = 277.8 kW, plant 34.0 1\/s, kp_udc = 2, ki_udc = 35 1\/s: crossover 11.2 Hz, phase margin 74.8 deg\n\n4. Zero-sequence current loop: loop inductance 1464 uH, u_cm of the AFEs = [0 -1]\n   module 2, zero-vector time 0.1: plant 111 1\/s, crossover 10.2 Hz, phase margin 60.0 deg\n   module 2, zero-vector time 0.2: plant 222 1\/s, crossover 18.6 Hz, phase margin 71.6 deg\n   module 2, zero-vector time 0.4: plant 445 1\/s, crossover 35.9 Hz, phase margin 78.5 deg\n\n5. Operating point at 17.8 rpm: torque 125 kNm per module (0.874 pu), 233 kW per module | AFE 273 A peak (0.83 pu), modulation 0.924 | inverter id -0.122, iq -0.856 pu, |u| 445 V peak of 618 V (udc\/sqrt(3))\n","truncated":false}}
+%---
+%[output:6b83bb23]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: Using find_system without the 'Variants' argument skips inactive Variant Subsystem blocks in the search. This behavior will change in a future release to look at all choices of the Variant Subsystem. To find blocks that are active in simulation or code generation, compile the model and use the built-in variant filters with the 'MatchFilter' option. To find all blocks use filter '@Simulink.match.allVariants' with the 'MatchFilter' option."}}
+%---
+%[output:3ca92eda]
+%   data: {"dataType":"text","outputData":{"text":"afe_inv_psm_n init: all 60 param.* references of the active blocks resolve\n","truncated":false}}
+%---
+%[output:860d587c]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: Using find_system without the 'Variants' argument skips inactive Variant Subsystem blocks in the search. This behavior will change in a future release to look at all choices of the Variant Subsystem. To find blocks that are active in simulation or code generation, compile the model and use the built-in variant filters with the 'MatchFilter' option. To find all blocks use filter '@Simulink.match.allVariants' with the 'MatchFilter' option."}}
+%---
+%[output:3535db85]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: Using find_system without the 'Variants' argument skips inactive Variant Subsystem blocks in the search. This behavior will change in a future release to look at all choices of the Variant Subsystem. To find blocks that are active in simulation or code generation, compile the model and use the built-in variant filters with the 'MatchFilter' option. To find all blocks use filter '@Simulink.match.allVariants' with the 'MatchFilter' option."}}
+%---
+%[output:80009551]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: afe_inv_psm_n init: 6 point(s) to fix in the model before running it (README, Model check):\n  afe_dqctrl_mod1\/grid_following_dqctrl_mod1: t_master comes from the tag time_afe_module_1, use time_master (the block makes its own local clock with p.ctrl.k_time)\n  afe_dqctrl_mod2\/grid_following_dqctrl_mod2: t_master comes from the tag time_afe_module_2, use time_master (the block makes its own local clock with p.ctrl.k_time)\n  inv_dqctrl_psm_mod1\/pmsm_inverter_dqctrl_mod1: t_master comes from the tag time_inv_module_1, use time_master (the block makes its own local clock with p.ctrl.k_time)\n  inv_dqctrl_psm_mod2\/pmsm_inverter_dqctrl_mod2: t_master comes from the tag time_inv_module_2, use time_master (the block makes its own local clock with p.ctrl.k_time)\n  outputs m and ctrl_log not connected in afe_dqctrl_mod1\/grid_following_dqctrl_mod1, afe_dqctrl_mod2\/grid_following_dqctrl_mod2, inv_dqctrl_psm_mod1\/pmsm_inverter_dqctrl_mod1, inv_dqctrl_psm_mod2\/pmsm_inverter_dqctrl_mod2: nothing of these blocks is logged (indices: pmsm_inverter_log_index.m of the library, Help of the blocks)\n  38 From blocks with 25 tags have no active Goto (the Gotos are in the commented modules afe_abc_inv_psm_mod1\/2): all_voltages_about_dclink (scopes\/module_1); ic_dclink_mod1 (afe_measurement_sim, scopes); ic_dclink_mod2 (scopes); ig_abc_pu_mod1 (afe_measurement_sim, scopes\/module_1); inverter_voltage_ee_phase_u_mod1 (inverter_measurement_sim); inverter_voltage_ee_phase_v_mod1 (inverter_measurement_sim); inverter_voltage_ee_phase_w_mod1 (inverter_measurement_sim); is_abc_pu_mod1 (afe_measurement_sim, scopes\/module_1); is_abc_pu_mod2 (scopes); is_uvw_pu_mod1 (inverter_measurement_sim\/module_1, scopes); is_uvw_pu_mod2 (inverter_measurement_sim\/module_1, scopes); iz_afe_pu_mod1 (scopes\/module_1); iz_afe_pu_mod2 (scopes); local_time_corr_afe1 (global timing); local_time_corr_afe2 (global timing); local_time_corr_inv1 (global timing); local_time_corr_inv2 (global timing); udc_mod1 (afe_measurement_sim, scopes); udc_mod2 (scopes); ug_abc_pu_mod1 (afe_measurement_sim, scopes\/module_1); us_uvw_pu_mod1 (inverter_measurement_sim\/module_1, scopes); us_uvw_pu_mod2 (inverter_measurement_sim\/module_1, scopes); vdc_pu_afe_mod1 (scopes\/module_1); vs_abc_pu_mod1 (scopes\/module_1); vs_abc_pu_mod2 (scopes)"}}
 %---
