@@ -14,8 +14,9 @@ function glb_time = timing_param(t)
 %     t.tc_decimation            decimation of the logging at tc
 %     t.delay_pwm                [s] PWM delay of the modulator model B (0 here)
 %
-%   Fields read by afe_inv_psm_n.slx: fPWM_AFE, TRGO_AFE_double_update, dead_time_AFE, ts_afe, fPWM_INV,
-%   TRGO_INV_double_update, dead_time_INV, ts_inv, tc, decimation_tc, Nc, Ns_afe, Ns_inv.
+%   Fields read by afe_inv_psm_n.slx (logging, Unit Delays of global timing, Simscape local solver): tc,
+%   decimation_tc, Nc, ts_afe, Ns_afe. The PWM and the control of the four library blocks read their own
+%   p.pwm and p.ctrl (param.afe_follower, param.inv_mod), whose periods init_model.m checks against these.
 %   The legacy init had seven clock domains (afe, inv, single_phase_inv, dab, psfbc, isop_rail, cllc); the
 %   model uses only the AFE and the INV domains. Same formulas as timing_setup: ts = tPWM/2 with double
 %   update, tc = ts_afe/tc_factor, Nc = ceil(t_measure/tc/decimation), Ns = ceil(t_measure/ts).

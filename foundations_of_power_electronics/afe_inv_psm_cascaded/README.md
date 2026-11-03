@@ -1,290 +1,272 @@
 # afe_inv_psm_cascaded — two AFE + inverter modules in parallel on one PMSM wind generator
 
 Two identical back-to-back modules of 250 kW are connected in parallel on both sides ("hard parallel"):
-on the grid side at the secondary of one 1 MVA Dyn11 transformer, on the machine side at the terminals of
-one permanent magnet wind generator (two of the six 267 kW systems of the 1.6 MW, 17.8 rpm, 104-pole
-WindGen generator, driven at fixed speed). Each module has an LCL filter on the grid side, a two-level AFE,
-a 7.2 mF DC link with a brake chopper, a two-level inverter and a 230 µH output inductor. The bridges are
-ideal switches, 4 kHz PWM with double update (control at 8 kHz), 3 µs dead time. Each converter has its own
-local clock with an alignment loop to the master time.
+the two AFEs at the secondary of one 1 MVA Dyn11 transformer, the two inverters at the terminals of one
+permanent magnet wind generator (two of the six 267 kW systems of the 1.6 MW, 17.8 rpm, 104-pole WindGen
+generator, driven at fixed speed). The folder name says "cascaded", but the two modules are in parallel.
+The model file is `afe_inv_psm_n.slx`.
 
-The folder name says "cascaded", but the two modules are in parallel. The model file is
-`afe_inv_psm_n.slx`.
+Since commit dfca8c0 ("building cascade architecture") the modules are made of four blocks of
+pwr-control/library: two **`grid_following_dqctrl_mod1`** (AFE, folder `masked_models/grid_following`)
+and two **`pmsm_inverter_dqctrl_mod1`** (inverter, folder `masked_models/pmsm_inverter`). Each block is a
+Simscape power stage (`afe_ssc.afe_two_level_lcl`: two-level bridge with ideal switches, DC-link
+capacitor, LCL filter) plus the whole control in one MATLAB Function, and it takes one struct as its mask
+parameter `p` (`p.hw`, `p.pwm`, `p.ctrl`). The old modules `afe_abc_inv_psm_mod1/2` are still in the
+model, commented out.
 
 | File | Content |
 |---|---|
-| `init_model.m` | initialization: every number in the struct `param`, design figures, then it opens the model, sets the mechanical setting, warns about the current controller of module 2 (open point 1) and checks the `param.*` references. Run it **from this folder** (the functions of `private/` are visible only to the files of this folder). |
-| `private/` | the parameter functions of this model (table below) |
-| `afe_inv_psm_n.slx` | the model (grid, two modules, machine, control, logging) |
-| `non_virtual_blocks_counting.m` | counts the non-virtual blocks of the model (`find_system` with `LookUnderMasks` `all`, `FollowLinks` `on`, `Virtual` `off`) and lists the subsystems with most blocks |
-| `init_model_legacy.m` | the old flat init, kept until the merge; it no longer runs with the library (see below) |
+| `init_model.m` | the initialization, written as a **live script** (plain-text live script: a `.m` file that MATLAB opens in the Live Editor). It fills `param` (the four block structs and the rest of the model), checks the structs against the library examples, prints the design figures of the loops, opens the model and checks it. |
+| `afe_inv_psm_cascaded_private.m` | handles to the functions of `private/` (`prv.timing_param`, `prv.loop_design_check`, ...): the Live Editor runs a live script from a copy outside this folder and does not see `private/` |
+| `private/` | the functions of this model (table below) |
+| `afe_inv_psm_n.slx` | the model (not changed by this revision) |
+| `non_virtual_blocks_counting.m` | counts the non-virtual blocks of the model |
+| `init_model_legacy.m` | the old flat init of the old architecture (it does not run with the `dev` library), kept for reference |
 
 ## The model
 
-**Grid** (`grid`).
-- `grid_emulator/three_phase_voltage_source_with_frt_emulator`: library emulator (ideal voltage sources,
-  690 V, 50 Hz) with its fault generator (open point 6).
-- `grid_emulator/3ph_Dyg`: Dyn11 transformer, 1 MVA, 690/690 V, made of three single-phase transformer
-  blocks, star point of the secondary grounded. Turns 24/14 (`n1 = floor(n2·√3)`), so the secondary is at
-  697 V (+1.0 %). Leakage from ucc 5 %: 75.8 µH, that is 76.6 µH and 16.0 mΩ referred to the secondary.
-  Magnetizing inductance 145 mH (8.8 A), iron losses 1.8 kW.
-- `power meter iec`, `threephase_vi_measures`.
-
-**Modules** (`afe_abc_inv_psm_mod1`, `afe_abc_inv_psm_mod2`, the same power stage).
-- `LCL_filter`: three-phase inductor `LFu` 500 µH (zero sequence `LFu_cm` 500 µH), then three capacitors
-  `CFu` 200 µF with `RCFu` 50 mΩ in star, star point floating. The capacitors of both modules are on the
-  same node, the transformer secondary: the grid-side inductor of the LCL is the transformer leakage, and
-  the two modules share it.
-- `afe`: two-level bridge `three_phase_inverter_ideal_switch_based_model` (data set
-  `silicon_high_power_ideal_switch`: 1.5 mΩ, diode 2 V + 0.15 mΩ, snubber 2200 Ω + 10 nF). The IGBT and
-  MOSFET bridges with thermal model are commented out (the legacy init did not switch them either). DC link
-  `dclink1` 7.2 mF. `sv_pwm`: `Three phase two level PWM generator with global TRGO` (the space vector
-  modulation is in the control).
-- `brake`: chopper with `Rbrake` 4 Ω, on at 1.175·`udc_nom` = 1257 V, off at 1.15·`udc_nom` = 1230 V
-  (literals in a MATLAB Function), 395 kW. It is enabled until `param.sim.time_aux_power_supply_fault`
-  (1e3 s: always).
-- `inverter/inverter`: the same bridge types (ideal switch active) and the same PWM generator.
-- `L_filter`: three-phase inductor `LFi` 230 µH (`LFi_cm` 230 µH).
-- `AFE_control/afe_control` and `INV_control/inverter_control`: the controls, triggered at both peaks of
-  the carrier (below).
-
-**Machine** (`pmsm/synchronous_motor`): library block `permanent_magnet_synchronous_machine` with the data
-of one WindGen system (Rs 30.1 mΩ, Ld 6.24 mH, Lq 7.56 mH, magnet flux 3.774 Vs, 104 poles); the block
-divides La, Lb and Rs by `param.psm.number_of_modules` = 2 and multiplies Jm and the friction by it, so it is
-two systems in parallel. `fixed_speed_setting`: ideal speed source, 17.8 rpm (energy production, default).
-`motor_load_setting` (speed-control variant) is commented out.
-
-**Clocks** (`global timing`): `time_afe3` is the master clock (gain 1). Each converter has a local clock
-`time = k·t` corrected by its alignment loop (`phase_compensation_1`): AFE gains 1.0002 / 1.0015, inverter
-gains 1.0005 / 1.001. The corrections are used here (in `inv_psm` they were not).
-
-**AFE control** (each module, 125 µs, pu of the AFE data set):
-- acquisitions of the converter current, grid current and grid voltage: quantized and one sample late;
-- PLL: four PLLs are in the model, one feeds the control: module 1 the C-Caller FHT-PLL (`dq_pll_mode4`),
-  module 2 the Simulink FHT-PLL (`dq_pll_mode3_modn`);
-- DC-link voltage PI → active current reference; PI of the grid current sequences; FRT (VDE 4110) →
-  reactive current references;
-- proportional-resonant controller of the converter current, one per phase (kp 0.6, ki 35, resonator at
-  50 Hz, delta 0.015), output one sample late, no grid voltage feed-forward;
-- zero-sequence current PI (kp 0.5, ki 18): only module 2 sends it to the modulator (`u_cm_comp_mod2` = −1,
-  `u_cm_comp_mod1` = 0);
-- space vector modulation: C-Caller `sv_pwm_cm` (`ctrl/space_vector`, with a common-mode input);
-- moving averages of the sequences: C-Caller in module 1, Simulink in module 2.
-
-**Inverter control** (each module, 125 µs, pu of one machine system):
-- torque curve → q current reference (`torque_overload_factor` 1); MTPA block → d current reference (the
-  same block as `inv_psm`, it sits on its limit −0.35 pu, open point 7);
-- dq current PI with vector clip (kp 0.25, ki 35): module 1 the C-Caller `dqvector_pi`; module 2 see
-  open point 1;
-- angle and speed: EKF in both modules, encoder selected (`use_psm_encoder` = 1). This model has the newer
-  `encoder-sensorless-switch` (the swapped speed inputs of `inv_psm` are not here);
-- space vector modulation: C-Caller `sv_pwm` (`space_vector`), output one sample late.
-
-Logging: `afe_measurement_sim`, `inverter_measurement_sim` (To Workspace), `scopes`.
+- **Grid** (`grid`): library emulator `three_phase_voltage_source_with_frt_emulator` (ideal sources, 690 V,
+  50 Hz, with its fault generator) and a Dyn11 transformer of three single-phase blocks (1 MVA, turns
+  24/14, so 697 V at the secondary; leakage 76.6 µH and 15.9 mΩ referred to the secondary, magnetizing
+  inductance 145 mH, iron losses 1.8 kW), star point of the secondary grounded.
+- **AFE** (`afe_dqctrl_mod1`, `afe_dqctrl_mod2`): `grid_following_dqctrl_mod1`. LCL filter 500 µH,
+  200 µF + 50 mΩ in a floating star, grid-side inductor of the block only a 1 µH connection (the
+  transformer leakage is the grid-side inductor), DC-link capacitor 3.6 mF. Both blocks are on the same
+  node (transformer secondary). Control: local clock, carrier and TRGO, first harmonic tracker and PLL,
+  DC-link voltage PI → active current reference, dq vector PI on the converter current, zero-sequence
+  current PI, SVPWM with a common-mode input. The block has no enable input, no pre-charge, no FRT control
+  and no brake chopper.
+- **Inverter** (`inv_dqctrl_psm_mod1`, `inv_dqctrl_psm_mod2`): `pmsm_inverter_dqctrl_mod1`. The same power
+  stage with an L filter of 230 µH (the capacitor branch is switched off by `Rcf` = 1e5 Ω) and a 3.6 mF
+  DC-link capacitor (with the AFE block: 7.2 mF per module, as the old modules). Field-oriented control:
+  encoder / back-EMF observer / EKF, torque curve, MTPA, dq current PI, SVPWM with dead-time compensation.
+  Inputs `t_master`, `ref` = [enable; reference], `enc` (electrical angle).
+- **Machine** (`pmsm`): library block `permanent_magnet_synchronous_machine` with the data of one WindGen
+  system (Rs 30.1 mΩ, Ld 6.24 mH, Lq 7.56 mH, magnet flux 3.774 Vs, 104 poles), scaled by
+  `param.psm.number_of_modules` = 2 (two systems in parallel). `fixed_speed_setting`: ideal speed source,
+  17.8 rpm (step at 25 ms, first-order lag 0.1 s). `motor_load_setting` is commented out.
+- **Clocks** (`global timing`): `time_afe3` is the master clock (Goto `time_master`). The four local clocks
+  `time_afe1/2`, `time_inv1/2` still read the corrections `local_time_corr_*` of the old modules. The new
+  blocks make their own local clock, `t_loc = t_master·p.ctrl.k_time·(1 + corr)`, and align it to
+  `t_master` with their own PI.
+- **Logging** (`afe_measurement_sim`, `inverter_measurement_sim`, `scopes`): still the signals of the old
+  modules (see fix 5).
 
 ## How to run
 
-1. Add the `library` repository to the MATLAB path with subfolders (`init_model.m` does it for
-   `C:\github\library`). The library gives the Simulink/Simscape blocks, the C-Caller sources and the
-   device data sets other than the embedded ones, no parameter.
-2. From this folder run `init_model.m`. It fills `param`, prints the local functions of `private/`, the
-   bases and the design figures, opens `afe_inv_psm_n.slx`, imports the 16 C-Caller bus types, closes the
-   scopes, sets the mechanical setting (`fixed_speed_setting` or `motor_load_setting`, by commenting
-   blocks in and out as the legacy init did), warns when module 2 has no current controller (open point 1)
-   and checks that every `param.*` name read by the model exists (`check_model_param_refs`).
-3. Run the simulation (`param.sim.simlength` = 1.25 s, `ode23tb`, `MaxStep` and Simscape local solver step
+1. `prv.library_setup()` (first section of the init) puts pwr-control/library on the path: the folder
+   named by the environment variable `PWR_CONTROL_LIBRARY`, or `library` next to this repository; it clones
+   the library there when it is missing.
+2. Open `init_model.m` in MATLAB (R2025a or later; plain-text live scripts are the default format for new
+   live scripts in R2026b). It opens in the Live Editor, with the output on the right. Run the whole script
+   (Run). A section run on its own needs `prv` and `param` in the workspace. To have an `.mlx`, use Save As;
+   the `.m` stays readable in git diffs.
+3. The first time, make the five fixes of the next section in the model, save it and run the init again:
+   the last section must print `connections of the four library blocks as expected`.
+4. Run the simulation (`param.sim.simlength` = 1.25 s, `ode23tb`, Simscape local solver step
    `param.glb_time.tc` = 0.625 µs = ts/200).
 
-## Parameter structure
+## Model check: five fixes to make in the slx
+
+This revision does not change the model. The last section of the init checks it
+(`prv.check_model_param_refs`: every `param.*` read by an active block exists; `prv.check_model_wiring`:
+the connections of the four library blocks and the From blocks without Goto) and prints what is open. With
+the model of commit dfca8c0 it prints these points:
+
+1. **Module 2 reads the struct of module 1.** The mask parameter `p` of
+   `afe_dqctrl_mod2/grid_following_dqctrl_mod2` is `param.afe_follower(1)` and the one of
+   `inv_dqctrl_psm_mod2/pmsm_inverter_dqctrl_mod2` is `param.inv_mod(1)`: set them to
+   `param.afe_follower(2)` and `param.inv_mod(2)`. With index 1 both AFEs have `u_cm` = 0, so nothing
+   controls the zero-sequence current that can circulate through the two modules, and the two modules have
+   the same clock.
+2. **`t_master` must be the master time.** The four blocks read the local times `time_afe_module_1/2` and
+   `time_inv_module_1/2`. Each block makes its own local clock from `t_master` and aligns it to `t_master`,
+   so with a local time at the input the clock ratio is applied twice and the alignment pulls the block to
+   the wrong time. Set the GotoTag of `afe_dqctrl_mod1/From`, `afe_dqctrl_mod2/From`,
+   `inv_dqctrl_psm_mod1/From8` and `inv_dqctrl_psm_mod2/From8` to `time_master`. In `global timing`, the
+   local clocks `time_afe1/2` and `time_inv1/2` with their Unit Delays, their Gotos, the 8 From
+   `local_time_corr_*` (no Goto any more) and the scope `pwm_alignments` are then not needed: delete them
+   (the clock correction of each block is `ctrl_log(4)`). The init sets the gains of the old local clocks
+   (`param.afe.behav.time_gain_module_1/2`, `param.inv.behav.time_gain_module_1/2`) to 1.
+3. **Inverter input `ref`.** Both inverter blocks get a Constant `0`. The port takes [enable; reference]
+   (2×1), and enable 0 keeps the gates off. Set the Constant value to `param.inv.ref` (= [1; 1]: enable,
+   scale of the torque curve `torque_overload_factor`).
+4. **Inverter input `enc`.** It comes from a Bus Creator (`theta_elec_psm`, `omega_elec_psm`). The block
+   reads one angle, and a bus does not go into its MATLAB Function. Connect `From13` (`theta_elec_psm`)
+   directly to `enc` and delete the Bus Creator and `From4`.
+5. **Logging and scopes.** 38 From blocks with 25 tags have no active Goto (their Gotos are in the commented
+   old modules): 8 in `global timing` (fix 2), 5 in `afe_measurement_sim`, 7 in
+   `inverter_measurement_sim`, 18 in `scopes`. A From without its Goto stops the model update. The outputs
+   `m` and `ctrl_log` of the four blocks are not connected. Take the signals from these outputs (for
+   example one Goto per output and Selectors), or comment the old logging out for now:
+
+   | Old tag | New signal |
+   |---|---|
+   | `is_abc_pu_mod1/2` (AFE converter current) | `m(1:3)` of the AFE block (pu of `ibez`) |
+   | `ig_abc_pu_mod1` (grid current) | `m(7:9)` of the AFE block |
+   | `ug_abc_pu_mod1` (grid voltage) | `m(10:12)` of the AFE block (pu of `ubez`); `m(4:6)` is the filter capacitor voltage |
+   | `udc_mod1/2`, `vdc_pu_afe_mod1` | `m(13)` of the AFE or inverter block (pu of `udc_nom` = 1070 V) |
+   | `ic_dclink_mod1/2` | `m(14)` (DC-link capacitor current of that block, pu of `ibez`) |
+   | `iz_afe_pu_mod1/2` (zero-sequence current) | `ctrl_log(36)` of the AFE block |
+   | `is_uvw_pu_mod1/2` (machine current) | `m(7:9)` of the inverter block (pu of the machine `ibez`) |
+   | `us_uvw_pu_mod1/2` (machine voltage) | `m(10:12)` of the inverter block |
+   | angle, speed, torque of the inverter control | `ctrl_log` of the inverter block, indices in `pmsm_inverter_log_index.m` of the library |
+
+   The leg voltages of the old bridges (`inverter_voltage_ee_phase_*`, `all_voltages_about_dclink`) are not
+   outputs of the new blocks.
+
+With the five fixes applied to a copy of the model data, the init prints `all 58 param.* references of
+the active blocks resolve` and `connections of the four library blocks as expected` (Octave, see
+"Checks done").
+
+## Parameters
+
+Everything is in the struct `param`. The four blocks read their own element of a struct array:
 
 | Group | Content |
 |---|---|
-| `param.sim` | `simlength` 1.25 s, `tc` 0.625 µs, `use_thermal_model` (it only sets the Simscape nonlinear iterations, 3 or 5), `nonlinear_iterations`, `load_step_time` (speed control only), `time_aux_power_supply_fault`, `check_param_refs` |
-| `param.time`, `param.glb_time` | `fpwm_afe`, `fpwm_inv` 4 kHz, `trgo_*` 1 (double update), `dead_time_*` 3 µs, `t_measure`, `tc_factor` 200; `glb_time = timing_param(param.time)` gives the names the blocks read: `fPWM_AFE`, `fPWM_INV`, `TRGO_AFE_double_update`, `TRGO_INV_double_update`, `ts_afe`, `ts_inv`, `dead_time_AFE`, `dead_time_INV`, `tc`, `decimation_tc`, `Nc`, `Ns_afe`, `Ns_inv` |
-| `param.grid` | `application_voltage` 690 V, `f_nom`, `pwr_nom` 1 MVA, `ucc` 5 %, `eta`, `p_iron`, `n1`/`n2` 24/14, core data; `fault_in` (inputs of the fault test); `frt = grid_fault_param(fault_in)` (names read by the emulator: `Amplitude_U/V/W`, `Phase_shift`, `enable_frt_1/2`, `deepPOSxi` ... `deepNEGeta`, `start_time_LVRT`, `end_time_LVRT`, `t_ramp`); `emu = grid_emulator_param(grid, frt)`: `fgrid_nom`, `us_primary_nom`, voltage references, `ugrid_bez`, `igrid_bez`, `omega_grid_nom`, `sof_50Hz.ss_c`, `trafo.*` (the three transformer blocks) |
-| `param.afe.hw` | `afe_hw_param(690, 250e3, fpwm)`: data set `afe690V` (`udc_nom` 1070 V, `ubez` 563.4 V, `ibez` 328.7 A = 250 kW/0.9), `LFu`/`LFu_cm` 500 µH, `RLFu`, `CFu` 200 µF, `RCFu` 50 mΩ, `CFi` 7.2 mF, `Rbrake` 4 Ω, `Rudc_measure` 1 MΩ |
-| `param.afe.behav`, `param.inv.behav` | clock gains `time_gain_module_1/2`, PWM phase shifts `pwm_phase_shift_mod1/2`, `en_parallel_mode` and `u_cm_comp_mod1/2` |
-| `param.afe.variant`, `param.afe.impl` | which PLL feeds the control in each module (`dq_pll_mode1..4`, `dq_pll_mode1_modn..4_modn`, exactly one per module), C-Caller or Simulink moving averages |
-| `param.afe.ctrl` | `afe_ctrl_param(ts, omega_base, gains)`: udc PI, proportional-resonant controller `res_pi.*` (`Aresd`, `Bresd`, `Cresd`, `kp_rpi`, `ki_rpi`), sequence PIs, zero-sequence PI, PLL gains, limits of the current references, first harmonic tracker `fht_grid.*`, observers `di_obs.*`, `vr_obs.*`, rms windows |
-| `param.afe.frt`, `param.afe.ref` | `k_frt_ref` 2, `settle_time` 0.175 s; active current references (their constant blocks are commented out: the udc PI gives the reference), reactive current steps |
-| `param.inv.hw` | `inv_hw_param(690, 250e3, fpwm)`: data set `inv690V_250kW`, `LFi`/`LFi_cm` 230 µH, `RLFi`, `RLFi_cm` |
-| `param.afe.ideal_switch`, `param.inv.ideal_switch`, `param.afe.igbt`, `param.inv.igbt`, `param.dev` | device data: ideal switch (bridges and brake chopper), Mitsubishi CM1200DW-34T embedded in `device_igbt_param` (bridges commented out), names of the data sets |
-| `param.thermal` | `weight`, `no_weight`, `cp_al`, `Rth_*_HA` 15 mK/W, `Tambient` 40 °C (water), `DThs_init`: read by the brake resistor and by the commented-out IGBT bridges |
-| `param.psm.machine`, `param.psm` | `psm_machine_param(machine_in)`: WindGen data, per-system values and bases (`ubez` 365.8 V, `ibez` 486.0 A, `tau_bez` 143.1 kNm); `number_of_modules` 2; `u_psm_scale`, `u_psm_scale_ekf`; `mode.*` (`use_torque_curve`, `use_speed_control`, `use_mtpa`, `use_psm_encoder`, `time_start_motor_control`); `impl.*` (which observer and which current controller is active in each module) |
-| `param.psm.ctrl` | `psm_ctrl_param(...)`: speed PI, current PI `kp_i`/`ki_i`, `iq_lim`, `id_lim`, observer gains, `di_obs.*`, `ekf.*` |
-| `param.load` | torque curve `rpm_base`/`torque_base` (per system), `torque_overload_factor` 1, `rpm_sim` 17.8, `omega_m_sim`, `external_load_inertia` |
-| `param.ctrl` | `CTRPIFF_CLIP_RELEASE`, alignment PI `kp_align`/`ki_align`/`lim_up_align`/`lim_down_align`, `dmavg_filter_enable_time`, `mavarage_filter_frequency_base_order`, filters `filters.afe.*` (161 Hz) and `filters.inv.*` (1 Hz, 10 Hz, 50 Hz second order) |
-| `param.meas` | ADC quantization (`adc_quantization` 1/2^11) and full scales |
-| `param.design` | informative design figures (below) |
+| `param.sim` | `simlength` 1.25 s, `tc` 0.625 µs (FixedStep of the model), `nonlinear_iterations` 3, `check_model`, `design_figures`, `design_plots`, `load_step_time` |
+| `param.time`, `param.glb_time` | 4 kHz with double update (control at 8 kHz), 3 µs dead time, `tc_factor` 200; `glb_time = prv.timing_param(param.time)` (`tc`, `ts_afe`, `ts_inv`, `decimation_tc`, `Nc`, ... read by the logging and the Simscape local solver) |
+| `param.grid` | 690 V, 50 Hz, transformer data; `fault_in` (fault test, OFF), `frt = prv.grid_fault_param(fault_in)`, `emu = prv.grid_emulator_param(grid, frt)` (emulator and transformer blocks) |
+| `param.afe_follower(1:2)` | mask struct `p` of the two AFE blocks, fields of `grid_following_param_example.m` of the library; the modules differ in `ctrl.k_time` (1.0002 / 1.0015) and `ctrl.u_cm` (0 / −1) |
+| `param.afe.hw`, `param.afe.behav` | read outside the blocks: bases of the scopes, gains of the old local clocks (1) |
+| `param.psm.machine_in`, `param.psm.machine`, `param.psm.number_of_modules` | WindGen data, per-system values and bases (`prv.psm_machine_param`), two systems in the machine block |
+| `param.load` | torque curve `rpm_base` / `torque_base` (per system), `torque_overload_factor` 1, `rpm_sim` 17.8, `external_load_inertia` |
+| `param.inv_mod(1:2)` | mask struct `p` of the two inverter blocks, fields of `pmsm_inverter_param_example.m`; the modules differ in `ctrl.k_time` (1.0005 / 1.001) |
+| `param.inv.ref`, `param.inv.behav` | input `ref` of the inverter blocks [enable; scale of the torque curve]; gains of the old local clocks (1) |
+| `param.ctrl.filters.inv.SOF_50Hz` | 50 Hz filter of `scopes/psm` |
+| `param.design` | design figures (`prv.loop_design_check`) |
+
+Main choices (the reasons are also in the text of the live script):
+
+- AFE current PI 0.75 / 35 (library example), DC-link PI `kp_udc` 2 / 35 (old modules; the example 0.85
+  gives 44° of phase margin with 7.2 mF), zero-sequence PI 0.5 / 18 only in the AFE of module 2 with
+  `u_cm` = −1 (as `u_cm_comp_mod2` of the old model; +1 would be positive feedback with the duty
+  convention of the block).
+- Inverter current PI **`kp_i` 1.0, `ki_i` 150**, not the example values (16.3 / 3195): see the design
+  figures and the two-inverter simulation. Angle from the encoder (`angle_src` 0, as the old model), torque
+  curve (`mode` 2) with a slew of 2 pu/s, MTPA, gates on at `t_enable` = 0.25 s.
+- Clock alignment of the four blocks `kp_align` 0.25, **`ki_align` 400** (old model and library examples:
+  18), so that the carriers of the two AFEs and of the two inverters are aligned before the inverters start
+  (design figures, last row).
+- Fault test OFF: the new AFE block has no FRT control. The legacy test (25.4, 75 % dip on two phases,
+  type D, from 0.75 s) is kept in `param.grid.fault_in`; set `enable_frt_2` = 1 to run it.
 
 ### Functions of `private/`
 
 | Function | Role |
 |---|---|
-| `timing_param(t)` | the two clock domains (AFE and inverter) and the names the blocks read (formulas of `timing_setup`) |
-| `grid_emulator_param(g, fault)` | emulator data, voltage references, bases, the Dyn11 transformer (formulas of `three_phase_transformer_setup`) and the 50 Hz second-order filter |
-| `grid_fault_param(f)` | the fault test (replaces `frt_settings` + `grid_fault_generator` + `asymmetric_error`) |
-| `afe_hw_param(V, P, fpwm)` | AFE data set, LCL filter, DC link, brake resistor, bases |
-| `afe_ctrl_param(ts, omega_base, g)` | every AFE control datum (formulas of `ctrl_afe_setup`): resonant controller, first harmonic tracker, observers (closed-form pole placement) |
-| `inv_hw_param(V, P, fpwm)` | inverter data set, output inductor, bases |
+| `library_setup(url)` | pwr-control/library on the path, cloned when missing (copy of the one of `theory_analysis_dab/three_phase_dab`) |
+| `timing_param(t)` | the clock domains and the names the model reads (formulas of `timing_setup`) |
+| `grid_emulator_param(g, fault)` | emulator data, voltage references, bases, the Dyn11 transformer blocks, the 50 Hz filter |
+| `grid_fault_param(f)` | the fault test |
 | `psm_machine_param(m)` | machine data, per-system values and bases (formulas of `pmsm_setup`) |
-| `psm_ctrl_param(...)` | machine control gains, double integrator observer, EKF matrices (formulas of `ctrl_pmsm_setup` and `ekf_pmsm_setup`) |
-| `device_ideal_switch_param`, `device_igbt_param` | device data sets |
-| `check_model_param_refs(model, param)` | lists the `param.*` names read by the model and reports the missing ones |
-
-## Old names and new names
-
-| Old (flat workspace) | New |
-|---|---|
-| `glb_time.*` | `param.glb_time.*` (same names) |
-| `psm.*` | `param.psm.machine.*` |
-| `psm_ctrl.*` | `param.psm.ctrl.*` |
-| `afe_ctrl.*` | `param.afe.ctrl.*` |
-| `hwdata.afe.*`, `hwdata.inv.*` | `param.afe.hw.*`, `param.inv.hw.*` |
-| `igbt.afe.*`, `igbt.inv.*` | `param.afe.igbt.*`, `param.inv.igbt.*` |
-| `ideal_switch.*` | `param.afe.ideal_switch.*` (AFE bridge and brake chopper), `param.inv.ideal_switch.*` (inverter bridge) |
-| `grid_emu.*` | `param.grid.emu.*` |
-| `frt_data.*` | `param.grid.frt.*`; `frt_data.k_frt_ref` and `frt_data.settle_time` → `param.afe.frt.*` |
-| `filters.afe.SOF_50Hz.ss_c` | `param.grid.emu.sof_50Hz.ss_c` |
-| `filters.afe.*` (161 Hz), `filters.inv.*` | `param.ctrl.filters.afe.*`, `param.ctrl.filters.inv.*` |
-| `CTRPIFF_CLIP_RELEASE`, `kp_align`, `ki_align`, `lim_up_align`, `lim_down_align`, `dmavg_filter_enable_time`, `mavarage_filter_frequency_base_order` | `param.ctrl.*` |
-| `simlength`, `nonlinear_iterations`, `load_step_time`, `time_aux_power_supply_fault` | `param.sim.*` |
-| `tc` | `param.glb_time.tc` (blocks), `param.sim.tc` (`FixedStep`) |
-| `adc_quantization` | `param.meas.adc_quantization` |
-| `Tambient`, `DThs_init`, `Rth_switch_HA`, `cp_al`, `weigth` | `param.thermal.*` (`weigth` → `weight`) |
-| `afe_pwm_phase_shift_mod1/2`, `time_gain_afe_module_1/2`, `u_cm_comp_mod1/2` | `param.afe.behav.pwm_phase_shift_mod1/2`, `.time_gain_module_1/2`, `.u_cm_comp_mod1/2` |
-| `inv_pwm_phase_shift_mod1/2`, `time_gain_inv_module_1/2` | `param.inv.behav.pwm_phase_shift_mod1/2`, `.time_gain_module_1/2` |
-| `ixi_ref_mod1/2`, `i_react_pos_ref_1..3`, `time_i_react_pos_ref_1/2` | `param.afe.ref.*` |
-| `use_dq_pll_mode1..4`, `use_dq_pll_mode1_modn..4_modn` | `param.afe.variant.dq_pll_mode1..4`, `.dq_pll_mode1_modn..4_modn` |
-| `use_moving_average_from_ccaller_mod1..3` | `param.afe.impl.*` |
-| `number_of_modules` | `param.psm.number_of_modules` |
-| `omega_m_bez` | `param.psm.machine.omega_m_bez` |
-| `rpm_base`, `torque_base`, `torque_overload_factor`, `rpm_sim`, `omega_m_sim`, `external_load_inertia` | `param.load.*` |
-| `u_psm_scale_ekf` | `param.psm.u_psm_scale_ekf` |
-| `use_torque_curve`, `use_speed_control`, `use_mtpa`, `use_psm_encoder`, `time_start_motor_control` | `param.psm.mode.*` |
-| `use_ekf_bemf_module_N`, `use_observer_from_*_module_N`, `use_current_controller_from_*_module_N` | `param.psm.impl.*` |
-
-## What changed in the model (2 November 2026)
-
-- 1433 block, mask, variant and configuration parameters re-pointed from the flat names to `param.*`
-  (table above): 895 block parameters, 431 values of library masks, 84 variant conditions, 20 mask
-  parameters, 3 configuration entries; 1134 of them in active blocks, 299 in commented-out blocks. The
-  model reads 273 distinct `param.*` names, all defined by the init. Same `ModelUUID` (the model itself is
-  re-pointed, there is no copy).
-- Configuration set: `StopTime = param.sim.simlength`, `FixedStep = param.sim.tc`,
-  `MaxStep = param.glb_time.tc`.
-- Two literals became parameters, in both modules: `Rudc_measure` `1e6` of the AFE DC link →
-  `param.afe.hw.Rudc_measure`, and `double_sampling` `1` of the AFE PWM generator →
-  `param.glb_time.TRGO_AFE_double_update` (the inverter PWM generator already read the TRGO name).
-- Names that the legacy init never defined, all in commented-out blocks: `weigth` (heatsink mass of the
-  IGBT bridges) → `param.thermal.weight`; `tc` (IGBT bridges, scope `inverter_voltage_ee`) →
-  `param.glb_time.tc`; `omega_m_bez` (`speed_reference_generator/Step1`) → `param.psm.machine.omega_m_bez`.
-  The configuration also had `FixedStep = tc` (not used by the variable-step solver): now `param.sim.tc`.
-- `inverter_measurement_sim/module_1/From6` and `To Workspace12` are commented out: they read the tag
-  `ileg_dc_inv_mod1`, which has no Goto in the whole model (a From without its Goto stops the update of the
-  diagram).
-- The legacy init also defined many names that this model does not read (timing and hardware of the
-  single-phase inverter, DAB, PSFB, ISOP rail and CLLC, modules 3 and 4, induction machine, battery,
-  UPQC transformer, ...). The new init keeps only what the model reads.
-
-The legacy init `init_model_legacy.m` does not run with the `dev` library: `grid_fault_generator` is now a
-function with arguments and `lithium_ion_battery_setup` takes the charge capacity.
-
-**Checks done.** The parameter part of the new init was run in Octave without the library on the path and
-compared with the legacy init run with the library functions of `dev` (with the old script version of
-`grid_fault_generator`, and the battery call skipped: the model does not read the battery): the
-305 distinct expressions of the model give the same values (295 identical, 6 within 1e-12, worst relative
-difference 3e-14); four more could not be evaluated in the legacy (`weigth`, `tc` twice, `omega_m_bez`:
-names the legacy never defined, see above). Every `param.*` name of the model resolves. The slx keeps the
-order, compression and dates of its zip entries; all changed XML parts parse. The model was not simulated
-here (no MATLAB).
+| `fht_gains(ts, w, delta, poles)`, `observer_gains(A, z)` | gains of the first harmonic tracker and of the double integrator observer of the AFE (the local functions of `grid_following_param_example.m`) |
+| `check_block_struct(p, p_ref, name)` | compares a block struct with the library example: missing fields (they stop the compilation), extra fields (not read), sizes |
+| `loop_design_check(param, show_plots)` | design figures of the loops (next section), exact discrete time with the timing of the blocks; for the machine current also the two-axis loop with the dq cross-coupling |
+| `check_model_param_refs(model, param)` | the `param.*` names read by the active blocks (commented blocks skipped, struct-array indices checked) and the missing ones |
+| `check_model_wiring(model)` | the connections of the four library blocks and the From blocks without an active Goto (fixes above) |
 
 ## Design figures
 
-From the init (`param.design`) and from the design check (averaged models of the loops, exact discrete
-time with the delays of the model; script and figures are not part of the repository):
+From `prv.loop_design_check` (printed by the init, section "Design figures") and the same check in Python
+(script and figures in the project files, folder `afe_inv_psm_cascaded/new_architecture/`). Small signal,
+exact discrete time: the sample of the previous trigger is used, the output is held for one period.
 
 | Quantity | Value |
 |---|---|
-| AFE bases | `ubez` 563.4 V peak, `ibez` 328.7 A peak, 1 pu power 277.8 kW (250 kW/0.9), `udc_nom` 1070 V; control voltage 1 pu = `udc/√3` = 618 V |
-| machine bases (one system) | `ubez` 365.8 V peak, `ibez` 486.0 A peak, `tau_bez` 143.1 kNm, 15.43 Hz |
-| operating point at 17.8 rpm | torque curve 125 kNm per system → 233 kW per module; grid current 273 A peak per module (0.83 pu), converter voltage 0.92 pu |
-| LCL resonance | 1381 Hz with one module alone on the transformer; 1039 Hz with the two modules (each one sees twice the transformer leakage); 977 Hz with one AFE stopped |
-| AFE current loop | crossover about 275 Hz; loop delay 2.5 samples (1 measurement + 1 output + 0.5 PWM hold): it damps a resonance only below fs/10 = 800 Hz |
-| DC-link voltage loop | crossover 11.1 Hz, phase margin 74° |
-| zero-sequence current loop | crossover 8.6–19 Hz, phase margin 68–77° (it changes with the zero-vector time) |
-| inverter current loops | machine (sum of the two modules): 13–14 Hz, phase margin 32–35°; circulating current between the two inverters (230 µH only): 223 Hz, phase margin 60°, gain margin 11 dB |
-| brake chopper | on at 1257 V, off at 1230 V, 4 Ω → 395 kW (1.7 times the module power) |
-| resonator of the PR controller | pole radius 1.000182 with forward Euler (open point 4) |
+| AFE bases | `ubez` 563.4 V, `ibez` 328.7 A (250 kW/0.9), `udc_nom` 1070 V; 1 pu of the modulator = udc/√3 = 617.8 V |
+| machine bases (one system) | `ubez` 365.8 V, `ibez` 486.0 A, `omega_b` 96.93 rad/s (15.43 Hz), `Lbez` 7.765 mH; pu: rs 0.040, ld 0.804, lq 0.974, output filter 0.0298 (231 µH) |
+| inverter current loop: the two modes | the machine current (sum of the two modules) sees machine + filter, about 1 pu; the current between the two inverters (difference) sees only the two output inductors, 0.0298 pu per module. The difference mode sets the limit `kp_i` < 2.45. With `kp_i` near 1 the dq cross-coupling of the machine (ω·L ≈ 1 pu at rated speed) is as large as the gain, and the feed-forward of the block uses the references, so it does not act on a current error: the machine current is a two-axis loop with a slow oscillating pole (the one-axis margins say little) |
+| inverter current loop, `kp_i` 1.0 / `ki_i` 150 (init) | difference mode: 528 Hz, phase margin 52°, gain margin 7.6 dB. Machine current with the cross-coupling at 1 pu speed: slowest pole −33.5 ± 77.2j rad/s (time constant 30 ms); a step of the q current settles (2 %) in 89 ms, overshoot 27 %. With the torque slew of 2 pu/s the current error stays below 0.01 pu |
+| inverter current loop, first choice 0.8 / 20 | difference mode: 417 Hz, 62°, 9.7 dB. Machine current: slowest pole −9.2 ± 12.6j rad/s (109 ms), step settling 199 ms |
+| inverter current loop, example gains 16.27 / 3194.8 | machine current fast (5 ms); difference mode **unstable** (pole radius 2.6) |
+| inverter current loop, old model 0.25 / 35 | difference mode 133 Hz, 72°; machine current: slowest pole −5.6 ± 28.4j rad/s (178 ms), step settling 419 ms |
+| LCL resonance | 1037 Hz with the two modules on the transformer (each sees twice the leakage), 1373 Hz with one module alone |
+| AFE current loop, 0.75 / 35 | two modules: 333 Hz, phase margin 68°, gain margin 7.1 dB, LCL mode 1122 Hz damped 6.9 %; one module alone: 386 Hz, 64°, 6.7 dB, 1418 Hz damped 4.7 %; difference of the two AFEs: 451 Hz, 59°, 9.0 dB. `kp_i` limit 1.71 (two modules), 1.63 (one), 2.14 (difference) |
+| DC-link voltage loop (7.2 mF) | `kp_udc` 2 / 35: 11.2 Hz, phase margin 75° (example 0.85: 6.5 Hz, 44°) |
+| zero-sequence current loop | path through both AFEs, both DC links and both inverters, 1460 µH; PI 0.5 / 18 in the AFE of module 2: 10–36 Hz, phase margin 60–79° (it changes with the zero-vector time 0.1–0.4) |
+| operating point at 17.8 rpm | torque curve 125 kNm per system = 0.874 pu, 233 kW per module; AFE current 273 A peak (0.83 pu), modulation 0.92; inverter (MTPA: id −0.12, iq −0.86 pu) about 445 V peak of 618 V available |
+| clock alignment | the block corrects a ratio, `t_loc = t_master·k_time·(1 + corr)`, so the gain of its loop grows with the time (`kp_align`·t). With `ki_align` 18 (old model) the carriers of the two AFEs pass through opposition at 0.11 s and are aligned within 2 µs only from 0.88 s; the two inverter carriers are still 68 µs (99°) apart when the inverters start at 0.25 s, aligned from 0.80 s. With 400 (init): aligned from 0.15 s (AFE) and 0.13 s (inverters). The linearized loop is stable only for t < min(1/kp, 2/(2·kp + ki·ts)): 3.6 s of simulated time with 400, 4.0 s with 18 (open point 5) |
 
-## Open points found during the migration
+## Two-inverter simulation (Octave twin)
 
-The control was not changed; these are the points to look at. Numbers from the init and from the design
-check (`design_check_afe_inv_psm_n.py` and its output in the project files, folder
-`afe_inv_psm_cascaded/`).
+To check the inverter gains with the real control code, the two inverter blocks were simulated in Octave:
+the MATLAB Function of the library (`pmsm_dq_ctrl_pwm.m`, two copies with their own state, called every
+0.625 µs as in Simulink) with the structs `param.inv_mod(1:2)` of the init; ideal floating DC sources of
+1070 V (so no zero sequence), ideal switches with 3 µs dead time, 231 µH per inverter, machine of two
+systems with the per-unit model of the control, fixed 1 pu speed, encoder angle; gates on at 0.25 s,
+torque curve 0.874 pu with a slew of 20 pu/s (to see it settle within 0.4 s; the init has 2 pu/s). In the
+second round the output inductor of module 2 is 5 % larger, which excites the current between the
+inverters. Script, output and figures in the project files, folder
+`afe_inv_psm_cascaded/new_architecture/twin/`.
 
-1. **Inverter of module 2 without a current controller.** `use_current_controller_from_simulink_module_2`
-   = 0 (legacy value) selects the C-Caller `dq_vector_pi_ccaller` in module 2, and that block is commented
-   out: the voltage reference of the inverter of module 2 is zero. The machine EMF then drives a current
-   through the machine and the 230 µH: about 1029 A peak in module 2 (2.12 pu of one system), the machine
-   gives 27 kNm instead of 265 kNm (10 %) and takes 50 kW from the shaft instead of 494 kW; module 2 sends
-   nothing to its DC link. The Simulink controller was probably meant: the C-Caller `dqvector_pi` keeps one
-   global state (`dqpi_ctrl` in `dqvector_pi_simulink.c`), so only one instance can run in a model, and module
-   2 uses the Simulink versions everywhere else (FHT-PLL, moving averages). The init keeps the legacy value
-   and prints a warning. Fix: set the flag to 1.
-2. **AFE current loop: LCL resonance with little damping.** With one module alone the resonance (1381 Hz)
-   would be above 800 Hz too, but with 5.4 % of passive damping the loop keeps 3.5 %. With the two modules
-   the resonance moves to 1039 Hz and the least damped mode of the loop is at 1078 Hz with 0.9 % damping
-   (passive 4.5 %); the `kp_rpi` limit is 0.71 against 0.6 now (gain margin 1.4 dB). The loop gain grows
-   with `udc` (1 pu = `udc/√3`): at the brake chopper level (1257 V) the damping is 0 (limit 0.60). The
-   legacy init raised `kp_rpi` from 0.2 (library) to 0.6 "for LVRT"; at 0.2 the damping is 3.6 %. Options:
-   `kp_rpi` 0.4 (2.4 %); 1.5 samples of delay instead of 2.5 (6.3 %, limit 1.72); `RCFu` 200 mΩ (9.6 %,
-   384 W per module at 50 Hz plus the ripple); active damping (capacitor current or grid current
-   feedback). The circulating current between the two AFEs (500 µH only) is well damped (46 %). One AFE
-   stopped: 2.4 %.
-3. **Inverter current loop: slow, and limited by the parallel connection.** `kp_i` 0.25, `ki_i` 35 give
-   13–14 Hz with 32–35° of phase margin for the machine current (as in `inv_psm`). Here `kp_i` cannot go
-   much higher: the current that circulates between the two inverters sees only the 230 µH, and with the
-   same gains its loop becomes unstable above `kp_i` 0.89. The gains suggested for `inv_psm` (5.3, 500) are
-   unstable here. With `kp_i` 0.4 (`ki_i` 56): machine 17–19 Hz, 38–41°; circulating current 356 Hz, 47°,
-   6.9 dB. A faster machine loop needs a separate control of the sum and of the difference of the two
-   module currents, or more inductance in the difference path.
-4. **Resonator of the PR controller.** Forward Euler (as the library): |z| = 1.000182 > 1 because delta
-   0.015 < ω·ts/2 = 0.0196, so the resonator alone grows (time constant 0.69 s). In closed loop the 50 Hz
-   pair is stable, but the resonator has no anti-windup: when the voltage is clipped (deep fault) its state
-   grows. The exact discretization `expm(Ares·ts)` gives |z| = 0.999411; with forward Euler delta ≥ 0.029
-   would also do. The block and its setup are in the library.
-5. **No grid voltage feed-forward.** The `From v_grid_ff_abc` goes only to a scope, and the Add of
-   `antiwind_up` adds a Constant 0. The controller builds the whole converter voltage: the inner loop
-   alone tracks the 50 Hz current with 29 A peak of error on 275 A (10 %) with the forward-Euler
-   resonator, and 70 A (25 %) with the exact one; the outer loops (udc PI, sequence PIs) remove the slow
-   error. If point 4 is fixed, add the feed-forward at the same time.
-6. **Fault test.** The abc fault (test 25.4, 75 % dip on two phases, type D) is off (`enable_frt_1` = 0);
-   the sequence fault is on (`enable_frt_2` = 1). The emulator subtracts the `deep*` values from the
-   pre-fault sequences, so from 0.75 s the positive sequence is 0.4 pu at +90° (a 90° phase jump) and the
-   negative sequence 0.57 pu: at the transformer secondary the phase voltages are 0.97 / 0.40 / 0.61 pu.
-   Please check that this is the test you want. The type D dip of test 25.4 in sequence form is
-   `deepPOSxi` 0.375, `deepNEGxi` 0.375, `deepPOSeta` = `deepNEGeta` = 0 (0.25 / 0.875 / 0.875 pu at the
-   emulator, as the abc fault). The fault ends at 1.665 s, after the end of the simulation (1.25 s): the
-   recovery is not simulated, and the reactive current steps at 2.0 s and 2.5 s are never reached. With
-   `k_frt_ref` 2 the FRT references ask 1.20 pu of positive-sequence reactive current (limit 1.0) and
-   1.13 pu of negative sequence (limit 0.5). Figure `grid_fault.png`.
-7. **MTPA block.** The same block as `inv_psm` (open point 1 there): gain `1/(Ld_norm − Lq_norm)/2` on the
-   speed, so `id_ref` sits on −0.35 pu at any load (+6 % torque at rated load).
-8. **Rating.** At 17.8 rpm the torque curve asks 233 kW per module; with the extra torque of the MTPA block
-   each module takes about 247 kW from the shaft, for 250 kW converters. The AFE current is 0.83 pu at
-   233 kW. The transformer is 1 MVA for 2 × 250 kW. The turns 24/14 put the secondary at 697 V (+1 %).
-9. **Zero-sequence current (checked, fine).** The PI of module 2 has the right sign (negative feedback
-   through `u_cm_comp_mod2` = −1 and the modulator), one controller for the one circulating path, 8.6–19 Hz
-   and 68–77° of phase margin. It removes the DC and slow circulating current; differences at the switching
-   frequency are limited only by the 1460 µH of the loop (zero-sequence inductors of both LCL filters and
-   both output inductors).
-10. **Name.** The folder is `afe_inv_psm_cascaded`, the modules are in parallel. The model has two modules;
-    the legacy settings of modules 3 and 4 are not in the new init.
-11. **Non-virtual blocks.** About 2100 in the model file by an estimate (library blocks counted as one,
-    choices of the variants included; please check with `non_virtual_blocks_counting.m`). The AFE controls
-    are the largest part (603 in module 1, 457 in module 2; the four PLLs alone 235 in module 1), then the
-    inverter controls (370 and 306; the three back-EMF observers 184 in module 1).
-12. **Not checked.** The PLLs, the FRT detection and timing (only the size of the references above), the
-    sequence PIs, the islanding detector, the speed-control variant, the IGBT and MOSFET bridges with
-    thermal model (commented out).
+| Case | Result |
+|---|---|
+| example gains 16.27 / 3194.8 | the current between the inverters is unstable: above 0.1 pu 1.4 ms after the start, then 207 A rms and 525 A peak, limited only by the voltage limiter; the torque is 24 % too high |
+| first choice 0.8 / 20 | current between the inverters 3–4 A peak; the machine current is slow: 50 to 100 ms after the end of the ramp the torque is still 3–4 % above the reference and moves slowly (time constant about 110 ms) |
+| init 1.0 / 150 | current between the inverters 3–4 A peak; torque within 1 % of the reference from 70 ms after the end of the ramp (0.2 % on average over 0.35–0.40 s), 12 % overshoot at the end of the fast 20 pu/s ramp |
+| init 1.0 / 150 with the torque slew of the init (2 pu/s), run to 0.8 s | the torque is on its reference within 0.001 pu during the whole ramp and after it (0.874 pu from 0.69 s); current error below 0.012 pu; current between the inverters 3 A peak |
+| clock alignment `ki_align` 18 (old; first round, 0.8 / 20) | the inverter carriers are 99° apart at the start: 28 A rms and 78 A peak of switching-frequency current between the inverters, phase current peak +7 % (with `ki_align` 400 or the same clock in both: none) |
+
+## Open points
+
+1. **Start-up of the AFEs.** The AFE block has no enable input and no pre-charge: both AFEs switch from
+   t = 0, and the DC-link reference steps at 1 ms (`udc_t_step`, filtered with 20 ms). The Solver
+   Configuration has "Start simulation from steady state" (`DoDC`) on, which sets the initial capacitor
+   voltages and inductor currents. Please look at the first 20 ms (DC-link voltages, AFE currents). The
+   inverters start at 0.25 s.
+2. **No brake chopper** in the new architecture (the old modules had 4 Ω, on at 1257 V). In normal
+   operation the AFE holds the DC link; in a grid fault the energy of the generator goes into the DC link.
+3. **No FRT control** in the AFE block (no negative-sequence current control, no reactive current on a
+   dip): the fault test is off.
+4. **Machine current loop.** `kp_i` cannot go much above 1, because the current between the two inverters
+   sees only the two output inductors; then the dq cross-coupling of the machine slows the machine current
+   (30 ms with 1.0 / 150). A faster machine loop needs a change of the inverter block: the cross-coupling
+   feed-forward from the measured current instead of the references, or a control of the sum and of the
+   difference of the two module currents (the two blocks exchange their currents), or more inductance in
+   the difference path.
+5. **Clock alignment of the library blocks.** The gain of the alignment loop grows with the simulated time
+   (design figures, last row): it is slow at the start and unstable after about 3.6 s with `ki_align` 400
+   (4 s with 18); then the correction runs into its limit (±5 %) and the carriers drift. The model runs
+   1.25 s. For longer runs the blocks need a small change in the library (for example the error divided by
+   `t_master`, which gives a constant loop gain, or an additive correction `t_loc = k_time·t_master +
+   offset`); the same loop is in `grid_following_dqctrl`, `grid_forming_dqctrl` and `pmsm_inverter_dqctrl`.
+6. **Zero-sequence current.** Checked only in the design figures (one PI, in the AFE of module 2,
+   `u_cm` = −1, 10–36 Hz). It acts only with fix 1 (module 2 reads `param.afe_follower(2)`).
+7. **Rating and speed.** At 17.8 rpm the torque curve asks 0.874 pu (233 kW per module, 250 kW
+   converters). `fixed_speed_setting` reaches 90 % of the speed at 0.25 s and 99 % at 0.5 s; with the slew of
+   2 pu/s the torque follows the curve from about 0.7 s.
+8. **Not checked here:** the AFE side in the time domain (PLL, start-up, DC-link control with the two
+   modules), the speed-control variant (`motor_load_setting`), the back-EMF observer and the EKF in the
+   parallel connection (`angle_src` 1 or 2: each inverter estimates the angle from its own current).
+
+## Changes in this revision
+
+- `init_model.m` rewritten for the four library blocks, as a live script. The structs of the blocks have
+  the fields of the library examples (`grid_following_param_example.m`, `pmsm_inverter_param_example.m`);
+  the init checks it at every run.
+- New: `afe_inv_psm_cascaded_private.m`, `private/library_setup.m`, `fht_gains.m`, `observer_gains.m`,
+  `check_block_struct.m`, `check_model_wiring.m`, `loop_design_check.m`. `check_model_param_refs.m` now
+  skips the commented-out blocks and checks the struct-array indices.
+- Removed (old architecture only, in the git history): `private/afe_ctrl_param.m`, `afe_hw_param.m`,
+  `inv_hw_param.m`, `psm_ctrl_param.m`, `device_ideal_switch_param.m`, `device_igbt_param.m`.
+- Kept: `timing_param.m`, `grid_emulator_param.m`, `grid_fault_param.m`, `psm_machine_param.m`.
+- The model is not changed.
+
+### Checks done
+
+No MATLAB here. The init was run end to end in Octave 8.4 with small stand-ins for `find_system`,
+`get_param` and `open_system` that read a dump of the model file:
+
+- the structs of the four blocks have the fields of the library examples, the timing is consistent;
+- the design figures are the same as in the Python check;
+- the 55 `param.*` names read by the active blocks of the model as it is all resolve, and the wiring check
+  prints the five fixes above (12 lines);
+- with the five fixes applied to the dump: 58 names resolve, `connections of the four library blocks as
+  expected`;
+- the two inverter blocks in the Octave twin above (library control code, not Simscape); the AFE side was
+  not simulated.
+
+The live script format was checked line by line (text lines, headings, section breaks, appendix); please
+tell me if the Live Editor shows something wrong.
