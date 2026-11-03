@@ -25,8 +25,9 @@ function psm = psm_machine_param(m)
 %     load_friction_m                                         permanent_magnet_synchronous_machine (the mask
 %                                                             prompt says "pole pairs" but the value given is
 %                                                             number_poles, as in the legacy model)
-%     ibez, ubez, psi_bez, omega_bez, omega_m_bez, tau_bez,   measurements and control (per unit)
-%     rpm_nom, psi_m_norm, Rs_norm, Ls_norm, Ld_norm, Lq_norm
+%   Fields read by init_model.m for the two inverter blocks (pmsm_inverter_dqctrl, per system):
+%     ubez, ibez (p.hw), omega_bez, Rs_m, Ld_m, Lq_m, Lmu, Xbez, Lbez (p.ctrl.omega_b, rs, ld, lq),
+%     rpm_nom, omega_m_bez, tau_bez (torque curve, design figures)
 
     psm.name = m.name;
     psm.number_of_systems = m.number_of_systems;
