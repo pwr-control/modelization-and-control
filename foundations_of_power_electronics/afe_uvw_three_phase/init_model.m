@@ -538,7 +538,11 @@ uvw.frt.f_lpf_ref     = 161;                        % [Hz] low pass of the refer
 % current control in uvw: resonant PI per phase, zero-sequence PI
 uvw.ictrl.kp        = c.res_pi.kp_rpi;              % resonant PI kp + ki*s/(s^2 + 2*delta*w*s + w^2)
 uvw.ictrl.ki        = c.res_pi.ki_rpi;              % [1/s]
-uvw.ictrl.delta_res = c.res_pi.delta_res;           % damping of the resonator
+uvw.ictrl.delta_res = 0.005;                        % damping of the resonator. The class value 0.015 was tuned
+                                                    % with the forward Euler resonator of the old subsystem (poles
+                                                    % outside the unit circle, gain 10.8 at omega); the library block
+                                                    % uses forward-backward Euler (poles inside) and 0.005 gives
+                                                    % the same gain at omega: same current loop as before
 uvw.ictrl.omega_res = c.omega_base;                 % [rad/s] resonance pulsation
 uvw.ictrl.mag_lim   = 1;                            % [pu] the alpha/beta output vector is scaled down above this length
 uvw.ictrl.mag_scale_max = 10;                       % largest scaling factor
