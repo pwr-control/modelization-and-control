@@ -197,8 +197,8 @@ mu0 = 4*pi*1e-7; mur = 10e3;
 
 % two simple calculation:
 Lm1 = (n1^2 * mu0 * mur * core_area) / core_length;
-% Lm1 = u1_nom/sqrt(3)/i1m/(2*pi*fgrid);
-i1m = us1/sqrt(3)/Lm1/(2*pi*fgrid);
+% Lm1 = sqrt(3)*u1_nom/i1m/(2*pi*fgrid);
+i1m = sqrt(3)*us1/Lm1/(2*pi*fgrid); % line no-load current: the delta primary coil Lm1 sees the line voltage
 
 % reference for the voltage sequence
 up_xi_pu_ref = 1; up_eta_pu_ref = 0; un_xi_pu_ref = 0; un_eta_pu_ref = 0;
