@@ -1,6 +1,6 @@
 clc
 
-mdl = 'afe_uvw_ctrl.slx';
+mdl = 'afe_rst_ctrl.slx';
 load_system(mdl);
 
 % conta anche i modelli referenziati (Model Reference), se ce ne sono
