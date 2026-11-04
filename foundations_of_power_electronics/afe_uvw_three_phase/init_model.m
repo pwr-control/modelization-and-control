@@ -542,7 +542,7 @@ uvw.ictrl.delta_res = 0.005;                        % damping of the resonator. 
                                                     % with the forward Euler resonator of the old subsystem (poles
                                                     % outside the unit circle, gain 10.8 at omega); the library block
                                                     % uses forward-backward Euler (poles inside) and 0.005 gives
-                                                    % the same gain at omega: same current loop as before
+                                                    % about the same gain at omega (11.1): same current loop as before
 uvw.ictrl.omega_res = c.omega_base;                 % [rad/s] resonance pulsation
 uvw.ictrl.mag_lim   = 1;                            % [pu] the alpha/beta output vector is scaled down above this length
 uvw.ictrl.mag_scale_max = 10;                       % largest scaling factor
