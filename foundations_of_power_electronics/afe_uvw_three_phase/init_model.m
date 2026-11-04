@@ -52,7 +52,7 @@ end
 clear overrides
 %[text] ## Simulation
 param.sim.simlength = 1.75;                 % [s] model StopTime
-param.sim.tc = 0.25e-6;                     % [s] fixed step (model FixedStep) and logging base
+param.sim.tc = 1e-6;                     % [s] fixed step (model FixedStep) and logging base
 param.sim.load_step_time = 1.25;            % [s]
 param.sim.transmission_delay = 125e-6*2;    % [s]
 param.sim.sst_num_of_modules = 2;
@@ -249,7 +249,7 @@ param.afe.hw.displayInfo(); %[output:7b3b50a3]
 clear h
 %[text] ### Control (with sequences)
 param.afe.ctrl = ctrl_afe_setup(param.glb_time.ts_afe, param.grid.emu.omega_grid_nom);
-param.afe.ctrl.kp_udc_ctrl = 2;
+param.afe.ctrl.kp_udc_ctrl = 4;
 
 % resonant PI gains for weak grids
 % param.afe.ctrl.res_pi.kp_rpi = 0.5;
