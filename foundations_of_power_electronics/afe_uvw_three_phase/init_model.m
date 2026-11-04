@@ -1,4 +1,4 @@
-%[text] # afe\_inv\_psm: model initialization (param structure by subsystem)
+%[text] # afe\_uvw\_three\_phase (afe\_rst\_ctrl.slx): model initialization (param structure by subsystem)
 % Rev. 01, 2026-09-29. Replaces the flat-workspace init_model.m (kept as init_model_legacy.m).
 %
 % Everything the model needs is in the struct "param", one group per subsystem:
@@ -8,7 +8,7 @@
 %   param.grid      grid emulator inputs;              param.grid.emu     grid_three_phase_emulator object
 %   param.frt       FRT test inputs;                   param.frt.data     frt_settings + grid_fault_generator data
 %   param.afe       active front end: .pwm .hw_in (hardware numbers) .hw (hw_afe_three_phase_setup object)
-%                   .ctrl .pll .impl .ref .behav .igbt .mosfet .ideal_switch
+%                   .ctrl .uvw (parameter struct of the library blocks afe_uvw_ctrl) .ref .behav .igbt .mosfet .ideal_switch
 %   param.inv       machine-side inverter: .pwm .hw_in .hw (hw_inverter_three_phase_setup) .behav .igbt .mosfet .ideal_switch
 %   param.psm       machine and its control: .machine_in (machine numbers) .machine (pmsm_setup object)
 %                   .mode .impl .ctrl (.ctrl.ekf) and the voltage scaling
@@ -258,28 +258,111 @@ param.afe.ctrl.kp_udc_ctrl = 2;
 % resonant PI gains for LVRT
 param.afe.ctrl.res_pi.kp_rpi = 0.6;
 param.afe.ctrl.res_pi.ki_rpi = 35;
-%[text] ### dqPLL selection
-%[text] Flags marked (variant) drive Variant Subsystem conditions in the model.
-param.afe.pll.use_dq_pll_fht_pll = 1;
-param.afe.pll.use_dq_pll_fht_simulink_pll = 0;
-param.afe.pll.use_dq_pll_mod1 = 0;
-param.afe.pll.use_dq_pll_ccaller_mod1 = 0;
-param.afe.pll.use_dq_pll_ccaller_mod2 = 0;
+%[text] ### Control in uvw: parameters of the library blocks (afe\_uvw\_ctrl)
+% The five MATLAB Function blocks of the library package masked_models/afe_uvw_ctrl
+% (grid_voltage_sequences, frt_vde4110, grid_current_sequences_q_ctrl, current_ctrl_uvw and
+% islanding_detector) read one struct: the mask parameter p of every block is param.afe.uvw.
+% The field names are those of afe_uvw_ctrl_param_example.m of the library (see the README of the
+% package), the numbers come from this init (param.afe.ctrl, param.frt.data, param.ctrl); the FRT
+% thresholds were constants inside the old subsystems. The blocks inherit the sample time of the
+% triggered subsystem afe_control: uvw.ts must be its period.
+c = param.afe.ctrl;
+uvw = struct();
+uvw.ts        = param.glb_time.ts_afe;              % [s] control period: integration step of all blocks
+uvw.omega_nom = param.grid.emu.omega_grid_nom;      % [rad/s] nominal grid pulsation: base of omega_pu
 
-param.afe.pll.use_dq_pll_mode1 = param.afe.pll.use_dq_pll_mod1;                 % (variant) simulink dqPLL
-param.afe.pll.use_dq_pll_mode2 = param.afe.pll.use_dq_pll_ccaller_mod1;         % (variant) ccaller dqPLL
-param.afe.pll.use_dq_pll_mode3 = param.afe.pll.use_dq_pll_fht_simulink_pll;     % (variant) fht simulink dqPLL
-param.afe.pll.use_dq_pll_mode4 = param.afe.pll.use_dq_pll_fht_pll;              % (variant) fht ccaller dqPLL
+% grid voltage sequences: xi-eta of the positive and negative sequence, moving average
+uvw.vseq.avg_order    = param.ctrl.mavarage_filter_frequency_base_order;  % window = grid period/avg_order (2: half period)
+uvw.vseq.omega_pu_min = 0.1;                        % [pu] limits of the measured pulsation used for the window
+uvw.vseq.omega_pu_max = 2;
+uvw.vseq.t_enable     = param.ctrl.dmavg_filter_enable_time;   % [s] averages are zero before this time
 
-param.afe.pll.use_dq_pll_mode1_modn = 0;    % simulink dqPLL
-param.afe.pll.use_dq_pll_mode2_modn = 0;    % ccaller dqPLL
-param.afe.pll.use_dq_pll_mode3_modn = 1;    % fht simulink dqPLL
-param.afe.pll.use_dq_pll_mode4_modn = 0;    % fht ccaller dqPLL
-%[text] ### C-caller versus Simulink implementation
-param.afe.impl.use_moving_average_from_ccaller_mod1 = 1;                        % (variant)
-param.afe.impl.use_moving_average_from_ccaller_mod2 = 0;
-param.afe.impl.use_moving_average_from_ccaller_mod3 = 0;
-param.afe.impl.use_moving_average_from_ccaller_mod4 = 0;
+% grid current sequences and reactive power control: PIs on the averaged sequences
+uvw.iseq.avg_order    = uvw.vseq.avg_order;
+uvw.iseq.omega_pu_min = uvw.vseq.omega_pu_min;
+uvw.iseq.omega_pu_max = uvw.vseq.omega_pu_max;
+uvw.iseq.t_enable     = uvw.vseq.t_enable;
+uvw.iseq.kp_pos       = c.kp_rc_pos_grid;           % PI of the positive-sequence eta grid current
+uvw.iseq.ki_pos       = c.ki_rc_pos_grid;           % [1/s]
+uvw.iseq.kp_neg       = c.kp_rc_neg_grid;           % PIs of the negative-sequence xi and eta grid currents
+uvw.iseq.ki_neg       = c.ki_rc_neg_grid;           % [1/s]
+uvw.iseq.lim_pos_eta  = c.ieta_pos_ref_lim;         % [pu] limits of the stack current references
+uvw.iseq.lim_neg_xi   = c.ieta_pos_ref_lim;         % [pu] (the old subsystem used the positive limit here too)
+uvw.iseq.lim_neg_eta  = c.ieta_neg_ref_lim;         % [pu]
+uvw.iseq.err_sign     = -1;                         % error = -(reference - measured): grid current measured towards the converter
+
+% FRT (VDE-AR-N 4110): voltage-rate observers, fault detection, power limitation, reactive current references
+uvw.frt.obs_kx        = c.vr_obs.kx;                % gains of the voltage-rate observers of ctrl_afe_setup (poles [-0.1 -0.4]*omega_base)
+uvw.frt.obs_kv        = c.vr_obs.kv;
+uvw.frt.t_obs_release = 0.025;                      % [s] observers held at zero before this time
+uvw.frt.v_pos_low     = 0.85;                       % [pu] fault when the positive sequence is below this ...
+uvw.frt.v_pos_high    = 1.15;                       % [pu] ... or above this ...
+uvw.frt.v_neg_max     = 0.1;                        % [pu] ... or the negative sequence is above this
+uvw.frt.v_hyst        = 0.1;                        % [pu] band narrowing to leave the fault
+uvw.frt.v_pos_dot_max = 2.0;                        % [pu/s] the voltage must also change faster than this
+uvw.frt.v_neg_dot_max = 2.0;                        % [pu/s]
+uvw.frt.t_rearm       = 0.125;                      % [s] idle time needed before a new detection
+uvw.frt.t_hold_max    = 7.625;                      % [s] a fault longer than this ends in the state EXCEEDED
+uvw.frt.pwrlim_v_pos  = 0.8;                        % [pu] active power limited (pwr_lim_enable) when v_pos < this ...
+uvw.frt.pwrlim_v_neg  = 0.1;                        % [pu] ... or v_neg > this
+uvw.frt.pwrlim_hyst   = 0.1;                        % [pu] released when v_pos > pwrlim_v_pos + hyst ...
+uvw.frt.pwrlim_v_neg_release = 0.7;                 % [pu] ... and v_neg < this
+uvw.frt.reddyn_enabled = 0;                         % reduced dynamic grid support (off, as in the old subsystem)
+uvw.frt.reddyn_v_pos  = 0.7;                        % [pu]
+uvw.frt.reddyn_v_neg  = 0.2;                        % [pu]
+uvw.frt.k_frt_ref     = param.frt.data.k_frt_ref;   % [pu/pu] reactive current per voltage change
+uvw.frt.t_avg_prefault = 0.5;                       % [s] window of the pre-fault voltage averages
+uvw.frt.t_avg_start   = 0.05;                       % [s] the pre-fault averages start here
+uvw.frt.lim_pos_eta   = c.i_grid_pos_eta_lim;       % [pu] limits of the grid current references
+uvw.frt.lim_neg_xi    = c.i_grid_neg_xi_lim;
+uvw.frt.lim_neg_eta   = c.i_grid_neg_eta_lim;
+uvw.frt.lim_pos_eta_red = c.i_grid_pos_eta_red_lim; % [pu] the same with reduced dynamic support
+uvw.frt.lim_neg_xi_red  = c.i_grid_neg_xi_red_lim;
+uvw.frt.lim_neg_eta_red = c.i_grid_neg_eta_red_lim;
+uvw.frt.f_lpf_ref     = 161;                        % [Hz] low pass of the references
+
+% current control in uvw: resonant PI per phase, zero-sequence PI
+uvw.ictrl.kp        = c.res_pi.kp_rpi;              % resonant PI kp + ki*s/(s^2 + 2*delta*w*s + w^2)
+uvw.ictrl.ki        = c.res_pi.ki_rpi;              % [1/s]
+uvw.ictrl.delta_res = c.res_pi.delta_res;           % damping of the resonator
+uvw.ictrl.omega_res = c.omega_base;                 % [rad/s] resonance pulsation
+uvw.ictrl.mag_lim   = 1;                            % [pu] the alpha/beta output vector is scaled down above this length
+uvw.ictrl.mag_scale_max = 10;                       % largest scaling factor
+uvw.ictrl.out_delay = 1;                            % 1: alpha/beta output one step late (as the old subsystem), 0: no delay
+uvw.ictrl.kp_z      = c.kp_is_z;                    % zero-sequence current PI
+uvw.ictrl.ki_z      = c.ki_is_z;                    % [1/s]
+uvw.ictrl.u_z_lim   = 1;                            % [pu] limit of u_gamma
+uvw.ictrl.iz_ref    = 0;                            % [pu] zero-sequence current reference
+
+% islanding detector (passive): U<, U>, f<, f>, ROCOF and 5th/7th harmonic criteria with on-delays.
+% Thresholds of the network protection of VDE-AR-N 4105 / 4110 for a 50 Hz grid; the slow U< stage
+% (2.7 s) lets the converter ride through a grid fault (frt_vde4110) without an islanding trip.
+uvw.island.h_avg_order  = 1;                        % harmonic averaging window = grid period/h_avg_order
+uvw.island.omega_pu_min = 0.5;                      % [pu] limits of the measured pulsation used for the window
+uvw.island.omega_pu_max = 1.5;
+uvw.island.t_enable     = 0.1;                      % [s] no detection before this time
+uvw.island.tau_f        = 0.02;                     % [s] low pass of the frequency
+uvw.island.obs_poles    = [-20 -80];                % [rad/s] poles of the ROCOF observer (double integrator, as vr_obs)
+Ad = [1 uvw.ts; 0 1];
+L = acker(Ad', [1 0]', exp(uvw.island.obs_poles*uvw.ts))';
+uvw.island.obs_kx = L(1)/uvw.ts;
+uvw.island.obs_kv = L(2)/uvw.ts;
+uvw.island.u_valid      = 0.5;                      % [pu] frequency and harmonic criteria only above this voltage
+uvw.island.u_min        = 0.8;                      % [pu] under-voltage ...
+uvw.island.t_trip_u_min = 2.7;                      % [s] ... for this time
+uvw.island.u_max        = 1.15;                     % [pu] over-voltage ...
+uvw.island.t_trip_u_max = 0.1;                      % [s] ... for this time
+uvw.island.f_min        = 47.5/param.grid.fgrid;    % [pu] under-frequency (47.5 Hz) ...
+uvw.island.f_max        = 51.5/param.grid.fgrid;    % [pu] over-frequency (51.5 Hz) ...
+uvw.island.t_trip_f     = 0.1;                      % [s] ... for this time
+uvw.island.rocof_max    = 2.5;                      % [Hz/s] rate of change of frequency ...
+uvw.island.t_trip_rocof = 0.1;                      % [s] ... for this time
+uvw.island.h_max        = 0.1;                      % [pu/pu] sqrt(u5^2 + u7^2)/u1 above this ...
+uvw.island.t_trip_h     = 0.1;                      % [s] ... for this time
+uvw.island.latch        = 1;                        % the output stays 1 until enable goes to 0
+
+param.afe.uvw = uvw;
+clear c uvw Ad L
 %[text] ### Current references and parallel operation
 % four modules in parallel connected to a dc microgrid
 param.afe.ref.ixi_ref_mod1 = -0.85;
