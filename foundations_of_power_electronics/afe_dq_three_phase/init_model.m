@@ -152,9 +152,9 @@ param.grid.core_length = 2.5;                       % [m]
 param.grid.mu0 = 4*pi*1e-7;
 param.grid.mur = 10e3;
 
-% magnetizing inductance from the core geometry, no-load current from it
+% magnetizing inductance from the core geometry, line no-load current from it (the delta primary coil Lm1 sees the line voltage)
 param.grid.Lm1 = (param.grid.n1^2 * param.grid.mu0 * param.grid.mur * param.grid.core_area) / param.grid.core_length;
-param.grid.i1m = param.grid.us1/sqrt(3)/param.grid.Lm1/(2*pi*param.grid.fgrid);
+param.grid.i1m = sqrt(3)*param.grid.us1/param.grid.Lm1/(2*pi*param.grid.fgrid);
 
 % reference for the voltage sequences
 param.grid.up_xi_pu_ref = 1;

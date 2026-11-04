@@ -28,7 +28,8 @@ function trafo = three_phase_transformer_param(t)
 %   (phi_sat = 1.5*psi), core_area, core_length, mu0, mur, enable_sat. A delta coil carries the line current
 %   divided by sqrt(3) at the line voltage: its resistance and leakage are 3 x the star-equivalent values,
 %   its magnetizing data (Lm1, Rfe1, psi) are referred to the line voltage (the library class
-%   three_phase_transformer_setup used the phase voltage for both connections, 2026-10-26).
+%   three_phase_transformer_setup used the phase voltage for both connections until 2026-11-04; it now
+%   applies the same coil factors, with i1m defined as the line no-load current).
 %
 %   Per-unit data (trafo.pu, parameters of the library blocks): Sr, V1, V2, fr, r1 = r2 = (1 - eta/100)/2,
 %   l1 = l2 = ucc/200, lm = 1/i0_pu (rated over magnetizing current, line quantities), lm0, rfe = Sr/p_iron,

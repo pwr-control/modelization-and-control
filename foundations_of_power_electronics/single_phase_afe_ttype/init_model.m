@@ -88,7 +88,7 @@ param.grid.n2 = 14;                                 % turns of the secondary (st
 param.grid.n1 = floor(param.grid.n2*sqrt(3));       % turns of the primary (delta) coils: 24
 param.grid.core_area = 0.05;                        % [m^2] core of the transformer blocks
 param.grid.core_length = 2.5;                       % [m]
-param.grid.mur = 10e3;                              % [-] relative permeability: Lm1 = 145 mH, i1m = 8.8 A
+param.grid.mur = 10e3;                              % [-] relative permeability: Lm1 = 145 mH, line no-load current i1m = 26.3 A
 param.grid.R_eq = 2e-3;                             % [Ohm] equivalent grid resistance (informative, not in the model)
 param.grid.frt = grid_fault_param('two_phase_D', 0.75, 0.915, 0.75, 0, 0);
 param.grid.emu = grid_emulator_param(param.grid, param.grid.frt);

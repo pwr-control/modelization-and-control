@@ -6,11 +6,13 @@ function trafo = three_phase_transformer_param(name, delta_star, pwr_nom, u1_nom
 %   delta_star : 1 for Dyn (delta primary), 0 for Yyn
 %   pwr_nom    : [W]      u1_nom, u2_nom : [V] line-to-line    f_nom : [Hz]
 %   eta        : [%] efficiency (copper losses)    ucc : [%] short-circuit voltage
-%   i1m        : [A] primary magnetizing current   p_iron : [W] iron losses
+%   i1m        : [A] primary line no-load (magnetizing) current   p_iron : [W] iron losses, total
 %   n1, n2     : turns    core_area [m^2], core_length [m], mur : core geometry (flux and Lm check)
 %
 %   Fields read by grid_forming_dq.slx (block grid_formed/grid_emulator/3ph_Dyg, three single-phase
-%   transformers): Lm1, n1, n2, Rd1, Rd2, Ld1, Ld2, Rfe1.
+%   transformers): Lm1, n1, n2, Rd1, Rd2, Ld1, Ld2, Rfe1. They are the data of one coil: a delta primary
+%   coil (delta_star = 1) sees the line voltage and carries the line current/sqrt(3), so its resistance and
+%   leakage are 3 x the star-equivalent values and its magnetizing branch is referred to the line voltage.
 
     trafo.name = name;
     trafo.delta_star = delta_star;
@@ -27,21 +29,27 @@ function trafo = three_phase_transformer_param(name, delta_star, pwr_nom, u1_nom
     trafo.n1 = n1;
     trafo.n2 = n2;
 
-    % leakage from the short-circuit voltage, split between the two windings
-    trafo.Lsigma = u1_nom*ucc/100/sqrt(3)/trafo.i1_nom/(2*pi*f_nom);        % [H] total, primary side
+    % primary coil: delta (k1 = 3) at the line voltage, star (k1 = 1) at the phase voltage
+    omega = 2*pi*f_nom;
     if delta_star == 1
-        trafo.Ld1 = 3/2*trafo.Lsigma;                                       % [H] Dy: delta winding
+        k1 = 3;  trafo.u1_coil = u1_nom;
     else
-        trafo.Ld1 = 1/2*trafo.Lsigma;                                       % [H] Yy
+        k1 = 1;  trafo.u1_coil = u1_nom/sqrt(3);
     end
-    trafo.Rd1 = 0.5*((1 - eta/100)*pwr_nom/3/trafo.i1_nom^2);              % [Ohm] copper losses, half per winding
-    trafo.Lm1 = u1_nom/sqrt(3)/i1m/(2*pi*f_nom);                           % [H] magnetizing, primary side
-    trafo.Ld2 = trafo.Lsigma/2/trafo.n12^2;                                 % [H]
-    trafo.Rd2 = trafo.Rd1/trafo.n12^2;                                      % [Ohm]
-    trafo.Lm2 = trafo.Lm1/trafo.n12^2;                                      % [H]
+    trafo.i1m_coil = i1m/sqrt(k1);                                          % [A] magnetizing current of the coil
+
+    % leakage from the short-circuit voltage and copper losses, half per winding, star equivalents
+    trafo.Lsigma = u1_nom*ucc/100/sqrt(3)/trafo.i1_nom/omega;               % [H] total, primary side
+    Rd_star = 0.5*((1 - eta/100)*pwr_nom/3/trafo.i1_nom^2);                 % [Ohm] per winding
+    trafo.Ld1 = k1*trafo.Lsigma/2;                                          % [H] primary coil
+    trafo.Rd1 = k1*Rd_star;                                                 % [Ohm] primary coil
+    trafo.Lm1 = trafo.u1_coil/trafo.i1m_coil/omega;                         % [H] magnetizing, primary coil
+    trafo.Ld2 = trafo.Lsigma/2/trafo.n12^2;                                 % [H] secondary coil (star)
+    trafo.Rd2 = Rd_star/trafo.n12^2;                                        % [Ohm]
+    trafo.Lm2 = trafo.Lm1/(trafo.u1_coil/(u2_nom/sqrt(3)))^2;               % [H] seen from the secondary coil
     trafo.p_iron = p_iron;
-    trafo.Rfe1 = (u1_nom/sqrt(3))^2/(p_iron/3);                             % [Ohm] iron losses, primary side
-    trafo.psi = trafo.Lm1*i1m*sqrt(2);                                      % [Vs] core flux
+    trafo.Rfe1 = trafo.u1_coil^2/(p_iron/3);                                % [Ohm] iron losses per limb, primary coil
+    trafo.psi = sqrt(2)*trafo.u1_coil/omega;                                % [Vs] peak flux linkage of the primary coil
     trafo.core_area = core_area;
     trafo.core_length = core_length;
     trafo.mu0 = 4*pi*1e-7;

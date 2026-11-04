@@ -90,10 +90,13 @@ end
 
 function trafo = three_phase_transformer_param(g, delta_star)
 % Same formulas and field names as the library class three_phase_transformer_setup (Dyn: delta_star = 1):
-% leakage Lsigma from ucc on the primary, Ld1 = 3/2*Lsigma for a Dy transformer (1/2 for Yy), Ld2 =
-% Lsigma/2/n12^2, copper losses (1 - eta)*pwr_nom split half per winding, Lm1 from the magnetizing current
-% at the phase voltage, Rfe1 from the iron losses per phase. The magnetizing current comes from the core
-% geometry as in the legacy init: Lm1 = n1^2*mu0*mur*core_area/core_length, i1m = u1/sqrt(3)/Lm1/omega.
+% the fields are the data of one coil of the three single-phase transformers. Leakage Lsigma from ucc and
+% copper losses (1 - eta)*pwr_nom split half per winding, both star equivalents on the primary side; a delta
+% primary coil (k1 = 3) sees the line voltage and carries the line current/sqrt(3), so Ld1 = 3*Lsigma/2 and
+% Rd1 = 3*Rd_star (star coil: k1 = 1), Ld2 = Lsigma/2/n12^2 and Rd2 = Rd_star/n12^2 for the star secondary.
+% Magnetizing branch of the primary coil at its own voltage: Lm1 from the coil magnetizing current, Rfe1 from
+% the iron losses per limb, psi the peak flux linkage. The magnetizing current comes from the core geometry
+% as in the legacy init: Lm1 = n1^2*mu0*mur*core_area/core_length, i1m (line) = sqrt(3)*u1/Lm1/omega.
     V = g.application_voltage;
     omega = 2*pi*g.f_nom;
     mu0 = 4*pi*1e-7;
@@ -109,24 +112,27 @@ function trafo = three_phase_transformer_param(g, delta_star)
     trafo.f_nom = g.f_nom;
     trafo.eta = g.eta;                                      % [%]
     trafo.ucc = g.ucc;                                      % [%]
-    trafo.i1m = V/sqrt(3)/Lm1_core/omega;                   % [A] magnetizing current at the phase voltage
+    if delta_star == 1
+        k1 = 3;  trafo.u1_coil = V;                         % delta primary coil: line voltage, line current/sqrt(3)
+    else
+        k1 = 1;  trafo.u1_coil = V/sqrt(3);                 % star primary coil: phase voltage, line current
+    end
+    trafo.i1m_coil = trafo.u1_coil/Lm1_core/omega;          % [A] magnetizing current of the primary coil
+    trafo.i1m = sqrt(k1)*trafo.i1m_coil;                    % [A] line no-load current
     trafo.n12 = trafo.u1_nom/trafo.u2_nom;
     trafo.n1 = g.n1;
     trafo.n2 = g.n2;
-    trafo.Lsigma = trafo.u1_nom*trafo.ucc/100/sqrt(3)/trafo.i1_nom/omega;   % [H]
-    if delta_star == 1
-        trafo.Ld1 = 3/2*trafo.Lsigma;                       % [H] Dy transformer
-    else
-        trafo.Ld1 = 1/2*trafo.Lsigma;                       % [H] Yy transformer
-    end
-    trafo.Rd1 = 0.5*((1 - trafo.eta/100)*trafo.pwr_nom/3/trafo.i1_nom^2);  % [Ohm]
-    trafo.Lm1 = trafo.u1_nom/sqrt(3)/trafo.i1m/omega;       % [H] = Lm1_core
-    trafo.Ld2 = trafo.Lsigma/2/trafo.n12^2;                 % [H]
-    trafo.Rd2 = trafo.Rd1/trafo.n12^2;                      % [Ohm]
-    trafo.Lm2 = trafo.Lm1/trafo.n12^2;                      % [H]
-    trafo.p_iron = g.p_iron;                                % [W]
-    trafo.Rfe1 = (trafo.u1_nom/sqrt(3))^2/(trafo.p_iron/3); % [Ohm]
-    trafo.psi = trafo.Lm1*trafo.i1m*sqrt(2);                % [Vs]
+    trafo.Lsigma = trafo.u1_nom*trafo.ucc/100/sqrt(3)/trafo.i1_nom/omega;   % [H] star equivalent, primary side
+    Rd_star = 0.5*((1 - trafo.eta/100)*trafo.pwr_nom/3/trafo.i1_nom^2);     % [Ohm] per winding, star equivalent
+    trafo.Ld1 = k1*trafo.Lsigma/2;                          % [H] primary coil
+    trafo.Rd1 = k1*Rd_star;                                 % [Ohm] primary coil
+    trafo.Lm1 = trafo.u1_coil/trafo.i1m_coil/omega;         % [H] = Lm1_core
+    trafo.Ld2 = trafo.Lsigma/2/trafo.n12^2;                 % [H] secondary coil (star)
+    trafo.Rd2 = Rd_star/trafo.n12^2;                        % [Ohm]
+    trafo.Lm2 = trafo.Lm1/(trafo.u1_coil/(trafo.u2_nom/sqrt(3)))^2;         % [H] seen from the secondary coil
+    trafo.p_iron = g.p_iron;                                % [W] total of the three limbs
+    trafo.Rfe1 = trafo.u1_coil^2/(trafo.p_iron/3);          % [Ohm] primary coil
+    trafo.psi = sqrt(2)*trafo.u1_coil/omega;                % [Vs] peak flux linkage of the primary coil
     trafo.core_area = g.core_area;                          % [m^2]
     trafo.core_length = g.core_length;                      % [m]
     trafo.mu0 = mu0;
