@@ -3,6 +3,10 @@ clc
 
 clear
 load ../sim_results/sim_results_8;
+if exist('param', 'var')       % results saved after init_model.m (param struct): legacy names used below
+    glb_time = param.glb_time;
+    hwdata.afe = param.afe.hw;
+end
 
 tratto1=1;
 tratto2=2;
