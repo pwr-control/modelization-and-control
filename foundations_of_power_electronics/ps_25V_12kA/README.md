@@ -14,6 +14,7 @@ Design document: `docs/ps_25V_12kA_r.pdf`.
 | `ps_25V_12kA_r.slx` | the model (grid emulator, AFE, full bridge, rectifier, load, logging) |
 | `docs/ps_25V_12kA_r.pdf` | design document |
 | `scripts/plotting_sim_results_7.m`, `_8.m` | plots of the stored runs (`sim_results/readme.txt`); they read a workspace saved after either init |
+| `non_virtual_blocks_counting.m` | counts the non-virtual blocks of the model (Davide) |
 | `init_model_legacy.m` | the old flat init, kept until the merge; it does not run with the library any more (next section) |
 
 ## Why the old init did not run
@@ -33,10 +34,12 @@ Design document: `docs/ps_25V_12kA_r.pdf`.
 ## The model
 
 **Power stage.**
-- Grid: library block `three_phase_voltage_source_with_frt_emulator` (480 V, 60 Hz, fault generator), equivalent
-  grid impedance 17.5 µH + 2 mΩ per phase, Dyn11 transformer 480/480 V, 1750 kVA, ucc 5 %, made of three
-  single-phase transformer blocks (delta primary coils of 24 turns, star secondary coils of 14 turns, star point
-  grounded).
+- Grid (since Davide's model of 5 November 2026): library block `three_phase_voltage_source_with_frt_emulator1`
+  (MATLAB Function version of the emulator, 480 V, 60 Hz, fault generator), three controlled voltage sources, and
+  the Dyn11 transformer 480/480 V, 1750 kVA, ucc 5 % as one library block `3ph_Dyg_ssc/configurable_trafo` (one
+  delta primary, star secondary with the star point grounded, three-limb core). There is no equivalent grid
+  impedance any more (before: 17.5 µH + 2 mΩ per phase): the grid side of the AFE filter is the transformer
+  leakage, 17.5 µH star equivalent.
 - AFE `afe_abc_mod1`: LC filter (`LFu` 330 µH, `CFu` 360 µF in star with 50 mΩ), two-level bridge with ideal
   switches (the IGBT and MOSFET variants are commented out), DC link `CFi` 2.4 mF, brake chopper 2.5 Ω.
 - Full bridge `full_bridge_converter`: input capacitor 1.2 mF on the same DC link; three bridge variants (ideal
@@ -48,10 +51,15 @@ Design document: `docs/ps_25V_12kA_r.pdf`.
 - `battery_1` (lithium-ion pack on the DC link): commented out; the init still gives it data.
 
 **Control.**
-- AFE, 8 kHz (4 kHz with double update): dq PI of the converter current (kp 0.25, ki 45), DC-link voltage PI
-  (kp 2, ki 35, reference 750 V through a 200 ms filter) that gives the active current reference (limit 1.65 pu),
-  PI of the reactive grid current. Four PLLs run in parallel and two Variant Source blocks choose one (mode 4:
-  FHT-PLL in C-Caller).
+- AFE, 8 kHz (4 kHz with double update), the control of `afe_uvw_three_phase` (`afe_rst_ctrl.slx`) since
+  Davide's model of 5 November 2026: FHT-PLL in Simulink; DC-link voltage PI (kp 2, ki 35, reference 750 V
+  through a 20 ms filter, 200 ms in the first version) that gives the active current reference (limit 1.65 pu);
+  the library blocks `afe_uvw_ctrl` (`grid_voltage_sequences`, `grid_current_sequences_q_ctrl`, `frt_vde4110`,
+  `current_ctrl_uvw`; `islanding_detector` is commented out), which read one struct, `param.afe.uvw`. The
+  converter current is controlled per phase by a resonant PI (kp 0.6, ki 35, damping 0.005 at 60 Hz) with a
+  zero-sequence PI; the grid current sequences by PIs (kp 0.25, ki 35). The FRT control (VDE-AR-N 4110) is
+  switched on at `settle_time` only when a fault generator is enabled (both off by default). The space-vector
+  modulator is the only C-Caller block left.
 - Full bridge, 8 kHz: modulator `full_bridge_zvs_pwm_modulator` (4 kHz carriers, 3 µs dead time); output current
   PI on the load current (kp 1, ki 18, output 0 ... 1 = phase displacement of leg B, 0 ... π); reference stepped
   at 25 ms to 12 kA with a slope of 120 kA/s; "DC transformer current compensation": a PI (kp 0.1, ki 2,
@@ -75,9 +83,11 @@ Design document: `docs/ps_25V_12kA_r.pdf`.
 | Group | Content |
 |---|---|
 | `param.sim` | `simlength` 1.75 s, `use_thermal_model`, `use_mosfet_thermal_model` (bridge variant), `nonlinear_iterations` 3 (5 with a thermal bridge), `check_model`, `design_figures` |
-| `param.time`, `param.glb_time` | AFE and full bridge 4 kHz with double update, dead time 3 µs, `fpwm_dab` 12 kHz (only for `ts_dab`), `tc_factor` 200; `glb_time = timing_param(param.time)` gives the names the blocks read: `fPWM_AFE`, `dead_time_AFE`, `ts_afe` (125 µs), `fPWM_PSFBC`, `TRGO_PSFBC_double_update`, `dead_time_PSFBC`, `ts_psfbc` (125 µs), `ts_dab` (41.7 µs), `tc` (0.625 µs), `decimation_tc`, `Nc`, `Ns_afe`, `Ns_dab` |
-| `param.grid` | 480 V, 60 Hz, 1750 kVA, ucc 5 %, eta 95 %, iron losses 1400 W, turns 24/14, core, `eq_grid_resistance`; `frt = grid_fault_param(...)` (test 25.4 of the legacy init, both enables 0); `emu = grid_emulator_param(...)`: bases, equivalent grid inductance, the 50 Hz filter of the emulator (`sof_50Hz`), transformer `emu.trafo` (coil data of the blocks: `Ld1`, `Rd1`, `Ld2`, `Rd2`, `Lm1`, `Rfe1`, `n1`, `n2`) |
-| `param.afe` | `pwr_nom` 325 kW; `hw = afe_hw_param(...)` (bases `ubez` 391.9 V, `ibez` 614.2 A, `udc_nom` 750 V, `CFi`, `LFu`, `CFu`, `RCFu`, `Rbrake`); `behav` (clock gain, carrier phase, zero sequence, brake step); `variant.dq_pll_mode1..4` (variant, exactly one at 1); `ctrl = afe_ctrl_param(...)` (gains, first harmonic trackers, observer, rms windows, time alignment PI); `ideal_switch`, `igbt` (device data) |
+| `param.time`, `param.glb_time` | AFE and full bridge 4 kHz with double update, dead time 3 µs, `fpwm_dab` 12 kHz (only for `ts_dab`), inverter domain of the template (`fpwm_inv`, only for `ts_inv` of `setup_global_filters`), `tc_factor` 200; `glb_time = timing_param(param.time)` gives the names the blocks read: `fPWM_AFE`, `dead_time_AFE`, `ts_afe` (125 µs), `fPWM_PSFBC`, `TRGO_PSFBC_double_update`, `dead_time_PSFBC`, `ts_psfbc` (125 µs), `ts_dab` (41.7 µs), `tc` (0.625 µs), `decimation_tc`, `Nc`, `Ns_afe`, `Ns_dab` |
+| `param.grid` | 480 V, 60 Hz, 1750 kVA, ucc 5 %, eta 95 %, iron losses 1400 W, turns 24/14 and core (they give `Lm1` = 145 mH), `lm0_pu` 0.5; `emu = grid_emulator_param(param.grid)`: emulator data (`fgrid_nom`, `us_secondary_nom`, `Vemu_ref_norm`, sequence references), bases, transformer `emu.trafo` with the SI data of one coil (`Ld1`, `Rd1`, `Ld2`, `Rd2`, `Lm1`, `Rfe1`) and the per-unit data of `configurable_trafo` in `emu.trafo.pu` (`Sr`, `V1`, `V3`, `fr`, `r1`, `l1`, `r3`, `l3`, `lm`, `lm0`, `rfe`, `clock3`) |
+| `param.frt.data` | `grid_fault_param(...)` (test 25.4 of the legacy init, both enables 0) plus `settle_time` 0.175 s (FRT control on) and `k_frt_ref` 2 (as `frt_settings` of the library) |
+| `param.ctrl` | settings common to the control blocks: time alignment PI (`kp_align`, `ki_align`, `lim_up_align`, `lim_down_align`), moving averages (`mavarage_filter_frequency_base_order`, `dmavg_filter_enable_time`), `filters = setup_global_filters(...)` of the library (the emulator reads `filters.afe.SOF_50Hz.ss_c`) |
+| `param.afe` | `pwr_nom` 325 kW; `hw = afe_hw_param(...)` (bases `ubez` 391.9 V, `ibez` 614.2 A, `udc_nom` 750 V, `CFi`, `LFu`, `CFu`, `RCFu`, `Rbrake`); `behav` (clock gain, carrier phase, brake step); `ctrl = afe_ctrl_param(...)` (gains with the field names of `ctrl_afe_setup`, first harmonic tracker, observers, rms windows); `ref` (`u_cm_comp_mod1`, reactive current steps, off); `uvw` (struct of the `afe_uvw_ctrl` blocks, field names of `afe_uvw_ctrl_param_example.m`); `ideal_switch`, `igbt` (device data) |
 | `param.psfbc` | `pwr_nom` 325 kW; `hw_in` (numbers of the converter) and `hw = psfbc_hw_param(...)` (transformer, capacitors, inductors, bases `idc1_bez` 433 A, `idc2_bez` = `idc2_nom` 12 kA, `udc2_bez` 45 V); `ctrl` (`kp_idc` 1, `ki_idc` 18, `kp_idc_trafo` 0.1, `ki_idc_trafo` 2, `lim_idc_trafo` 0.1, `tau_idc_trafo` 20 ms; `kp_udc`, `ki_udc` not used); `ideal_switch`, `igbt`, `mosfet` (device data) |
 | `param.diode.rectifier` | data of the rectifier diodes (forward voltage, resistance, reverse recovery, thermal resistances, snubber) |
 | `param.thermal` | heatsink (liquid-cooled plate, 15 mK/W to the water at 40 °C), `heatsink` struct read by the bridges with thermal model, `Tambient`, `DThs_init` |
@@ -90,14 +100,14 @@ Design document: `docs/ps_25V_12kA_r.pdf`.
 
 | Function | Role |
 |---|---|
-| `timing_param(t)` | the two clock domains (AFE, full bridge) and `ts_dab` (formulas of `timing_setup`) |
-| `grid_emulator_param(g, fault)` | grid emulator, equivalent grid impedance, Dyn11 transformer (formulas of `grid_three_phase_emulator` and `three_phase_transformer_setup` after the fix of the delta primary of November 2026) |
+| `timing_param(t)` | the two clock domains (AFE, full bridge), `ts_dab` and the inverter domain of the template (formulas of `timing_setup`) |
+| `grid_emulator_param(g)` | grid emulator and Dyn11 transformer with its per-unit data (formulas of `grid_three_phase_emulator` and `three_phase_transformer_setup`: delta primary fix and per-unit fields of November 2026) |
 | `grid_fault_param(...)` | fault test of the emulator (`frt_settings` + `grid_fault_generator`, reduced to the kinds of this model) |
-| `afe_hw_param(...)`, `afe_ctrl_param(...)` | AFE hardware and control (`three_phase_afe_hwdata`, `hw_afe_three_phase_setup`, `ctrl_afe_setup`) |
+| `afe_hw_param(...)`, `afe_ctrl_param(...)` | AFE hardware and control (`three_phase_afe_hwdata`, `hw_afe_three_phase_setup`, `ctrl_afe_setup`): the fields of the class that the model and the section "Control in uvw" read |
 | `psfbc_hw_param(...)` | full-bridge hardware (`single_phase_psfbc_hwdata` + `hw_psfbc_single_phase_setup`, numbers of the data set PSFBC_800V from the init) |
 | `device_ideal_switch_param`, `device_igbt_param`, `device_mosfet_param` | device data sets (the three used ones are embedded; other names are read from the library data sets) |
 | `battery_param(...)` | lithium-ion pack (`lithium_ion_battery_setup`) |
-| `design_figures(param)` | the design figures below (plain MATLAB, no toolbox) |
+| `design_figures(param)` | the design figures below (plain MATLAB, no toolbox; the init itself needs the Control System Toolbox for `setup_global_filters` and `acker`) |
 | `check_model_param_refs(model, param)` | lists the `param.*` names read by the active blocks and reports the missing ones |
 | `check_from_goto(model)` | lists the `From` blocks of the active part without an active `Goto` |
 | `library_setup()` | puts `pwr-control/library` on the path (clones it when missing) |
@@ -111,13 +121,14 @@ Design document: `docs/ps_25V_12kA_r.pdf`.
 | `hwdata.afe.*` | `param.afe.hw.*` |
 | `hwdata.psfbc.*`, `mu0` | `param.psfbc.hw.*`, `param.psfbc.hw.mu0` |
 | `hwdata.dab.idc1_bez` | `param.psfbc.hw.idc1_bez` (value changed, open point 5) |
-| `afe_ctrl.*`, `CTRPIFF_CLIP_RELEASE` | `param.afe.ctrl.*`, `param.afe.ctrl.clip_release` |
-| `kp_align`, `ki_align`, `lim_up_align`, `lim_down_align` | `param.afe.ctrl.align.kp`, `.ki`, `.lim_up`, `.lim_down` |
-| `time_gain_afe_module_1`, `afe_pwm_phase_shift_mod1`, `u_cm_comp_mod1`, `time_aux_power_supply_fault` | `param.afe.behav.time_gain_module_1`, `.pwm_phase_shift_mod1`, `.u_cm_comp_mod1`, `.time_aux_power_supply_fault` |
-| `use_dq_pll_mode1` ... `use_dq_pll_mode4` | `param.afe.variant.dq_pll_mode1` ... `dq_pll_mode4` |
+| `afe_ctrl.*` | `param.afe.ctrl.*` (`CTRPIFF_CLIP_RELEASE` is not read by the new control) |
+| `kp_align`, `ki_align`, `lim_up_align`, `lim_down_align` | `param.ctrl.kp_align`, `.ki_align`, `.lim_up_align`, `.lim_down_align` |
+| `time_gain_afe_module_1`, `afe_pwm_phase_shift_mod1`, `time_aux_power_supply_fault` | `param.afe.behav.time_gain_module_1`, `.pwm_phase_shift_mod1`, `.time_aux_power_supply_fault` |
+| `u_cm_comp_mod1` | `param.afe.ref.u_cm_comp_mod1` |
+| `use_dq_pll_mode1` ... `use_dq_pll_mode4` | gone: the new control has one PLL (FHT-PLL in Simulink) |
 | `psfbc_ctrl.*` | `param.psfbc.ctrl.*` |
-| `grid_emu.*`, `frt_data.*` | `param.grid.emu.*`, `param.grid.emu.frt.*` |
-| `filters.afe.SOF_50Hz.ss_c.A`, `.B`, `.C` | `param.grid.emu.sof_50Hz.A`, `.B`, `.C` |
+| `grid_emu.*`, `frt_data.*` | `param.grid.emu.*`, `param.frt.data.*` |
+| `filters.afe.SOF_50Hz.ss_c.A`, `.B`, `.C` | `param.ctrl.filters.afe.SOF_50Hz.ss_c.A`, `.B`, `.C` (`setup_global_filters` of the library) |
 | `ideal_switch.*` (AFE, brake), `ideal_switch.dab.*` (full bridge) | `param.afe.ideal_switch.*`, `param.psfbc.ideal_switch.*` |
 | `igbt.afe.*`, `igbt.psfbc.*`, `mosfet.psfbc.*` | `param.afe.igbt.*`, `param.psfbc.igbt.*`, `param.psfbc.mosfet.*` |
 | `heatsink.*`, `Tambient`, `DThs_init` | `param.thermal.heatsink.*`, `param.thermal.Tambient`, `param.thermal.DThs_init` |
@@ -127,9 +138,48 @@ Design document: `docs/ps_25V_12kA_r.pdf`.
 | `nonlinear_iterations` | `param.sim.nonlinear_iterations` |
 | `simlength` (`StopTime`), `tc` (`FixedStep`), `glb_time.tc` (`MaxStep`) | `param.sim.simlength`, `param.glb_time.tc` |
 
-## What changed in the model (5 November 2026)
+## New AFE control and grid emulator (Davide, 5 November 2026)
 
-The model was edited as XML (no MATLAB in the cloud): same file, same `ModelUUID`.
+Davide replaced the AFE control with the one of `afe_uvw_three_phase` (library blocks `afe_uvw_ctrl`) and the
+grid emulator with the MATLAB Function emulator and the `configurable_trafo` block (commit 7f13ac3, model saved
+in R2026b). The init now gives these blocks what they read:
+- `param.afe.uvw`: the section "Control in uvw" of `afe_uvw_three_phase/init_model.m` (Davide's copy), placed in
+  the AFE section before the checks. It reads the fields of `param.afe.ctrl` that `afe_ctrl_param` now provides
+  with the names of `ctrl_afe_setup`: resonant PI `res_pi.kp_rpi` 0.6 and `res_pi.ki_rpi` 35 (as
+  `afe_uvw_three_phase`), zero-sequence PI 0.5/18, sequence PIs 0.25/35, limits, voltage-rate observer `vr_obs`.
+  The islanding thresholds `f_min`, `f_max` are 0.95 and 1.03 pu (57.0 and 61.8 Hz at 60 Hz): the copied
+  `47.5/fgrid`, `51.5/fgrid` are 50 Hz values (the detector is commented out in the model).
+- `param.frt.data`: the fault data move from `param.grid.emu.frt` and get `settle_time` and `k_frt_ref`.
+- `param.ctrl`: Davide's section "Control settings common to all modules" (before the AFE section now).
+- `param.afe.ref`: `u_cm_comp_mod1` and the reactive current steps of `FRT-VDE4110` (off: reference 0).
+- `param.grid.emu.trafo.pu` and `param.grid.lm0_pu` 0.5: per-unit data of `configurable_trafo`, as in
+  `afe_uvw_three_phase` (r1 = r3 = 0.025, l1 = l3 = 0.025, lm = 138, lm0 = 0.5, rfe = 1250, clock 11).
+- Removed because no block reads them any more: equivalent grid impedance (`ucc_factor`, `eq_grid_resistance`),
+  `param.grid.emu.sof_50Hz`, the PLL variants `param.afe.variant`, the dq current PI gains, `clip_release`,
+  `pll_p_frt`, `param.ctrl.CTRPIFF_CLIP_RELEASE`, and the C types of the two PLL C-Callers. Fixed:
+  `dead_time_INV` took the AFE dead time.
+- Design figures: the AFE current loop is now the resonant PI per phase (open point 3).
+
+Checks in Octave on Davide's model (stubs of `find_system`, `get_param` and `set_param` from its `.slx`, library
+classes adapted to Octave, `control` package): the init runs to the end; all 150 `param.*` names of the active
+blocks exist; `param.afe.uvw` has every field of `afe_uvw_ctrl_param_example.m` (only `frt.obs_poles` is missing,
+which no block reads) with the same values except `f_min`, `f_max` (above); the filter `SOF_50Hz` has DC gain 1.
+
+Not done in the init (model points, open point 9 and 10):
+- 24 tags of `From` blocks have no active `Goto`. All of them feed scopes or `To Workspace` blocks only:
+  `data_to_worspace_module_1` of the copied control (`dq_pll`: tags of the old PLLs; `inner_current_tracking`:
+  `isa`, `isa_ref`, ..., `id_xi_pu`, `iz_*` of the old current control; `pwr_meter`), `pwr_act_grid` and
+  `pwr_react_grid` (scope `power-meter mod1`; their `Goto` blocks are in `instantaneus_power`, which is commented
+  out), `power_meter_iec` (`afe_measurement_sim`, `scope`: the new `power meter iec mfunc` does not write it).
+  `afe_rst_ctrl.slx` has the same `From` blocks in `data_to_worspace_module_1` without `Goto`.
+- The warnings "Error resolving Custom Code" and "include/src ... does not exist": the custom-code settings of
+  the model list `include` and `src` as folders relative to the model folder. Same settings and same C-Caller
+  (space-vector modulator) as `afe_rst_ctrl.slx`.
+
+## What changed in the model (5 November 2026, first version)
+
+The model was edited as XML (no MATLAB in the cloud): same file, same `ModelUUID`. Davide's model of the same day
+(previous section) replaces it; the points below are about the version before.
 - 616 names re-pointed in the block parameters, mask values and variant controls, plus 3 entries of the
   configuration. The active blocks read 159 distinct `param.*` names with the ideal-switch bridge (173 with the IGBT
   bridge, 166 with the MOSFET bridge, 228 in the whole model with every block active); all exist.
@@ -181,10 +231,10 @@ simulation.
 | Output filter (0.4 µH, 45 mF) | 1186 Hz, characteristic impedance 2.98 mΩ, load 2.08 mΩ |
 | Full-bridge current loop, kp 1, ki 18 | phase margin 34°, gain margin 1.6 dB, closed-loop pair at 1349 Hz damped 0.057, slow pole −10 rad/s, stable for kp < 1.21 |
 | Same loop, kp 0.3, ki 100 | crossover 21 Hz, phase margin 110°, gain margin 11.8 dB, pair at 1267 Hz damped 0.39, slow pole −92 rad/s |
-| AFE LCL resonance | 1493 Hz (fs/6 = 1333 Hz), grid side 34.9 µH |
-| AFE current loop, kp 0.25, ki 45 | crossover 82 Hz, phase margin 69°, gain margin 23.6 dB |
-| AFE DC-link loop, kp 2, ki 35, 3.6 mF | crossover 60 Hz, phase margin 45.5°, gain margin 19.7 dB |
-| With the current loop at kp 0.75 | current loop 231 Hz, 73°, 14.1 dB; DC-link loop 57 Hz, 73°, 22.4 dB |
+| AFE LCL resonance | 2060 Hz (fs/6 = 1333 Hz), grid side 17.5 µH (transformer leakage only) |
+| AFE current loop, resonant PI per phase kp 0.6, ki 35, damping 0.005 | crossover 193 Hz, phase margin 75°, gain margin 17.2 dB |
+| AFE DC-link loop, kp 2, ki 35, 3.6 mF | crossover 56 Hz, phase margin 71°, gain margin 22.7 dB (current loop as a dq PI 0.6/17.5) |
+| Before (dq current PI kp 0.25, ki 45, grid side 34.9 µH) | current loop 82 Hz, 69°, 23.6 dB; DC-link loop 60 Hz, 45.5°, 19.7 dB |
 
 ## Open points
 
@@ -200,9 +250,12 @@ simulation.
 2. **The output current loop is near its stability limit** with kp 1 (gain margin 1.6 dB, output filter mode at
    1.35 kHz damped 6 %): expect ringing of the load current. kp 0.3, ki 100 gives 11.8 dB and a faster slow pole.
    The gains are left as in the legacy model.
-3. **AFE: the DC-link loop (60 Hz) is close to the current loop (82 Hz).** The phase margin is still 45°. kp_is 0.75
-   separates them (231 Hz against 57 Hz). The LCL resonance (1493 Hz) is above fs/6 with converter-current
-   feedback; the margins above include the 50 mΩ in series with `CFu`, which damps it.
+3. **AFE loops.** With the old dq current PI (kp 0.25) the DC-link loop (60 Hz) was close to the current loop
+   (82 Hz). The resonant PI of the new control with the gains of `afe_uvw_three_phase` (kp 0.6, ki 35) gives
+   193 Hz against 56 Hz, phase margins 75° and 71°. A resonant PI kp + ki·s/(s² + ω²) acts like a dq PI
+   kp + (ki/2)/s: the old loop would be kp 0.25, ki 90. The LCL resonance moved from 1493 Hz to 2060 Hz (no grid
+   impedance), above fs/6 with converter-current feedback; the margins include the 50 mΩ in series with `CFu`,
+   which damps it.
 4. **`ts_dab` in the compensation.** Its low-pass filter and PI are set with `ts_dab` = 41.7 µs, but they run
    every 125 µs (the full-bridge trigger): their time constants are three times longer than the numbers in the
    init. The battery block (commented out) also uses `ts_dab`.
@@ -212,10 +265,20 @@ simulation.
    its limit (point 1) this changes nothing at rated load.
 6. **Design document and init differ.** The document gives 10 kHz and Ls = 8 µH for the full bridge, the
    CM1200DW-24T module, Lgrid ≈ 50 µH and Cdc2 = 50 mF. The init (as the legacy one) has 4 kHz, Ls = 20 µH, the
-   CM1200DW-34T data set, 17.5 µH plus the transformer leakage, and 45 mF.
-7. **Grid transformer.** Its coil data follow the library class after the fix of the delta primary (4 November
-   2026): the factor 3 of a delta coil is on `Ld1`, `Rd1` and `Rfe1`; `Lm1` stays 144.8 mH (from the core) and
-   `i1m` = 15.2 A is the line no-load current. The values are the same as those of the library now. Before the fix
-   the legacy init gave other transformer losses.
+   CM1200DW-34T data set, only the transformer leakage (17.5 µH; the old emulator had 17.5 µH more), and 45 mF.
+7. **Grid transformer.** `configurable_trafo` reads per-unit data on the coil bases of the library (formulas of
+   `three_phase_transformer_setup`, fix of the delta primary of 4 November and per-unit fields of 5 November 2026):
+   `Lm1` 144.8 mH from the core gives lm = 138 pu (i1m = 15.2 A, line no-load current). The zero-sequence
+   magnetizing inductance of the three-limb core, lm0 = 0.5 pu, is an assumption as in `afe_uvw_three_phase`
+   (lm0 = lm would be a bank of three single-phase units).
 8. **Rectifier diodes with charge model.** `sim_results/readme.txt` notes that with the charge model the thermal
    behaviour of the diodes has no meaning.
+9. **`From` blocks without `Goto` (24 tags, logging only).** Listed in "New AFE control and grid emulator". If
+   Simulink stops on them, comment out `data_to_worspace_module_1/dq_pll` and `inner_current_tracking`, the
+   `pwr_meter` readers and the two `power_meter_iec` readers, or wire the signals of `current_ctrl_uvw` (outputs
+   `i_abc_ref`, `is_xe`) to new `Goto` blocks.
+10. **Custom code.** The include folders `include` and `src` of the model settings are relative to the model
+    folder, where they do not exist (warnings at the init). The C sources are in
+    `library/user_defined_functions/ccaller` of the library.
+11. **Library example, 60 Hz.** `afe_uvw_ctrl_param_example.m` sets `island.f_min = 47.5/f_nom` and
+    `f_max = 51.5/f_nom`: right for 50 Hz, 0.79 and 0.86 pu at 60 Hz. The init of this model uses 0.95 and 1.03.

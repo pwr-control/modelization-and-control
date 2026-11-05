@@ -9,8 +9,8 @@ function fig = design_figures(param)
 %      with the DC transformer current compensation at its limit, and the output at that duty.
 %   2. Output current loop of the full bridge: crossover, phase and gain margins, closed-loop poles, largest
 %      stable kp_idc.
-%   3. AFE: power drawn from the DC link, grid current, LCL resonance, converter current loop and DC-link
-%      voltage loop (crossover, phase and gain margins).
+%   3. AFE: power drawn from the DC link, grid current, LCL resonance, converter current loop (resonant PI
+%      per phase of current_ctrl_uvw) and DC-link voltage loop (crossover, phase and gain margins).
 %
 %   Models
 %   - Full bridge, averaged: source n*udc*D (n = n2/n1) behind the equivalent resistance of the commutation
@@ -30,11 +30,16 @@ function fig = design_figures(param)
 %     ts_psfbc on the load current, which reaches it through a Unit Delay (one sample); zero-order hold of the
 %     phase displacement; the plant above discretized exactly (expm).
 %   - AFE: converter-side current loop on the LCL filter (LFu with RLFu, CFu + RCFu in star, grid side =
-%     leakage of the transformer + equivalent grid inductance with their resistances), 1 pu of controller
-%     output = udc/sqrt(3) peak phase voltage (gain sqrt(3)/2 into the space vector modulator, which gives
-%     2/3*udc per unit), 1.5 samples of delay. DC-link loop: the closed current loop and the capacitance
-%     CFi + Cdc_dc1 (the input capacitor of the full bridge is on the same bus), plant
-%     1.5*ubez*ibez/(C*udc^2) per unit of active current.
+%     leakage of the transformer with its resistances: the grid emulator has no grid impedance), 1 pu of
+%     controller output = udc/sqrt(3) peak phase voltage (gain sqrt(3)/2 into the space vector modulator,
+%     which gives 2/3*udc per unit), 1.5 samples of delay (the output delay of the block and the hold).
+%     Controller: the resonant PI per phase of the library block current_ctrl_uvw with the data of
+%     param.afe.uvw.ictrl, kp*e + x2 with x1+ = x1 + ts*x2, x2+ = x2 + ts*(-w^2*x1+ - 2*delta*w*x2 + ki*e)
+%     (forward Euler on x1, backward Euler on x2, as the block). DC-link loop: the current loop as the
+%     synchronous frame sees it, i.e. the dq equivalent of the resonant PI, kp + (ki/2)/s (kp + ki*s/(s^2 +
+%     w^2) is kp + ki/2/(s - j*w) + ki/2/(s + j*w)), closed, and the capacitance CFi + Cdc_dc1 (the input
+%     capacitor of the full bridge is on the same bus), plant 1.5*ubez*ibez/(C*udc^2) per unit of active
+%     current.
 %   Plain MATLAB (expm, eig), no toolbox.
 
     fig = struct();
@@ -111,8 +116,8 @@ function fig = design_figures(param)
         fc, pm, gm, p_res(1), p_res(2), p_slow, kp_lim);
 
     %% 3. AFE
-    a = param.afe.hw;  ac = param.afe.ctrl;  tsa = param.glb_time.ts_afe;
-    emu = param.grid.emu;  tr = emu.trafo;
+    a = param.afe.hw;  ac = param.afe.ctrl;  ic = param.afe.uvw.ictrl;  tsa = param.glb_time.ts_afe;
+    tr = param.grid.emu.trafo;
     i_act = P_dc/(1.5*a.ubez*a.ibez);                   % [pu] active current at 1 pu of voltage
     K = udc/sqrt(3)/a.ubez;                             % converter voltage per pu of controller output
     if tr.delta_star == 1
@@ -121,28 +126,35 @@ function fig = design_figures(param)
         k1 = 1;
     end
     L1 = a.LFu;  R1 = a.RLFu;  Cf = a.CFu;  Rcf = a.RCFu;
-    L2 = tr.Lsigma + emu.eq_grid_inductance;            % [H] star equivalent per phase
-    R2 = tr.Rd1/k1 + tr.Rd2*tr.n12^2 + emu.eq_grid_resistance;
+    L2 = tr.Lsigma;                                     % [H] star equivalent per phase: transformer leakage
+    R2 = tr.Rd1/k1 + tr.Rd2*tr.n12^2;
     fres = sqrt((L1 + L2)/(L1*L2*Cf))/(2*pi);
     Zb = a.ubez/a.ibez;
     fa = logspace(0, log10(0.999/(2*tsa)), 6000);
     w = 2*pi*fa;  z = exp(1j*w*tsa);
     Zc = Rcf + 1./(1j*w*Cf);  Z2 = 1j*w*L2 + R2;
     G = K*Zb./(1j*w*L1 + R1 + Zc.*Z2./(Zc + Z2));
-    Li = (ac.kp_is_xi + ac.ki_is_xi*tsa./(1 - 1./z)).*G.*exp(-1j*w*1.5*tsa);
+    % resonant PI of current_ctrl_uvw: R(z) = C*(zI - Ar)^-1*Br with C = [0 1] (output x2, no feedthrough)
+    w0 = ic.omega_res;
+    Ar = [1, tsa; -tsa*w0^2, 1 - tsa^2*w0^2 - 2*ic.delta_res*w0*tsa];
+    Br = [0; tsa*ic.ki];
+    Rz = Br(2)*(z - Ar(1,1))./((z - Ar(1,1)).*(z - Ar(2,2)) - Ar(1,2)*Ar(2,1));
+    Li = (ic.kp + Rz).*G.*exp(-1j*w*1.5*tsa);
     [fci, pmi, gmi] = margins(fa, Li);
+    % DC-link loop on the current loop of the synchronous frame: dq equivalent kp + (ki/2)/s
+    Ldq = (ic.kp + ic.ki/2*tsa./(1 - 1./z)).*G.*exp(-1j*w*1.5*tsa);
     Cdc = a.CFi + hw.Cdc_dc1;
     kdc = 1.5*a.ubez*a.ibez/(Cdc*udc^2);                % [1/s] per pu of active current
-    Lu = (ac.kp_udc_ctrl + ac.ki_udc_ctrl*tsa./(1 - 1./z)).*(Li./(1 + Li))*kdc./(1j*w);
+    Lu = (ac.kp_udc_ctrl + ac.ki_udc_ctrl*tsa./(1 - 1./z)).*(Ldq./(1 + Ldq))*kdc./(1j*w);
     [fcu, pmu, gmu] = margins(fa, Lu);
-    fig.afe = struct('P_dc', P_dc, 'i_act', i_act, 'K', K, 'L2', L2, 'fres', fres, 'fc_i', fci, 'pm_i', pmi, ...
-        'gm_i', gmi, 'Cdc', Cdc, 'kdc', kdc, 'fc_udc', fcu, 'pm_udc', pmu, 'gm_udc', gmu);
+    fig.afe = struct('P_dc', P_dc, 'i_act', i_act, 'K', K, 'L2', L2, 'fres', fres, 'kp_i', ic.kp, 'ki_i', ic.ki, ...
+        'fc_i', fci, 'pm_i', pmi, 'gm_i', gmi, 'Cdc', Cdc, 'kdc', kdc, 'fc_udc', fcu, 'pm_udc', pmu, 'gm_udc', gmu);
     fprintf('3. AFE: %.0f kW from the grid = %.2f pu of active current (%.0f A peak, limit %.2f pu) | LCL: LFu %.0f uH, CFu %.0f uF, grid side %.1f uH -> %.0f Hz (fs/6 = %.0f Hz)\n', ...
         P_dc/1e3, i_act, i_act*a.ibez, ac.ixi_pos_ref_lim, L1*1e6, Cf*1e6, L2*1e6, fres, 1/tsa/6);
-    fprintf('   current loop kp = %.2f, ki = %.0f: crossover %.0f Hz, phase margin %.1f deg, gain margin %.1f dB\n', ...
-        ac.kp_is_xi, ac.ki_is_xi, fci, pmi, gmi);
-    fprintf('   DC-link loop kp = %.2f, ki = %.0f, C = %.1f mF (plant %.0f 1/s): crossover %.0f Hz, phase margin %.1f deg, gain margin %.1f dB\n', ...
-        ac.kp_udc_ctrl, ac.ki_udc_ctrl, Cdc*1e3, kdc, fcu, pmu, gmu);
+    fprintf('   current loop, resonant PI per phase kp = %.2f, ki = %.0f, delta = %.3f: crossover %.0f Hz, phase margin %.1f deg, gain margin %.1f dB\n', ...
+        ic.kp, ic.ki, ic.delta_res, fci, pmi, gmi);
+    fprintf('   DC-link loop kp = %.2f, ki = %.0f, C = %.1f mF (plant %.0f 1/s, current loop as a dq PI %.2f/%.1f): crossover %.0f Hz, phase margin %.1f deg, gain margin %.1f dB\n', ...
+        ac.kp_udc_ctrl, ac.ki_udc_ctrl, Cdc*1e3, kdc, ic.kp, ic.ki/2, fcu, pmu, gmu);
 end
 
 function [R, name] = switch_resistance(param, Ip)

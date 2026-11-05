@@ -6,9 +6,10 @@ function glb_time = timing_param(t)
 %     t.fpwm_afe, t.trgo_afe       [Hz] PWM frequency of the two-level AFE bridge and double update flag
 %                                  (1: two control steps per carrier period)
 %     t.dead_time_afe              [s] dead time of the AFE legs (modulator mask)
-%     t.fpwm_inv, t.trgo_inv       [Hz] PWM frequency of the two-level INV bridge and double update flag
-%                                  (1: two control steps per carrier period)
-%     t.dead_time_inv              [s] dead time of the INV legs (modulator mask)
+%     t.fpwm_inv, t.trgo_inv       [Hz] inverter clock domain of the shared template and double update flag:
+%                                  this model has no inverter, ts_inv only feeds setup_global_filters
+%                                  (filters.inv.*, not read by the model)
+%     t.dead_time_inv              [s] dead time of the inverter domain (not read by the model)
 %     t.fpwm_psfbc, t.trgo_psfbc   [Hz] switching frequency of the phase-shift full bridge and double update
 %                                  flag (modulator full_bridge_zvs_pwm_modulator: two triggers per period)
 %     t.dead_time_psfbc            [s] dead time of the full-bridge legs
@@ -24,12 +25,11 @@ function glb_time = timing_param(t)
 %
 %   Fields read by ps_25V_12kA_r.slx: fPWM_AFE, dead_time_AFE, ts_afe (AFE control, logging at ts_afe),
 %   fPWM_PSFBC, TRGO_PSFBC_double_update, dead_time_PSFBC, ts_psfbc (current PI of the full bridge), ts_dab,
-%   tc, decimation_tc, Nc, Ns_afe, Ns_dab.
+%   tc, decimation_tc, Nc, Ns_afe, Ns_dab. The init reads ts_afe, ts_inv, ts_dab and tc for
+%   setup_global_filters (param.ctrl.filters).
 %   The legacy init had seven clock domains (afe, inv, single_phase_inv, dab, psfbc, isop_rail, cllc), all at
-%   4 kHz with double update except dab and cllc at 12 kHz. The gains of the AFE current PI read
-%   glb_time.ts_inv: the inverter domain had the same clock as the AFE, so those gains read
-%   param.glb_time.ts_afe now. Same formulas as timing_setup: ts = tPWM/2 with double update,
-%   tc = ts_afe/tc_factor, Nc = ceil(t_measure/tc/decimation), Ns = ceil(t_measure/ts).
+%   4 kHz with double update except dab and cllc at 12 kHz. Same formulas as timing_setup: ts = tPWM/2 with
+%   double update, tc = ts_afe/tc_factor, Nc = ceil(t_measure/tc/decimation), Ns = ceil(t_measure/ts).
 
     % AFE domain: two-level bridge, modulator, all the AFE control loops
     glb_time.fPWM_AFE = t.fpwm_afe;
@@ -40,12 +40,12 @@ function glb_time = timing_param(t)
     glb_time.minimum_pulse_time_AFE = 1e-6;
     glb_time.delayAFE_modB = 2*pi*t.fpwm_afe*t.delay_pwm;
 
-    % INV domain: two-level bridge, modulator, all the INV control loops
+    % INV domain of the shared template (no inverter in this model: only ts_inv for setup_global_filters)
     glb_time.fPWM_INV = t.fpwm_inv;
     glb_time.tPWM_INV = 1/t.fpwm_inv;
     glb_time.TRGO_INV_double_update = t.trgo_inv;
     glb_time.ts_inv = sample_time(glb_time.tPWM_INV, t.trgo_inv);
-    glb_time.dead_time_INV = t.dead_time_afe;
+    glb_time.dead_time_INV = t.dead_time_inv;
     glb_time.minimum_pulse_time_INV = 1e-6;
     glb_time.delayINV_modB = 2*pi*t.fpwm_inv*t.delay_pwm;
 
