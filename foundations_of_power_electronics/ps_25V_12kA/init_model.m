@@ -4,7 +4,7 @@
 clear;
 model = 'ps_25V_12kA_r';
 prv = ps_25V_12kA_private();    % handles to the functions of ./private (the Live Editor does not see ./private)
-prv.library_setup();            % pwr-control/library on the path (blocks, C-Caller sources), cloned when missing
+prv.library_setup();            % pwr-control/library on the path (blocks, C-Caller sources), cloned when missing %[output:675b18a7]
 
 % environment (was init_environment of the library)
 close all; clc; beep off;
@@ -16,7 +16,7 @@ catch ME
     end
 end
 param = struct();
-fprintf('%s init: functions of ./private, called as prv.<name>: %s\n', model, strjoin(fieldnames(prv)', ', '));
+fprintf('%s init: functions of ./private, called as prv.<name>: %s\n', model, strjoin(fieldnames(prv)', ', ')); %[output:929bb977]
 %%
 %[text] ## Simulation
 %[text] The full bridge has three variants in the model: ideal switches (default), IGBT with thermal model and MOSFET with thermal model (ZVS snubbers). The init comments out the two that are not used, together with the blocks that log their data. The AFE bridge is always the ideal-switch one.
@@ -47,7 +47,7 @@ param.time.t_measure = param.sim.simlength; % [s] logging window
 param.time.tc_factor = 200;                 % tc = ts_afe/tc_factor
 param.time.tc_decimation = 1;
 param.time.delay_pwm = 0;                   % [s] (not used by this model)
-param.glb_time = prv.timing_param(param.time);
+param.glb_time = prv.timing_param(param.time); %[output:5f132968]
 %%
 %[text] ## Grid
 %[text] Grid emulator (block three\_phase\_voltage\_source\_with\_frt\_emulator1 of the library, MATLAB Function: three ideal voltage sources with the fault generator) and a Dyn11 transformer 480/480 V, 1750 kVA, ucc 5 percent: block configurable\_trafo of the library (one delta primary, star secondary with the star point grounded, three-limb core). There is no equivalent grid impedance any more, so the grid side of the AFE filter is the transformer leakage (17.5 uH star equivalent). The transformer block reads the per-unit data param.grid.emu.trafo.pu (r1, l1, r3, l3, lm, lm0, rfe, clock3) and Sr, V1, V3, fr from param.grid.emu.trafo, with the per-unit formulas of the class three\_phase\_transformer\_setup of the library. The magnetizing inductance comes from the core: Lm1 = mu0\*mur\*n1\*n1\*area/length = 145 mH on the delta coil of n1 = 24 turns (lm = 138 pu).
@@ -64,10 +64,10 @@ param.grid.core_length = 2.5;                   % [m]
 param.grid.mur = 10e3;                          % [-] relative permeability: Lm1 = 145 mH
 param.grid.lm0_pu = 0.5;                        % [pu] zero-sequence magnetizing inductance of the three-limb core
                                                 % (lm0 = lm would be a bank of three single-phase units)
-param.grid.emu = prv.grid_emulator_param(param.grid);
+param.grid.emu = prv.grid_emulator_param(param.grid); %[output:8072d662]
 %[text] ### Fault test of the grid emulator
 %[text] Both fault generators are off, as in the legacy init. The data are those of the legacy test 25.4: 75 percent dip on two phases, variant D, 915 ms from 0.75 s. Set enable\_frt\_1 = 1 to apply it from the abc amplitudes, enable\_frt\_2 = 1 to apply it from the sequence references (deepPOSxi to deepNEGeta). The emulator and the FRT control of the AFE read param.frt.data; the FRT control is switched on at settle\_time when one of the two enables is 1.
-param.frt.data = prv.grid_fault_param('two_phase_D', 0.75, 0.915, 0.75, 0, 0);
+param.frt.data = prv.grid_fault_param('two_phase_D', 0.75, 0.915, 0.75, 0, 0); %[output:0a0efb48]
 param.frt.data.settle_time = 0.175;             % [s] FRT control of the AFE enabled from here (step FRT-VDE4110/enable)
 param.frt.data.k_frt_ref = 2;                   % [pu/pu] reactive current per pu of voltage change (frt_vde4110)
 %%
@@ -87,7 +87,7 @@ param.ctrl.filters = setup_global_filters(param.glb_time.ts_afe, param.glb_time.
 param.afe.pwr_nom = 325e3;                      % [W] rated power (bases: ibez = 614.2 A peak)
 param.afe.hw_in.CFi = 2.4e-3;                   % [F] DC-link capacitor of the AFE
 param.afe.hw_in.RCFi = 1e-3;                    % [Ohm] its series resistance (informative)
-param.afe.hw = prv.afe_hw_param(param.grid.application_voltage, param.afe.pwr_nom, param.glb_time.fPWM_AFE, param.afe.hw_in);
+param.afe.hw = prv.afe_hw_param(param.grid.application_voltage, param.afe.pwr_nom, param.glb_time.fPWM_AFE, param.afe.hw_in); %[output:32b8bcfd]
 %[text] ### Behaviour
 param.afe.behav.time_gain_module_1 = 1.0002;            % [-] clock ratio of the local time of the module
 param.afe.behav.pwm_phase_shift_mod1 = 0;               % [rad] carrier phase
@@ -117,7 +117,7 @@ g.i_grid_neg_xi_red_lim = 0.1;
 g.i_grid_neg_eta_red_lim = 0.1;
 g.pll_p = 1;                    % FHT-PLL PI
 g.pll_i1 = 80;                  % [1/s]
-param.afe.ctrl = prv.afe_ctrl_param(param.glb_time.ts_afe, param.grid.emu.omega_grid_nom, g);
+param.afe.ctrl = prv.afe_ctrl_param(param.glb_time.ts_afe, param.grid.emu.omega_grid_nom, g); %[output:10e5d3fd]
 clear g
 %[text] ### References
 %[text] u\_cm\_comp\_mod1 is the zero-sequence factor of the space-vector modulator (space\_vector/Gain3): 0 for one module, -1 on the modules that follow a master in a hard parallel connection. The positive-sequence reactive current reference (FRT-VDE4110/positive\_reactive\_current\_reference) is 0, unity power factor. enable\_i\_react\_pos\_steps = 1 gives two steps after the fault test, as in afe\_uvw\_three\_phase: plus and minus the reactive current of cos(phi) = 0.95 at the rated active current, 0.335 s and 0.835 s after the end of the fault (2.0 s and 2.5 s with the default test: extend simlength).
@@ -263,7 +263,7 @@ h.RLdc_dc1 = 157*0.02*h.Ldc_dc1;
 h.Ldc_dc2 = 0.4e-6;             % [H] output inductor
 h.RLdc_dc2 = 157*0.01*h.Ldc_dc2;
 param.psfbc.hw_in = h;
-param.psfbc.hw = prv.psfbc_hw_param(param.afe.hw.udc_nom, param.psfbc.pwr_nom, param.glb_time.fPWM_PSFBC, h);
+param.psfbc.hw = prv.psfbc_hw_param(param.afe.hw.udc_nom, param.psfbc.pwr_nom, param.glb_time.fPWM_PSFBC, h); %[output:01855f71]
 clear h
 %[text] ### Control
 %[text] Output current loop: a PI on the load current (in pu of 12 kA) gives the phase displacement of leg B (0 to 1 = 0 to pi); the reference steps to 12 kA at 25 ms with a slope of 10 times 12 kA per second. The DC transformer current compensation adds its PI output (limited at plus or minus lim\_idc\_trafo) to the duty 0.5 of both legs. It reads the DC input current of the bridge, which is positive at full load: it sits at its lower limit and caps the effective duty at 1 - 2\*lim\_idc\_trafo = 0.8, which the section "Design figures" compares with the duty the rated point needs. lim\_idc\_trafo = 0 switches it off. Values of the legacy model; they were typed in the blocks before.
@@ -298,11 +298,11 @@ clear d
 %%
 %[text] ## Power semiconductors
 %[text] Ideal switch for the AFE bridge and the brake (param.afe.ideal\_switch) and for the full bridge (param.psfbc.ideal\_switch); IGBT and MOSFET data sets for the full bridges with thermal model and for the IGBT AFE bridge (commented out in the model).
-param.afe.ideal_switch = prv.device_ideal_switch_param('silicon_high_power_ideal_switch', param.glb_time.fPWM_AFE, param.afe.hw.udc_nom);
-param.psfbc.ideal_switch = prv.device_ideal_switch_param('silicon_high_power_ideal_switch', param.glb_time.fPWM_PSFBC, param.psfbc.hw.udc1_nom);
-param.afe.igbt = prv.device_igbt_param('mitsubishi_CM1200DW_34T', param.glb_time.fPWM_AFE, param.afe.hw.udc_nom);
-param.psfbc.igbt = prv.device_igbt_param('mitsubishi_CM1200DW_34T', param.glb_time.fPWM_PSFBC, param.psfbc.hw.udc1_nom);
-param.psfbc.mosfet = prv.device_mosfet_param('danfoss_SKM1700MB20R4S2I4', param.glb_time.fPWM_PSFBC, param.psfbc.hw.udc1_nom);
+param.afe.ideal_switch = prv.device_ideal_switch_param('silicon_high_power_ideal_switch', param.glb_time.fPWM_AFE, param.afe.hw.udc_nom); %[output:7a95a2c1]
+param.psfbc.ideal_switch = prv.device_ideal_switch_param('silicon_high_power_ideal_switch', param.glb_time.fPWM_PSFBC, param.psfbc.hw.udc1_nom); %[output:0592dc0d]
+param.afe.igbt = prv.device_igbt_param('mitsubishi_CM1200DW_34T', param.glb_time.fPWM_AFE, param.afe.hw.udc_nom); %[output:2e283582]
+param.psfbc.igbt = prv.device_igbt_param('mitsubishi_CM1200DW_34T', param.glb_time.fPWM_PSFBC, param.psfbc.hw.udc1_nom); %[output:7ebc0036]
+param.psfbc.mosfet = prv.device_mosfet_param('danfoss_SKM1700MB20R4S2I4', param.glb_time.fPWM_PSFBC, param.psfbc.hw.udc1_nom); %[output:66698fb6]
 %%
 %[text] ## Heatsink
 %[text] Aluminium plate, liquid cooled, for PrimePACK2 modules: water flow above 28 l/min, water in/out rise at most 5 K with 2 kW of losses. HA is the rise from the water to the heatsink surface. no\_weight = weight/10 leaves out the thermal inertia.
@@ -332,7 +332,7 @@ param.thermal.heatsink.DThs_init = param.thermal.DThs_init;
 %%
 %[text] ## Battery (battery\_1, commented out in the model)
 %[text] Lithium-ion pack at the DC-link voltage, 250 kW, 1C capacity, as the legacy init (R0 and R1 halved, C1 divided by 50). The block is commented out: the data only keep it ready.
-param.battery.pack_1 = prv.battery_param(param.afe.hw.udc_nom, 250e3, 250e3/param.afe.hw.udc_nom, 0.85, param.glb_time.ts_dab, false);
+param.battery.pack_1 = prv.battery_param(param.afe.hw.udc_nom, 250e3, 250e3/param.afe.hw.udc_nom, 0.85, param.glb_time.ts_dab, false); %[output:0fdf3891]
 param.battery.pack_1.R0 = param.battery.pack_1.R0/2;
 param.battery.pack_1.R1 = param.battery.pack_1.R1/2;
 param.battery.pack_1.C1 = param.battery.pack_1.C1/50;
@@ -349,9 +349,9 @@ param.meas.adc16_quantization = 1/2^15;
 %%
 %[text] ## Design figures
 %[text] Averaged models (the README explains them): operating point and duty budget of the full bridge, its output current loop, and the AFE current and DC-link voltage loops. With the legacy settings two points stand out: the DC transformer current compensation caps the duty of the full bridge at 0.8 while the rated point needs about 0.83 (the output stays near 11.6 kA, 24.2 V), and kp\_idc = 1 is close to the stability limit of the output current loop (gain margin 1.6 dB, the output filter mode at 1.35 kHz damped 6 percent). Both are left as in the legacy model; the README gives the numbers of the alternatives. The AFE current loop is the resonant PI per phase of current\_ctrl\_uvw (kp 0.6, ki 35): crossover 193 Hz, phase margin 75 deg, gain margin 17 dB; the DC-link loop crosses at 56 Hz with 71 deg. Without the grid impedance the LCL resonance is at 2.06 kHz.
-if param.sim.design_figures
-    param.design = prv.design_figures(param);
-end
+if param.sim.design_figures %[output:group:70bca072]
+    param.design = prv.design_figures(param); %[output:02ed2fb8]
+end %[output:group:70bca072]
 %%
 %[text] ## Model
 %[text] ### C-Caller types and scopes
@@ -394,14 +394,34 @@ for b = 1:numel(bridges)
         set_param([model '/' readers{b}{r}], 'Commented', state);
     end
 end
-fprintf('%s init: full bridge %s active\n', model, bridges{active});
+fprintf('%s init: full bridge %s active\n', model, bridges{active}); %[output:87aefeef]
 clear fb bridges readers active b r state
+%[text] ### CREATE\_POWER\_METER\_BUS
+% Simulink.Bus for output "m" of the MATLAB Function block three_phase_power_meter_iec
+% (Symbols pane: Type = Bus: PowerMeterIecBus). Bus objects stay in the base workspace.
+names = {'Q1p', 'Q1n', 'P1n', 'P1p', 'U1n', 'U1p', ...
+    'i_act_1n', 'i_react_1n', 'i_act_1p', 'i_react_1p'};
+
+elems = Simulink.BusElement.empty(0,1);
+for k = 1:numel(names)
+    e            = Simulink.BusElement;
+    e.Name       = names{k};
+    e.Dimensions = 1;
+    e.DataType   = 'double';
+    e.Complexity = 'real';
+    elems(k,1)   = e;
+end
+
+PowerMeterIecBus          = Simulink.Bus;
+PowerMeterIecBus.Elements = elems;
+assignin('base', 'PowerMeterIecBus', PowerMeterIecBus);
+clear names elems e k
 %[text] ### Checks of the model
 %[text] Every param.\* read by the active blocks must exist; then the From blocks of the active part that have no active Goto. In this model they all feed scopes or To Workspace blocks: the logging subsystem data\_to\_worspace\_module\_1 of the control copied from afe\_rst\_ctrl (old PLLs and xi-eta current control), instantaneus\_power (commented out) and power\_meter\_iec (the new power meter does not write it). afe\_rst\_ctrl has the same ones in data\_to\_worspace\_module\_1; the README lists them.
-if param.sim.check_model
-    [missing_refs, model_refs] = prv.check_model_param_refs(model, param);
+if param.sim.check_model %[output:group:95f59ab5]
+    [missing_refs, model_refs] = prv.check_model_param_refs(model, param); %[output:88ff59d7] %[output:2c60366b] %[output:43c50375]
     if isempty(missing_refs)
-        fprintf('%s init: all %d param.* references of the active blocks resolve\n', model, numel(model_refs));
+        fprintf('%s init: all %d param.* references of the active blocks resolve\n', model, numel(model_refs)); %[output:118beca0]
     else
         warning('%s init: %d param.* references of the active blocks do not exist in param:\n  %s', model, ...
             numel(missing_refs), strjoin(missing_refs', '\n  '));
@@ -410,13 +430,76 @@ if param.sim.check_model
     if isempty(lost)
         fprintf('%s init: every From block of the active part has its Goto\n', model);
     else
-        warning('%s init: %d tags of From blocks have no active Goto:\n  %s', model, numel(lost), strjoin(lost, '\n  '));
+        warning('%s init: %d tags of From blocks have no active Goto:\n  %s', model, numel(lost), strjoin(lost, '\n  ')); %[output:01640732]
     end
     clear missing_refs model_refs lost
-end
+end %[output:group:95f59ab5]
 
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
 %   data: {"layout":"onright","rightPanelPercent":33.8}
+%---
+%[output:675b18a7]
+%   data: {"dataType":"text","outputData":{"text":"library_setup: library already on the path (C:\\github\\pwr-control\\library)\n","truncated":false}}
+%---
+%[output:929bb977]
+%   data: {"dataType":"text","outputData":{"text":"ps_25V_12kA_r init: functions of .\/private, called as prv.<name>: afe_ctrl_param, afe_hw_param, battery_param, check_from_goto, check_model_param_refs, design_figures, device_ideal_switch_param, device_igbt_param, device_mosfet_param, grid_emulator_param, grid_fault_param, library_setup, psfbc_hw_param, timing_param\n","truncated":false}}
+%---
+%[output:5f132968]
+%   data: {"dataType":"text","outputData":{"text":"Timing: AFE 4000 Hz, double update = 1, ts_afe = 125.0 us, dead time 3.0 us | full bridge 4000 Hz, double update = 1, ts_psfbc = 125.0 us, dead time 3.0 us\ntc = 0.6250 us, logging window 1.750 s (Nc = 2800000, Ns_afe = 14000), ts_dab = 41.67 us\n","truncated":false}}
+%---
+%[output:8072d662]
+%   data: {"dataType":"text","outputData":{"text":"Transformer Dyn11_480V_480V_1750kVA: Ld1 = 26.2 uH, Rd1 = 9.87 mOhm, Ld2 = 8.7 uH, Rd2 = 3.29 mOhm, Lm1 = 144.8 mH (i1m = 15.2 A), Rfe1 = 494 Ohm\nPer unit (coil bases 0.3950 \/ 0.1317 Ohm): r1 = 0.0250, l1 = 0.0250, r3 = 0.0250, l3 = 0.0250, lm = 138.2, lm0 = 0.5, rfe = 1250, clock 11\nGrid emulator: grid_480V_1750kVA_Dyn11, 60 Hz, ugrid_bez = 391.9 V, igrid_bez = 509.1 A | no grid impedance: grid side = transformer leakage 17.5 uH (star equivalent)\n---------------------------\n","truncated":false}}
+%---
+%[output:0a0efb48]
+%   data: {"dataType":"text","outputData":{"text":"Fault test: two_phase_D, enable_frt_1 = 0, enable_frt_2 = 0, amplitudes [0.250 0.875 0.875], phase shift -0.380 rad, from 0.750 s to 1.665 s\n","truncated":false}}
+%---
+%[output:32b8bcfd]
+%   data: {"dataType":"text","outputData":{"text":"Hardware three-phase two-level AFE: afe480V, 325 kW, 480 V, 60 Hz | ubez = 391.9 V, ibez = 614.3 A (is_nom 434.3 A rms), 1 pu = 361.1 kW | udc_nom = 750 V\nDC link CFi = 2.4 mF | filter LFu = 330 uH (0.195 pu), CFu = 360 uF star (0.087 pu), RCFu = 50 mOhm | Rbrake = 2.5 Ohm\n---------------------------\n","truncated":false}}
+%---
+%[output:10e5d3fd]
+%   data: {"dataType":"text","outputData":{"text":"AFE control: udc PI kp = 2.00, ki = 35, ixi limit = 1.65 | resonant current PI kp = 0.60, ki = 35, zero sequence kp = 0.50, ki = 18 | sequence PIs pos 0.25\/35, neg 0.25\/35, limits 1.00\/0.50 | PLL kp = 1.0, ki = 80\nFHT: omega = 377.0 rad\/s, delta = 0.05, Ld = [0.2155 41.4364] | di_obs: Ld = [0.2178 63.263187] | vr_obs: kx = 186.99, kv = 5618.40\n","truncated":false}}
+%---
+%[output:01855f71]
+%   data: {"dataType":"text","outputData":{"text":"Phase-shift full bridge: PSFBC_800V, 325 kW, 750 V -> 45 V \/ 12000 A bases, 4000 Hz | transformer 34:2:2, Lm = 1.00 mH, Ls = 20.03 uH (Ld1 = 10.02 uH, Ld2 = 34.7 nH), Rs1 = 1.00 mOhm\nCin = 1.20 mF + 1.0 mOhm, Cout = 45 mF + 0.10 mOhm, Lout = 0.40 uH + 0.63 uOhm | idc1_bez = 433.3 A\n---------------------------\n","truncated":false}}
+%---
+%[output:7a95a2c1]
+%   data: {"dataType":"text","outputData":{"text":"Ideal switch data set: silicon_high_power_ideal_switch | Rds_on = 1.50 mOhm, Vth = 5.5 V | diode 2.0 V + 0.15 mOhm | snubber 2200 Ohm + 10 nF\n","truncated":false}}
+%---
+%[output:0592dc0d]
+%   data: {"dataType":"text","outputData":{"text":"Ideal switch data set: silicon_high_power_ideal_switch | Rds_on = 1.50 mOhm, Vth = 5.5 V | diode 2.0 V + 0.15 mOhm | snubber 2200 Ohm + 10 nF\n","truncated":false}}
+%---
+%[output:2e283582]
+%   data: {"dataType":"text","outputData":{"text":"IGBT data set: mitsubishi_CM1200DW-34T (Si-IGBT)\nVce_sat = 2.40 V + 0.25 mOhm, Vd = 2.80 V + 0.25 mOhm | Eon+Eoff = 730 mJ, Erec = 140 mJ at 1000 V \/ 1200 A | Rth_switch_JH = 49.0 mK\/W, Rth_diode_JH = 64.0 mK\/W\n---------------------------\n","truncated":false}}
+%---
+%[output:7ebc0036]
+%   data: {"dataType":"text","outputData":{"text":"IGBT data set: mitsubishi_CM1200DW-34T (Si-IGBT)\nVce_sat = 2.40 V + 0.25 mOhm, Vd = 2.80 V + 0.25 mOhm | Eon+Eoff = 730 mJ, Erec = 140 mJ at 1000 V \/ 1200 A | Rth_switch_JH = 49.0 mK\/W, Rth_diode_JH = 64.0 mK\/W\n---------------------------\n","truncated":false}}
+%---
+%[output:66698fb6]
+%   data: {"dataType":"text","outputData":{"text":"MOSFET data set: danfoss_SKM1700MB20R4S2I4 (SiC MOSFET)\nRds_on = 1.04 mOhm, Vth = 5.5 V | Eon+Eoff = 185 mJ, Err = 9.7 mJ at 1300 V \/ 1000 A | Rth_mosfet_JH = 35.0 mK\/W\n---------------------------\n","truncated":false}}
+%---
+%[output:0fdf3891]
+%   data: {"dataType":"text","outputData":{"text":"Battery: 750 V | 250 kW | 333 Ah | 207 cells | R0 = 56.25 mOhm | soc_init = 0.85\n","truncated":false}}
+%---
+%[output:02ed2fb8]
+%   data: {"dataType":"text","outputData":{"text":"1. Full bridge at 25.0 V, 12000 A (300 kW): n*udc = 44.12 V (udc 750 V, turns 34:2), commutation dD = 0.226 (0.832 mOhm), path 39.9 uOhm + diode 0.98 V (ideal switch 1.50 mOhm)\n   duty needed 0.826, largest duty 0.800: the DC transformer current compensation sits at -0.10 (d1 = 0.40), the current loop saturates at about 11613 A, 24.19 V. lim_idc_trafo = 0 gives D up to 1 (14599 A possible).\n   power from the DC link about 298 kW (conduction 16.7 kW, iron 0.5 kW)\n2. Full-bridge output current loop: kp_idc = 1.00, ki_idc = 18 1\/s, ts = 125.0 us, plant 1.244 pu\/pu at DC, output filter 1186 Hz (Z0 2.98 mOhm, load 2.08 mOhm)\n   crossover 1105 Hz, phase margin 34.3 deg, gain margin 1.6 dB | closed loop: pair at 1349 Hz damped 0.057, slow pole -10.0 rad\/s | stable for kp_idc < 1.21\n3. AFE: 298 kW from the grid = 0.83 pu of active current (507 A peak, limit 1.65 pu) | LCL: LFu 330 uH, CFu 360 uF, grid side 17.5 uH -> 2060 Hz (fs\/6 = 1333 Hz)\n   current loop, resonant PI per phase kp = 0.60, ki = 35, delta = 0.005: crossover 193 Hz, phase margin 75.2 deg, gain margin 17.2 dB\n   DC-link loop kp = 2.00, ki = 35, C = 3.6 mF (plant 178 1\/s, current loop as a dq PI 0.60\/17.5): crossover 56 Hz, phase margin 70.8 deg, gain margin 22.7 dB\n","truncated":false}}
+%---
+%[output:87aefeef]
+%   data: {"dataType":"text","outputData":{"text":"ps_25V_12kA_r init: full bridge full-bridge_ideal_switch_based active\n","truncated":false}}
+%---
+%[output:88ff59d7]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: Error resolving Custom Code."}}
+%---
+%[output:2c60366b]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: include specified in custom include directory paths string does not exist in any of the following search directories:\nC:\\github\\pwr-control\\modelization-and-control\\foundations_of_power_electronics\\ps_25V_12kA"}}
+%---
+%[output:43c50375]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: src specified in custom include directory paths string does not exist in any of the following search directories:\nC:\\github\\pwr-control\\modelization-and-control\\foundations_of_power_electronics\\ps_25V_12kA"}}
+%---
+%[output:118beca0]
+%   data: {"dataType":"text","outputData":{"text":"ps_25V_12kA_r init: all 150 param.* references of the active blocks resolve\n","truncated":false}}
+%---
+%[output:01640732]
+%   data: {"dataType":"warning","outputData":{"text":"Warning: ps_25V_12kA_r init: 24 tags of From blocks have no active Goto:\n  i_grid_pu_rms (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/pwr_meter)\n  id_eta_pu (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  id_xi_pu (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  isa (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  isa_ref (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  isb (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  isb_ref (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  isc (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  isc_ref (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  iz_ctrl_out (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  iz_pu (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  iz_pu_ref (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/inner_current_tracking)\n  omega_grid_dqpll_ccaller (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/dq_pll)\n  omega_grid_fht_simulink_pll (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/dq_pll)\n  omega_grid_fhtsr_dqpll (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/dq_pll)\n  omega_grid_pu_dqpll (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/dq_pll)\n  phase_grid_dqpll (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/dq_pll)\n  phase_grid_dqpll_ccaller (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/dq_pll)\n  phase_grid_fht_simulink_pll (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/dq_pll)\n  phase_grid_fhtsr_dqpll (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/dq_pll)\n  power_meter_iec (2 From in afe_measurement_sim, scope)\n  pwr_act_grid (2 From in afe_abc_mod1\/AFE_control\/afe_control, afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/pwr_meter)\n  pwr_react_grid (2 From in afe_abc_mod1\/AFE_control\/afe_control, afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/pwr_meter)\n  u_grid_pu_rms (1 From in afe_abc_mod1\/AFE_control\/afe_control\/data_to_worspace_module_1\/pwr_meter)"}}
 %---
