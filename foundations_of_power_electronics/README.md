@@ -289,6 +289,10 @@ Recurring building blocks across the projects:
 - 480 V / 60 Hz front end, 325 kW per stage, fPWM = 4 kHz.
 - Device modelling is the point of the two stored runs: ideal-switch AFE, IGBT with thermal
   model on the full bridge, charge (reverse-recovery) model on the rectifier diodes.
+- Parameters in `param` (live-script `init_model.m` + `private/`); the init selects the full-bridge variant
+  (ideal switches, IGBT or MOSFET with thermal model) and prints a design check. Open points in the README:
+  the DC transformer current compensation caps the duty at 0.8 (rated point needs 0.83), and the output current
+  loop has a gain margin of 1.6 dB.
 - `docs/ps_25V_12kA_r.pdf` is the design document.
 
 ### `ps_isop_rail`
