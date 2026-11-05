@@ -10,13 +10,13 @@ colore3 = [0.75 0.75 0.75];
 fontsize_plotting = 14;
 
 N1=1;
-N2=Nc;
+N2=param.glb_time.Nc;
 signal = iuvw_psm_sim(N1:N2,2);
 time = time_tc_sim;
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*param.glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';
@@ -50,7 +50,7 @@ time = time_tc_sim;
 
 sig_fft = signal;
 Nfft = length(sig_fft)-1;
-u1 = Nfft*tc;
+u1 = Nfft*param.glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=[0:1/u1:Nfft/2/u1-1/u1]';

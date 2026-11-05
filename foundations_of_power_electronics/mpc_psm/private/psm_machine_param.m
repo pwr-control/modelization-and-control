@@ -23,8 +23,10 @@ function psm = psm_machine_param(m)
 %                                                             prompt says "pole pairs" but the value given is
 %                                                             number_poles, as in the legacy model)
 %     ibez, ubez, psi_bez, omega_bez, omega_m_bez, tau_bez,   measurements and control (per unit)
-%     rpm_nom, psi_m_norm, Rs_norm, Ls_norm                   (back-EMF observers, EKF)
-%     Lalpha_norm, Lbeta_norm, Rs_norm, omega_bez             predictive control (mp control/mpc_pu_d)
+%     rpm_nom, psi_m_norm                                     (back-EMF observers, EKF, predictive control)
+%   The predictive control, the EKF and the two non-EKF back-EMF observers use the R and L of
+%   param.psm.ctrl.mpc (q axis of the machine plus the output inductor, private/psm_ctrl_param.m); before
+%   November 2026 they read Lalpha_norm, Lbeta_norm, Rs_norm and Ls_norm of this struct (still built here).
 
     psm.name = m.name;
     psm.number_of_systems = m.number_of_systems;
