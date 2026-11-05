@@ -170,11 +170,17 @@ end
 param.grid.eq_grid_inductance = param.grid.Lgrid_base*param.grid.ucc_factor;    % [H]
 param.grid.eq_grid_resistance = 2e-3;                                             % [Ohm]
 
+% transformer of the grid emulator: block configurable_trafo of the library (Dyn11, one delta primary, star secondary
+% with the star point grounded, three-limb core). It reads the per-unit data param.grid.emu.trafo.pu.* (r1, l1, r3,
+% l3, lm, lm0, rfe, clock3) that the class three_phase_transformer_setup computes from the nameplate above, next to
+% the SI data of one coil (Rd1, Ld1, Lm1, Rfe1, Rd2, Ld2) of the former three single-phase transformers.
+param.grid.lm0_pu = 0.5;                            % [pu] zero-sequence magnetizing inductance of the three-limb core
+                                                    % (lm0 = lm would be a bank of three single-phase units)
 g = param.grid;
 param.grid.emu = grid_three_phase_emulator('Dyn11', g.delta_star, g.grid_nominal_power, g.application_voltage, ...
     g.us1, g.us2, g.fgrid, g.eq_grid_inductance, g.eq_grid_resistance, g.eta, g.ucc, g.i1m, g.p_iron, ...
     g.n1, g.n2, g.core_area, g.core_length, g.mur, ...
-    g.up_xi_pu_ref, g.up_eta_pu_ref, g.un_xi_pu_ref, g.un_eta_pu_ref);
+    g.up_xi_pu_ref, g.up_eta_pu_ref, g.un_xi_pu_ref, g.un_eta_pu_ref, g.lm0_pu);
 clear g
 %[text] ## FRT
 param.frt.test_index = 25;                  % type of fault: index
