@@ -135,10 +135,16 @@ Recurring building blocks across the projects:
 - `kalman_psm.m` builds the 6-state EKF (αβ currents, back-EMF, angle, speed).
 
 ### `mpc_psm`
-- Model predictive current control of a PMSM drive, 690 V, 250 kW. The inverter runs at
-  6 × fPWM (15 kHz) with single update — the oversampling typical of FCS-MPC.
+- Finite-set model predictive current control of a permanent magnet wind generator: one of the
+  six systems (about 267 kW) of a 1.6 MW, 17.8 rpm machine on a two-level inverter (ideal
+  switches, 690 V class, 230 µH) across a 1200 V battery. The control runs at 15 kHz with single
+  update — the oversampling typical of FCS-MPC — and tests the 8 states of the bridge with delay
+  compensation and a switching term; sensorless with a 6-state EKF (encoder as an option).
 - Formulation based on the work of Geyer and Rodriguez; cost function and candidate vectors
-  live inside the model.
+  live inside the model (MATLAB Function `mpc`). See the folder `README.md`.
+- `init_model.m` migrated (November 2026) to the `param` structure with the parameter functions in
+  `private/`, and the control fixed at the same time (voltage base, delay compensation, EKF
+  voltage and inductance); the legacy flat init is kept as `init_model_legacy.m`.
 
 ### `mpc_ttype_psm`
 - Predictive control of a three-level T-type inverter feeding a PMSM, fPWM = 4 kHz with double
