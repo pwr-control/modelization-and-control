@@ -6,6 +6,9 @@ function glb_time = timing_param(t)
 %     t.fpwm_afe, t.trgo_afe       [Hz] PWM frequency of the two-level AFE bridge and double update flag
 %                                  (1: two control steps per carrier period)
 %     t.dead_time_afe              [s] dead time of the AFE legs (modulator mask)
+%     t.fpwm_inv, t.trgo_inv       [Hz] PWM frequency of the two-level INV bridge and double update flag
+%                                  (1: two control steps per carrier period)
+%     t.dead_time_inv              [s] dead time of the INV legs (modulator mask)
 %     t.fpwm_psfbc, t.trgo_psfbc   [Hz] switching frequency of the phase-shift full bridge and double update
 %                                  flag (modulator full_bridge_zvs_pwm_modulator: two triggers per period)
 %     t.dead_time_psfbc            [s] dead time of the full-bridge legs
@@ -36,6 +39,15 @@ function glb_time = timing_param(t)
     glb_time.dead_time_AFE = t.dead_time_afe;
     glb_time.minimum_pulse_time_AFE = 1e-6;
     glb_time.delayAFE_modB = 2*pi*t.fpwm_afe*t.delay_pwm;
+
+    % INV domain: two-level bridge, modulator, all the INV control loops
+    glb_time.fPWM_INV = t.fpwm_inv;
+    glb_time.tPWM_INV = 1/t.fpwm_inv;
+    glb_time.TRGO_INV_double_update = t.trgo_inv;
+    glb_time.ts_inv = sample_time(glb_time.tPWM_INV, t.trgo_inv);
+    glb_time.dead_time_INV = t.dead_time_afe;
+    glb_time.minimum_pulse_time_INV = 1e-6;
+    glb_time.delayINV_modB = 2*pi*t.fpwm_inv*t.delay_pwm;
 
     % phase-shift full bridge domain: modulator, output current PI
     glb_time.fPWM_PSFBC = t.fpwm_psfbc;
