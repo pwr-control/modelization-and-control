@@ -10,6 +10,11 @@ flux come from an extended Kalman filter (EKF), sensorless; the speed comes from
 observer on the EKF angle. The control was fixed in November 2026: see
 [Control fixes](#control-fixes-november-2026).
 
+**Design note:** [`repos_doc/psm_mpc_ekf`](https://github.com/pwr-control/repositories-documentation/tree/main/repos_doc/psm_mpc_ekf)
+of `pwr-control/repositories-documentation` (PDF `psm_mpc_ekf.pdf`) explains the machine model in per unit
+and the active flux, the predictive control and its current loop, the EKF and the speed of the double
+integrator observer, the parameters and the design check of this model.
+
 | File | Content |
 |---|---|
 | `init_model.m` | initialization (plain-text live script): every number in the struct `param`, design figures, then it opens the model, sets the mechanical setting and checks the `param.*` references and the From/Goto tags. Run it **from this folder**. |

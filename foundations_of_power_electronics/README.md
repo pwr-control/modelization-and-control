@@ -145,6 +145,9 @@ Recurring building blocks across the projects:
 - `init_model.m` migrated (November 2026) to the `param` structure with the parameter functions in
   `private/`, and the control fixed at the same time (voltage base, delay compensation, EKF
   voltage and inductance); the legacy flat init is kept as `init_model_legacy.m`.
+- Design note: [`repos_doc/psm_mpc_ekf`](https://github.com/pwr-control/repositories-documentation/tree/main/repos_doc/psm_mpc_ekf)
+  of `repositories-documentation` (machine model in per unit, predictive control and its current
+  loop, EKF and speed observer, parameters, design check).
 
 ### `mpc_ttype_psm`
 - Predictive control of a three-level T-type inverter feeding a PMSM, fPWM = 4 kHz with double
