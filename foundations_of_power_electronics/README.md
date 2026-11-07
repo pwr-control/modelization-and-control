@@ -419,6 +419,9 @@ Recurring building blocks across the projects:
 - Grid-support logic: FRT detection, VDE 4110 reactive current references, islanding detector,
   positive/negative sequence decomposition.
 - `video_plot/` animates the FHT dq-PLL response.
+- `init_model.m` builds the struct `param` with the functions of `private/` (November 2026); the
+  converter side of the LCL filter is open, the model is a PLL bench. Details, wiring fixes and the
+  design check in [`three_phase_dqPLLs_analysis/README.md`](three_phase_dqPLLs_analysis/README.md).
 
 ### `single_phase_dqPLLs_analysis`
 - Control-analysis project with no power stage: comparison of the orthogonal-signal generators
