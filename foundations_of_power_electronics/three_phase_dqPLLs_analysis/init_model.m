@@ -1,9 +1,9 @@
 %[text] # Three-phase grid PLLs under grid faults (three\_phase\_dqPLLs\_analysis, model frt\_dqpll)
 %[text] Initialization of frt\_dqpll.slx. The model is a PLL test bench: a 1 MVA, 690 V grid emulator (three controlled voltage sources driven by the fault generator of the library, three\_phase\_voltage\_source\_with\_frt\_emulator, and a Dyn11 coupling transformer, library block configurable\_trafo) feeds the LCL filter of a 250 kW active front end whose converter side is left open: there is no converter and no DC link, the grid voltages and currents are only measured, normalized and acquired by the AFE control (12-bit quantizer and one step delay).
 %[text] The AFE control (AFE\_control1/afe\_control, triggered by the modulator TRGO every ts = 125 us) holds four phase locked loops on the same grid voltage, compared side by side: the dq-PLL in Simulink (synchronous reference frame, proportional gain scheduled during the fault), the dq-PLL of the C-Caller dqpll\_grid (fed by three per-phase first harmonic trackers), the DDSRF-PLL (decoupled double synchronous reference frame on the per-phase first harmonic trackers) and the FHT-PLL (first harmonic trackers on alpha and beta, positive sequence from their quadrature outputs); every loop ends in a double-integrator observer for the frequency. One of the four drives the rest of the control (param.afe.pll.use\_dq\_pll\_mode1..4): the grid voltage sequences, the FRT detection with the reactive current references of VDE-AR-N 4110, the grid current sequences with the reactive power PIs and the islanding detector are the library blocks afe\_uvw\_ctrl, parameter struct param.afe.uvw. The space vector modulator runs with zero references and only gives the control trigger.
-%[text] FRT test: VDE-AR-N 4110 test 25.4 in its asymmetric variant 1 (phase U to 0.25 pu, phases V and W to 0.875 pu with a shift of 21.8 degrees, built from the abc amplitudes) from 0.75 s for 915 ms; the simulation stops at 1.25 s, inside the fault.
+%[text] FRT test: VDE-AR-N 4110 test 25.4 in its asymmetric variant 1 (phase U to 0.25 pu, phases V and W to 0.875 pu with a shift of 21.8 degrees, built from the abc amplitudes) from 0.75 s for 915 ms; the simulation runs for 2.25 s, through the fault and its recovery.
 %[text] All the data are in one struct param, one group per part of the model: sim, time, glb\_time, grid, frt, afe, inv, meas, ctrl. The model reads param.\* only; the README lists the old names. The functions of ./private are called through the handles of frt\_dqpll\_private.m (prv.timing\_param, prv.grid\_param, ...): the Live Editor runs a live script from a copy outside this folder and does not see ./private. Run the whole script once (Run): a section run on its own needs prv and param in the workspace.
-%[text] The old flat init is init\_model\_legacy.m (kept until the merge). It no longer runs with the library (grid\_fault\_generator is a function now) and it does not define the param.\* names that the blocks copied from afe\_uvw\_three\_phase already read.
+%[text] Design note of this model (the three PLLs from the control point of view, continuous-time models, performance on the logged fault and on test signals, criticalities and what to change): repos\_doc/three\_phase\_plls\_comparison/three\_phase\_plls\_comparison.pdf of pwr-control/repositories-documentation, https://github.com/pwr-control/repositories-documentation/tree/main/repos\_doc/three\_phase\_plls\_comparison. Its MATLAB script plotting\_results\_plls.m re-runs the PLL variants of the note on the logged capacitor voltage after a simulation (or on a saved sim\_results\_01.mat).
 clear;
 model = 'frt_dqpll';
 prv = frt_dqpll_private();      % handles to the functions of ./private (the Live Editor does not see ./private)
@@ -24,13 +24,13 @@ param = struct();
 fprintf('%s init: functions of ./private, called as prv.<name>: %s\n', model, strjoin(fieldnames(prv)', ', ')); %[output:64263c7b]
 %%
 %[text] ## Simulation
-param.sim.simlength = 2.25;                 % [s] model StopTime: the simulation ends inside the fault (0.75 s + 915 ms)
+param.sim.simlength = 2.25;                 % [s] model StopTime: fault from 0.75 s for 915 ms, then the recovery
 param.sim.nonlinear_iterations = 3;         % Simscape Solver Configuration of the grid emulator (no semiconductors: 3 is enough)
 param.sim.check_model = true;               % last section: param.* references of the model and From blocks without a Goto
 param.sim.design_figures = true;            % section PLL design check: figures of the loops (false: numbers only)
 %%
 %[text] ## Timing
-%[text] One clock domain: the modulator timer at 4 kHz with double update gives the control trigger (TRGO) every ts = 125 us; the step tc = ts/200 = 0.625 us is the logging base, the MaxStep of the solver, the step of the Simscape local solver and the time constant of the first order filters that smooth the emulator voltages (td2tc).
+%[text] One clock domain: the modulator timer at 4 kHz with double update gives the control trigger (TRGO) every ts = 125 us; the step tc = ts/100 = 1.25 us is the logging base, the MaxStep of the solver, the step of the Simscape local solver and the time constant of the first order filters that smooth the emulator voltages (td2tc).
 param.time.fpwm = 4e3;                      % [Hz] frequency of the modulator timer (block sv_pwm/modulator1)
 param.time.trgo = 1;                        % double update: control at 2*fpwm
 param.time.dead_time = 3e-6;                % [s] dead time of the modulator (no bridge in this model)

@@ -8,11 +8,16 @@ voltages at the filter capacitor and compares four phase locked loops on the sam
 tracker of each phase); a Variant Source picks one of them for the grid support blocks of the library
 (`afe_uvw_ctrl`: FRT detection VDE-AR-N 4110, voltage and current sequences, islanding detector). The grid
 emulator applies test 25.4 of VDE-AR-N 4110 in its asymmetric variant 1 (phase U to 0.25 pu, phases V and W
-to 0.875 pu rotated by 21.8 degrees) from 0.75 s for 915 ms; the simulation stops at 1.25 s, inside the fault.
+to 0.875 pu rotated by 21.8 degrees) from 0.75 s for 915 ms; the simulation runs for 2.25 s, through the fault and its recovery.
 
 The init was rewritten in November 2026 as a `param` struct with the functions of `private/`, the model was
 re-pointed to the new names and the Goto/From tags of the control blocks copied from the library were fixed
 (see [Wiring fixes](#wiring-fixes-of-the-control-tags-november-2026)).
+
+**Design note:** [`repos_doc/three_phase_plls_comparison`](https://github.com/pwr-control/repositories-documentation/tree/main/repos_doc/three_phase_plls_comparison)
+of pwr-control/repositories-documentation (November 2026): the three PLL blocks (dq-PLL, DDSRF-PLL, FHT-PLL)
+from the control point of view, their continuous-time models, the performance on the logged fault and on
+test signals, the criticalities and what to change. Its MATLAB script is `plotting_results_plls.m` (below).
 
 | File | Content |
 |---|---|
@@ -21,11 +26,11 @@ re-pointed to the new names and the Goto/From tags of the control blocks copied 
 | `private/` | the parameter functions of this model (table below) |
 | `frt_dqpll.slx` | the model (grid emulator, LCL filter, AFE control with the four PLLs, logging) |
 | `plotting_results_afe.m`, `plotting_results_fhtsr_dqpll.m` | post-processing of the logged grid and PLL quantities |
+| `plotting_results_plls.m` | the PLL variants of the design note re-run offline on the logged capacitor voltage (dq-PLL with constant and with scheduled gain, FHT-PLL, DDSRF-PLL as built, with the positive feed and corrected): checks the FHT-PLL branch against the log, prints the metrics table and draws four figures. Works on the base workspace after a run, or on a saved file: `plotting_results_plls('sim_results_01.mat')` |
 | `video_plot/video_plot_FHT_dqPLL.m` | animation of the FHT dq-PLL response |
 | `voltage_spectrum_analysis.m` | FFT of the grid phase voltage `vg_abc_sim` (bases now from `param`, they were the 400 V ones of another model) |
 | `plotting_results_inv.m`, `plotting_results_dclink.m` | post-processing of other models (PMSM inverter, DC link): they plot signals this model does not log |
 | `non_virtual_blocks_counting.m` | counts the non-virtual blocks of the model |
-| `init_model_legacy.m` | the old flat init, kept until the merge |
 
 ## The model
 
@@ -63,8 +68,8 @@ re-pointed to the new names and the Goto/From tags of the control blocks copied 
 
 | Group | Content |
 |---|---|
-| `param.sim` | `simlength` 1.25 s, nonlinear iterations, `check_model`, `design_figures` |
-| `param.time` → `param.glb_time` | `fpwm` 4 kHz, double update, dead time 3 µs, `tc_factor` 200: `prv.timing_param` gives `ts_afe`, `tc`, `Nc`, `Ns_afe`, `fPWM_AFE`, ... (AFE domain only) |
+| `param.sim` | `simlength` 2.25 s, nonlinear iterations, `check_model`, `design_figures` |
+| `param.time` → `param.glb_time` | `fpwm` 4 kHz, double update, dead time 3 µs, `tc_factor` 100 (tc 1.25 µs): `prv.timing_param` gives `ts_afe`, `tc`, `Nc`, `Ns_afe`, `fPWM_AFE`, ... (AFE domain only) |
 | `param.grid` → `param.grid.emu` | 1 MW, 690 V, Dyn11, core data: `prv.grid_param` adds the dataset of the voltage class (50 Hz, η 95 %, `ucc` 5 %, iron losses 1.8 kW), `n1`, `Lm1`, the no-load current and the object `grid_three_phase_emulator` with `trafo.pu.*` |
 | `param.frt` → `param.frt.data` | test 25.4, asymmetric type 1, start 0.75 s: `prv.frt_param` merges `frt_settings` and `grid_fault_generator` of the library |
 | `param.afe.hw`, `hw_in` | 250 kW hardware of the 690 V class (`prv.afe_hw_param`: `udc_nom` 1070 V, LFu, CFu, CFi, brake) through `hw_afe_three_phase_setup` |
@@ -157,9 +162,9 @@ T(s) = ω_n (kp s + ki) / (s² + ω_n kp s + ω_n ki) with ω_n = 2π 50.
 9. **LCL seen from the grid** (converter open): 76.8 µH (leakage + 1 µH) with 200 µF and 50 mΩ resonate at
    **1284 Hz** with damping 0.06 (gain 8 at the resonance on the capacitor voltage the control measures);
    every step of the fault excites it. No grid inductance in the model, see above.
-10. **Simulation length**: 1.25 s ends inside the fault (0.75 → 1.665 s): the end of the FRT, the recovery
-    and the reactive current steps of `param.afe.ref` (2.0 s and 2.5 s) never happen. Set
-    `param.sim.simlength` to 2.7 s or more to see them.
+10. **Simulation length**: 2.25 s (it was 1.25 s, inside the fault, until the run of November 2026) covers
+    the fault (0.75 → 1.665 s), the recovery and the first reactive current step of `param.afe.ref` (2.0 s);
+    the second step (2.5 s) needs `param.sim.simlength` of 2.7 s or more.
 11. `plotting_results_inv.m` and `plotting_results_dclink.m` plot signals of other models (PMSM currents,
     DC link): they stop on missing variables.
 
@@ -167,7 +172,5 @@ T(s) = ω_n (kp s + ki) / (s² + ω_n kp s + ω_n ki) with ω_n = 2π 50.
 
 - The fault gain set (point 2) and the DDSRF stage B input (point 5) are design choices of the author,
   reported and not changed.
-- `init_model_legacy.m` is kept until the merge; it does not run with the current library (two outputs of
-  `init_environment`, script call of `grid_fault_generator`).
 - The Goto Tag Visibility blocks of the full AFE control (`isa_mod1`, `udcd_pu_afe_mod1`, `u_7th_*`, ...)
   stay in `afe_control` without a Goto: harmless.
