@@ -236,12 +236,12 @@ fres_dab = glb_time.fPWM_DAB/5;
 fres_cllc = glb_time.fPWM_CLLC*1.2;
 
 hwdata.single_phase_inverter = single_phase_inverter_hwdata(application_voltage, single_phase_inverter_pwr_nom, glb_time.fPWM_INV);
-hwdata.afe = three_phase_afe_hwdata(application_voltage, afe_pwr_nom, glb_time.fPWM_AFE);
-hwdata.inv = three_phase_inverter_hwdata(application_voltage, inv_pwr_nom, glb_time.fPWM_INV);
-hwdata.dab = single_phase_dab_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_DAB, fres_dab);
-hwdata.psfbc = single_phase_psfbc_hwdata(application_voltage, psfbc_pwr_nom, glb_time.fPWM_PSFBC);
-hwdata.three_phase_dab = three_phase_dab_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_DAB, fres_dab);
-hwdata.cllc = single_phase_cllc_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_CLLC, fres_cllc);
+hwdata.afe = three_phase_afe_hwdata(application_voltage, afe_pwr_nom, glb_time.fPWM_AFE); %[output:379b877c]
+hwdata.inv = three_phase_inverter_hwdata(application_voltage, inv_pwr_nom, glb_time.fPWM_INV); %[output:210866fc]
+hwdata.dab = single_phase_dab_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_DAB, fres_dab); %[output:8783c351]
+hwdata.psfbc = single_phase_psfbc_hwdata(application_voltage, psfbc_pwr_nom, glb_time.fPWM_PSFBC); %[output:773fe0e4]
+hwdata.three_phase_dab = three_phase_dab_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_DAB, fres_dab); %[output:8fd79177]
+hwdata.cllc = single_phase_cllc_hwdata(application_voltage, dab_pwr_nom, glb_time.fPWM_CLLC, fres_cllc); %[output:46547a1d]
 
 % modifications
 hwdata.afe.CFi = 2 * hwdata.psfbc.Cdc_dc1;
@@ -306,7 +306,7 @@ deepNEGxi = 0.4;
 deepNEGeta = 0.4;
 frt_data = frt_settings(test_index, test_subindex, asymmetric_error_type, ...
     enable_frt_1, enable_frt_2, start_time_LVRT, deepPOSxi, deepPOSeta, deepNEGxi, deepNEGeta);
-grid_fault_generator;
+grid_fault_generator; %[output:03a5c5ed]
 %[text] ### Reactive Current References Settings
 % reactive current references 
 enable_i_react_pos_steps = 1;
@@ -396,11 +396,11 @@ ki_udc = 18.0;
 kp_idc = 0.5;
 ki_idc = 18.0;
 
-%% gain for weak grids
+%%\ gain for weak grids
 afe_ctrl.res_pi.kp_rpi = 0.5;
 afe_ctrl.res_pi.ki_rpi = 18;
 
-%% gains for LVRT
+%%\ gains for LVRT
 afe_ctrl.res_pi.kp_rpi = 0.6;
 afe_ctrl.res_pi.ki_rpi = 35;
 
@@ -611,42 +611,50 @@ for i = 1:length(open_scopes)
     set_param(open_scopes{i}, 'Open', 'off');
 end
 
-%[text] ### Enable/Disable Subsystems
-% if use_mosfet_thermal_model
-%     set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three_phase_inverter_mosfet_based_with_thermal_model', 'Commented', 'off');
-%     set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three_phase_inverter_igbt_based_with_thermal_model', 'Commented', 'on');
-%     set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three_phase_inverter_ideal_switch_based_model', 'Commented', 'on');
-%     set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three_phase_inverter_mosfet_based_with_thermal_model', 'Commented', 'off');
-%     set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three_phase_inverter_igbt_based_with_thermal_model', 'Commented', 'on');
-%     set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three_phase_inverter_ideal_switch_based_model', 'Commented', 'on');
-% else
-%     if use_thermal_model
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three_phase_inverter_mosfet_based_with_thermal_model', 'Commented', 'on');
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three_phase_inverter_mosfet_based_with_thermal_model', 'Commented', 'on');
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three_phase_inverter_igbt_based_with_thermal_model', 'Commented', 'off');
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three_phase_inverter_ideal_switch_based_model', 'Commented', 'on');
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three_phase_inverter_igbt_based_with_thermal_model', 'Commented', 'off');
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three_phase_inverter_ideal_switch_based_model', 'Commented', 'on');
-%     else
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three_phase_inverter_mosfet_based_with_thermal_model', 'Commented', 'on');
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three_phase_inverter_mosfet_based_with_thermal_model', 'Commented', 'on');
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three_phase_inverter_igbt_based_with_thermal_model', 'Commented', 'on');
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/afe/three_phase_inverter_ideal_switch_based_model', 'Commented', 'off');
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three_phase_inverter_igbt_based_with_thermal_model', 'Commented', 'on');
-%         set_param('afe_inv_psm/afe_abc_inv_psm_mod1/inverter/inverter/three_phase_inverter_ideal_switch_based_model', 'Commented', 'off');
-%     end
-% end
-% 
-% if use_torque_curve
-%     set_param('afe_inv_psm/fixed_speed_setting', 'Commented', 'off');
-%     set_param('afe_inv_psm/motor_load_setting', 'Commented', 'on');
-% else
-%     set_param('afe_inv_psm/fixed_speed_setting', 'Commented', 'on');
-%     set_param('afe_inv_psm/motor_load_setting', 'Commented', 'off');
-% end
+%[text] ### CREATE\_POWER\_METER\_BUS
+% Simulink.Bus for output "m" of the MATLAB Function block three_phase_power_meter_iec
+% (Symbols pane: Type = Bus: PowerMeterIecBus). Bus objects stay in the base workspace.
+names = {'Q1p', 'Q1n', 'P1n', 'P1p', 'U1n', 'U1p', ...
+    'i_act_1n', 'i_react_1n', 'i_act_1p', 'i_react_1p'};
+
+elems = Simulink.BusElement.empty(0,1);
+for k = 1:numel(names)
+    e            = Simulink.BusElement;
+    e.Name       = names{k};
+    e.Dimensions = 1;
+    e.DataType   = 'double';
+    e.Complexity = 'real';
+    elems(k,1)   = e;
+end
+
+PowerMeterIecBus          = Simulink.Bus;
+PowerMeterIecBus.Elements = elems;
+assignin('base', 'PowerMeterIecBus', PowerMeterIecBus);
+clear names elems e k
 
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
 %   data: {"layout":"onright"}
+%---
+%[output:379b877c]
+%   data: {"dataType":"text","outputData":{"text":"Device AFE_THREE_PHASE: afe690V\nNominal Voltage: 690 V | Nominal Current: 2.324276e+02 A\nCurrent Normalization Data: 328.70 A\nVoltage Normalization Data: 563.38 V\n---------------------------\n","truncated":false}}
+%---
+%[output:210866fc]
+%   data: {"dataType":"text","outputData":{"text":"Device INVERTER: inv690V_250kW\nNominal Voltage: 550 V | Nominal Current: 370 A\nCurrent Normalization Data: 523.26 A\nVoltage Normalization Data: 449.07 V\n---------------------------\n","truncated":false}}
+%---
+%[output:8783c351]
+%   data: {"dataType":"text","outputData":{"text":"Single Phase DAB: DAB_1200V\nNominal Power: 250000 [W]\nNormalization Voltage DC1: 1200 [V] | Normalization Current DC1: 250 [A]\nNormalization Voltage DC2: 1200 [V] | Normalization Current DC2: 250 [A]\nInternal Tank Ls: 3.819719e-05 [H] | Internal Tank Cs: 1.151294e-04 [F]\n---------------------------\n","truncated":false}}
+%---
+%[output:773fe0e4]
+%   data: {"dataType":"text","outputData":{"text":"Single Phase PSFBC: PSFBC_1200V\nNominal Power: 275000 [W]\nNormalization Voltage DC1: 1200 [V] | Normalization Current DC1: 250 [A]\nNormalization Voltage DC2: 1200 [V] | Normalization Current DC2: 250 [A]\nInternal Tank Ls1: 3.030303e-05 [H] | Internal Tank Ls2: 3.030303e-05 [H]\n---------------------------\n","truncated":false}}
+%---
+%[output:8fd79177]
+%   data: {"dataType":"text","outputData":{"text":"Single Phase DAB: Three_phase_DAB_1200V\nNominal Power: 250000 [W]\nNormalization Voltage DC1: 1200 [V] | Normalization Current DC1: 750 [A]\nNormalization Voltage DC2: 1200 [V] | Normalization Current DC2: 750 [A]\nInternal Tank Ls: 1.200000e-04 [H] | Internal Tank Cs: 750 [F]\n---------------------------\n","truncated":false}}
+%---
+%[output:46547a1d]
+%   data: {"dataType":"text","outputData":{"text":"Single Phase CLLC: CLLC_1200V\nNominal Power: 250000 [W]\nNormalization Voltage DC1: 1200 [V] | Normalization Current DC1: 250 [A]\nNormalization Voltage DC2: 1200 [V] | Normalization Current DC2: 250 [A]\nInternal Tank Ls: 2.580123e-05 [H] | Internal Tank Cs: 4.734509e-06 [F]\n---------------------------\n","truncated":false}}
+%---
+%[output:03a5c5ed]
+%   data: {"dataType":"error","outputData":{"errorType":"runtime","text":"Not enough input arguments.\nError in <a href=\"matlab:matlab.lang.internal.introspective.errorDocCallback('grid_fault_generator', 'C:\\github\\pwr-control\\library\\library\\setup_files\\simulink_models_initialization\\grid_fault_generator.m', 4)\" style=\"font-weight:bold\">grid_fault_generator<\/a> (<a href=\"matlab: opentoline('C:\\github\\pwr-control\\library\\library\\setup_files\\simulink_models_initialization\\grid_fault_generator.m',4,0)\">line 4<\/a>)\nswitch input.test_index"}}
 %---
