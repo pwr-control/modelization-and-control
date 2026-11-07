@@ -13,7 +13,7 @@ font_size_labels = 14;
 font_size_title = 14;
 
 load ..\sim_results_FHTSR_dqPLL_2.mat;
-tc_eq = glb_time.ts_afe;
+tc_eq = param.glb_time.ts_afe;
 tc = tc_eq;
 t1 = 0.7;
 t2 = 1.1;

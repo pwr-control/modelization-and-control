@@ -8,13 +8,13 @@ colore1 = [0.5 0.5 0.5];
 colore2 = [0.8 0.8 0.8];
 
 Nperiod = 10;
-N2 = Nc/3;
-N1 = N2 - floor(Nperiod/f_grid/tc);
+N2 = param.glb_time.Nc/3;
+N1 = N2 - floor(Nperiod/param.grid.emu.fgrid_nom/param.glb_time.tc);
 sig_fft=vg_abc_sim(N1:N2,1);
 time = t_tc_sim(N1:N2);
 
-igrid_base = 250e3/400/sqrt(3/2);
-ugrid_base = 400/sqrt(3/2);
+igrid_base = param.grid.emu.igrid_bez;   % was 250e3/400/sqrt(3/2) of a 400 V model
+ugrid_base = param.grid.emu.ugrid_bez;   % was 400/sqrt(3/2) of a 400 V model, this model is 690 V
 
 % figure; 
 % plot(time,sig_fft,'-k','LineWidth',tratto1);
@@ -27,14 +27,14 @@ ugrid_base = 400/sqrt(3/2);
 % print('ugrid_fft_analysis','-depsc');
 
 Nfft=length(sig_fft)+1;
-u1=Nfft*tc;
+u1=Nfft*param.glb_time.tc;
 f_sig=fft(sig_fft,Nfft);
 Xrange=[f_sig(1)/Nfft f_sig(2:Nfft/2)'/(Nfft/2)];
 freq=(0:1/u1:Nfft/2/u1-1/u1)';
 
 n1 = 2; n2 = 11; n3 = 11; n4 = 17;
-f1 = f_grid*0.9*n1; f2 = f_grid*1.1*n2;
-f3 = f_grid*0.9*n3; f4 = f_grid*1.1*n4;
+f1 = param.grid.emu.fgrid_nom*0.9*n1; f2 = param.grid.emu.fgrid_nom*1.1*n2;
+f3 = param.grid.emu.fgrid_nom*0.9*n3; f4 = param.grid.emu.fgrid_nom*1.1*n4;
 
 figure; 
 subplot 211
@@ -80,8 +80,8 @@ print('ugrid_spectrum_no_islanding','-depsc');
 
 return
 n1 = 17; n2 = 23; n3 = 23; n4 = 35;
-f1 = f_grid*0.9*n1; f2 = f_grid*1.1*n2;
-f3 = f_grid*0.9*n3; f4 = f_grid*1.1*n4;
+f1 = param.grid.emu.fgrid_nom*0.9*n1; f2 = param.grid.emu.fgrid_nom*1.1*n2;
+f3 = param.grid.emu.fgrid_nom*0.9*n3; f4 = param.grid.emu.fgrid_nom*1.1*n4;
 figure; 
 subplot 211
 plot(freq,abs(Xrange)./ugrid_base*100,'-k','LineWidth',tratto1);
@@ -102,8 +102,8 @@ title('Grid Phase Voltage Spectrum $23\le h \le 35$','Interpreter','latex');
 print('ugrid_spectrum_s-ii','-depsc');
 
 n1 = 35; n2 = 50; n3 = 50; n4 = 75;
-f1 = f_grid*0.9*n1; f2 = f_grid*1.1*n2;
-f3 = f_grid*0.9*n3; f4 = f_grid*1.1*n4;
+f1 = param.grid.emu.fgrid_nom*0.9*n1; f2 = param.grid.emu.fgrid_nom*1.1*n2;
+f3 = param.grid.emu.fgrid_nom*0.9*n3; f4 = param.grid.emu.fgrid_nom*1.1*n4;
 figure; 
 subplot 211
 plot(freq,abs(Xrange)./ugrid_base*100,'-k','LineWidth',tratto1);
@@ -124,7 +124,7 @@ title('Grid Phase Voltage Spectrum $h \ge 50$','Interpreter','latex');
 print('ugrid_spectrum_s-iii','-depsc');
 
 u_spectrum = abs(Xrange);
-Na = floor(f_grid*u1)+2;
+Na = floor(param.grid.emu.fgrid_nom*u1)+2;
 Nb = length(u_spectrum)-1;
 u_harmonics = u_spectrum(Na:Nb);
 THDu = sqrt(sum(u_harmonics.^2))/ugrid_base*100

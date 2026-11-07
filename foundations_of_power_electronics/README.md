@@ -419,6 +419,12 @@ Recurring building blocks across the projects:
 - Grid-support logic: FRT detection, VDE 4110 reactive current references, islanding detector,
   positive/negative sequence decomposition.
 - `video_plot/` animates the FHT dq-PLL response.
+- `init_model.m` builds the struct `param` with the functions of `private/` (November 2026); the
+  converter side of the LCL filter is open, the model is a PLL bench. Details, wiring fixes and the
+  design check in [`three_phase_dqPLLs_analysis/README.md`](three_phase_dqPLLs_analysis/README.md).
+- Design note: [`repos_doc/three_phase_plls_comparison`](https://github.com/pwr-control/repositories-documentation/tree/main/repos_doc/three_phase_plls_comparison)
+  (the three PLLs compared on the logged fault and on test signals, November 2026); its script
+  `plotting_results_plls.m` re-runs them on the logged voltage.
 
 ### `single_phase_dqPLLs_analysis`
 - Control-analysis project with no power stage: comparison of the orthogonal-signal generators
