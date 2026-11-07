@@ -427,10 +427,20 @@ Recurring building blocks across the projects:
   `plotting_results_plls.m` re-runs them on the logged voltage.
 
 ### `single_phase_dqPLLs_analysis`
-- Control-analysis project with no power stage: comparison of the orthogonal-signal generators
-  used to build a virtual dq frame in single phase — first-harmonic tracker, SOGI and
-  phase-shift filter — each in Simulink and C-Caller form.
-- `test_phase_shift_filter.slx` isolates the C-Caller phase-shift filter.
+- Control-analysis project with no power stage: three single-phase PLLs on the same test voltage,
+  side by side at 125 µs: the Park PLL of the single-phase inverter controls (Park-transform
+  quadrature generator, a SOGI with gain 0.5), the FHT-PLL (first harmonic trackers) and the
+  DDSRF-PLL of the AFE controls.
+- Block `test_signal` with six test cases (the 2021 test, phase jump, frequency step, DC offset,
+  EN 50160 harmonics, sag) and the true angle of the fundamental, so the phase error of each PLL is
+  known; `run_test_cases.m` runs them and prints the metrics, `plotting_results_plls.m` plots them.
+- `init_model.m` builds the struct `param` with the functions of `private/` (November 2026); the
+  custom C code settings that pointed to missing files were removed. Details, old names and the
+  design check in [`single_phase_dqPLLs_analysis/README.md`](single_phase_dqPLLs_analysis/README.md).
+- Design note: [`repos_doc/single_phase_lock_loop`](https://github.com/pwr-control/repositories-documentation/tree/main/repos_doc/single_phase_lock_loop)
+  rev. 01 (the generators, the linear models of the three loops checked against the simulation,
+  the test results and what to change, November 2026).
+- `test_phase_shift_filter.slx` isolates the C-Caller phase-shift filter (not used by the model).
 
 ### `long_cable_effects`
 - AFE + inverter + PMSM at 400 V with high-frequency models added: a lumped HF power-cable model
