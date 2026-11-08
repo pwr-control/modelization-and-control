@@ -169,7 +169,9 @@ Numbers from `prv.vienna_design` (printed by the init) and from the switched mod
    DC link while the grid voltage rises and the PLL waits for the 12.5 ms reset of its trackers), then rises
    to 1171 V (+9.4 %; the bridge cannot give energy back) and is within 2 % after 288 ms. With the PLL
    integrator from 0 (as in `frt_dqpll`) the peak is 1228 A and udc 1513 V, lock at 112 ms: hence the
-   initial value 1 pu.
+   initial value 1 pu. The peak comes from the current PI, which has no voltage feed-forward: at the start its
+   integrators are at zero, the legs sit mostly at the neutral point and the rising grid voltage drives the
+   filter current until the integrators catch up.
 7. **Steady state**: THD of the grid current 3.4 % (h5 2.0 %, h7 1.6 %, h11 1.1 %, h13 0.9 %), converter
    current 2.8 %; the dead time adds 0.4 %. Most of the low-order distortion comes from the zero crossings:
    with the min-max zero sequence the pole reference and the current have opposite signs over 2δ = 8.6
@@ -181,10 +183,14 @@ Numbers from `prv.vienna_design` (printed by the init) and from the switched mod
 
 ## Open points
 
-- **Start-up peak** (point 6): not changed. Options: connect the load after the start (switched model:
-  318 A, but udc goes to 1341 V with the diodes alone), start the udc reference from the measured udc (782 A,
-  1084 V; the low-pass block of the library has no initial state), enable the PWM after the PLL lock, or add
-  a voltage feed-forward to the current PI.
+- **Start-up peak** (point 6): not changed in the model. Recommended: a feed-forward of the measured
+  capacitor voltage on the output of the current PI (the sample advanced by 1.5 ts) and a udc reference that
+  starts from the measured udc (the low-pass block of the library has no initial state). Switched model: peak
+  455 A instead of 752 A, no udc overshoot (1070 V), within 2 % after 235 ms, same steady state (THD 3.4 %);
+  the remaining dip to 772 V is the load draining the DC link while the grid voltage rises from zero. The
+  reference from the measured udc alone gives 782 A and 1084 V. Connecting the load after the start does not
+  help without the feed-forward: the start-up current alone charges the unloaded DC link to 1341 V (the bridge
+  cannot give the energy back). Enabling the PWM only after the PLL lock is a further option.
 - **Zero-crossing distortion** (point 7): a Vienna-aware zero sequence needs a change of `sv_pwm_cm` (C
   code of the library) or a block after it.
 - **LCL** (point 2): the resonance depends on the grid inductance, here the transformer leakage only; a
