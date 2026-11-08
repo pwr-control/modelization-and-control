@@ -189,11 +189,6 @@ Recurring building blocks across the projects:
 - Includes an impedance-measurement / system-identification subsystem and the FRT machinery
   (disabled in the committed configuration).
 
-### `single_phase_catenary`
-- Single-phase AFE applied to a DC catenary auxiliary supply: catenary 3000 V nominal
-  (4000 V max), 2 × 5.4 MW per 12 km, ISOP stack of 4 × 250 kW full bridges.
-- Shares the power stage, control and post-processing of `single_phase_afe`.
-
 ### `single_phase_inverter`
 - `two_levels/` — single-phase H-bridge, fPWM = 10 kHz, 400 V, with result scripts for 50 Hz,
   80 Hz and 400 Hz output; full device loss and junction temperature breakdown.
@@ -314,10 +309,6 @@ Recurring building blocks across the projects:
   simulation in `claude_analysis/` and the open points in its README (sharing inside a pair is weak).
 - `trafo/four_winding_transformer.tex` derives the four-winding transformer analytically
   (flux-linkage matrix, T-equivalent, MMF balance, port relations).
-
-### `ps_isop_rail_bidirectional`
-- Bidirectional version of the ISOP rail supply: the battery is moved to 1.5 × catenary voltage
-  and sized on the catenary power (10.8 MW) instead of the converter power.
 
 ---
 
