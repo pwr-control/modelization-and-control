@@ -27,8 +27,13 @@ function d = vienna_design(param, options)
 %        the sign of the current; neutral-point current (1 - |m|) i and the ripple of vC2 - vC1 it gives
 %     6. DDSRF-PLL: linear loop with the decoupling low-pass filter (tau = 1/w): natural frequency, damping,
 %        crossover and phase margin
-%     7. start: the DC link starts at udc_init with the load connected, the udc reference rises from 0 (Step at 1
-%        ms, low-pass 20 ms with zero initial state) and passes the diode level sqrt(3) E_pk later
+%     7. start: the DC link starts at udc_init with the load connected and the udc reference rises from 0 (Step at
+%        1 ms, low-pass 20 ms with zero initial state). The udc PI (udc_ctrl) is in velocity form with
+%        back-calculation: it stores x = out - kp e also while its output is clamped, so out(k) = out(k-1) +
+%        kp (e(k) - e(k-1)) + ki ts e(k). It starts at its lower limit with a positive stored state, and its output
+%        turns positive when the error rises above -x/(kp + ki ts), while udc is still above its reference: with the
+%        current loop, which has no feed-forward of the grid voltage, this gives the start-up current peak (see the
+%        design note: a lower limit 0 with conditional integration removes it)
 
     if nargin < 2 || isempty(options)
         hz = true;
@@ -207,17 +212,28 @@ function d = vienna_design(param, options)
     t_step = 1e-3;
     tau_ref = 20e-3;
     if u_diode < udc0
-        t_cross = t_step - tau_ref*log(1 - u_diode/udc0);
+        t_cross = t_step - tau_ref*log(1 - u_diode/udc0);   % the udc reference passes the diode level
     else
         t_cross = [];
     end
+    kpi = c.kp_udc_ctrl + c.ki_udc_ctrl*ts;
+    e0 = 0 - param.afe.dclink.udc_init/hw.udc_nom;          % [pu] first error of the udc PI (reference 0)
+    out0 = min(max(kpi*e0, -c.ixi_pos_ref_lim), c.ixi_pos_ref_lim);
+    x0 = out0 - c.kp_udc_ctrl*e0;                           % state stored by the back-calculation
+    e_pos = -x0/kpi;                                        % error at which the output turns positive
     d.start = struct('u_diode', u_diode, 't_cross', t_cross, 'udc_init', param.afe.dclink.udc_init, ...
-        'tau_RC', R_load*C_ser);
+        'tau_RC', R_load*C_ser, 'e0', e0, 'out0', out0, 'x0', x0, 'e_pos', e_pos);
     fprintf(['7. Start: DC link at %.0f V with the load (R C = %.0f ms), grid voltage from 0 (ramp %.0f ms and filter), ' ...
-        'diode level sqrt(3) E = %.0f V (%.3f pu); the udc reference starts at 0 and passes the diode level at %s ms: ' ...
-        'until then the udc PI asks for negative current, which the Vienna bridge cannot give\n'], ...
-        param.afe.dclink.udc_init, 1e3*R_load*C_ser, 1e3*param.frt.data.t_ramp, u_diode, u_diode/hw.udc_nom, ...
-        num(1e3*t_cross, '%.1f', 'never'));
+        'diode level sqrt(3) E = %.0f V (%.3f pu)\n'], param.afe.dclink.udc_init, 1e3*R_load*C_ser, ...
+        1e3*param.frt.data.t_ramp, u_diode, u_diode/hw.udc_nom);
+    if out0 <= -c.ixi_pos_ref_lim && x0 > 0 && e_pos < 0
+        fprintf(['   udc PI (velocity form, back-calculation): the reference starts at 0, error %.2f pu, output at ' ...
+            'the lower limit %.2f pu, stored state %+.2f pu: the output turns positive when the error rises above ' ...
+            '%.2f pu, while udc is still above its reference (start-up current peak: see the design note; a lower ' ...
+            'limit 0 with conditional integration removes it)\n'], e0, out0, x0, e_pos);
+    else
+        fprintf('   udc PI: no positive output while udc is above its reference (error %.2f pu at the start)\n', e0);
+    end
 
     % ======================================================================== figure
     if isfield(param.sim, 'design_figures') && param.sim.design_figures

@@ -156,10 +156,10 @@ if param.sim.check_model
     end
     lost = prv.check_from_goto(model);
     if isempty(lost)
-        fprintf('%s init: every active From block has its Goto\n', model);
+        fprintf('%s init: every active From block reaches its Goto\n', model);
     else
-        warning('%s init: %d tags read by active From blocks have no active Goto:\n  %s', model, numel(lost), ...
-            strjoin(lost, '\n  '));
+        warning('%s init: %d tags read by active From blocks do not reach an active Goto:\n  %s', model, ...
+            numel(lost), strjoin(lost, '\n  '));
     end
     clear missing_refs model_refs lost
 end

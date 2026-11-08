@@ -88,7 +88,7 @@ control voltage. The two inversions close the current loop with the right sign (
 | `param.grid` → `param.grid.emu` | 1 MVA, 690 V, Dyn11, core data: `prv.grid_param` adds the data set of the voltage class (50 Hz, η 95 %, `ucc` 5 %, iron losses 1.8 kW), `n1`, `Lm1`, the line no-load current and the object `grid_three_phase_emulator` |
 | `param.frt` → `param.frt.data` | test 25.4 of VDE-AR-N 4110, both generators off (not applied): `prv.frt_param` merges `frt_settings` and `grid_fault_generator` of the library; the emulator reads `t_ramp` |
 | `param.afe.hw`, `hw_in` | 250 kW hardware of the 690 V class (`prv.afe_hw_param`: `udc_nom` 1070 V, LCL filter, DC link) through `hw_afe_three_phase_setup` |
-| `param.afe.dev` | switches and diodes of the bridge: data set `silicon_high_power_ideal_switch` (the numbers that were typed in the mask) |
+| `param.afe.dev` | switches and diodes of the bridge: data set `silicon_high_power_ideal_switch` (the numbers that were typed in the mask: switch 1.5 mΩ, diode 2 V and 0.15 mΩ, RC snubber 10 nF and 2.2 kΩ) |
 | `param.afe.dclink`, `param.load` | initial DC voltage 1070 V, measuring dividers 107 kΩ, neutral point to ground 100 kΩ; load 5 Ω |
 | `param.afe.ctrl` | `ctrl_afe_setup` of the library with the gains of this model: udc PI 4 / 45, current PI 0.25 / 35 on both axes, DDSRF-PLL 0.32 / 8 |
 | `param.afe.pll`, `param.afe.behav` | initial value of the PLL frequency integrator (1 pu); clock gain, PWM phase, zero-sequence output gain, `pwr_lim_enable` |
@@ -144,10 +144,16 @@ DC-link halves now reads `param.afe.dclink.udc_init`), and these fixes:
   the thermal data of a template bridge (the ideal Vienna block has none), the DC-link current
   `ic_dclink_mod1`, the other PLLs of the template and the power meter of the template control.
 - **Current PI**: reads the AFE gains and `ts_afe` instead of the PMSM gains and `ts_inv` (same numbers).
+- **Tag visibility** (Davide, in MATLAB): a Goto Tag Visibility `Vgrid_unorm_ddsrf` in
+  `AFE_control/afe_control`. The Goto of the DDSRF-PLL with this tag is scoped and its From in `pll_stageB`
+  did not see it (so already before the changes; the first version of `check_from_goto` compared the tags
+  only and missed it).
 
 Checked with Octave stubs of Simulink (`find_system`, `get_param` on the saved XML): all 93 `param.*`
-references of the active blocks resolve and every active From block has a Goto. The model has not yet been
-compiled in MATLAB after the changes.
+references of the active blocks resolve and every active From block reaches its Goto: `check_from_goto` now
+also applies the visibility rules (global, local in the same subsystem, scoped under a Goto Tag Visibility
+block that contains both), and flags the model before the visibility fix above. The switched results of the
+design note are still to be compared with a run of the model.
 
 ## Design check (November 2026)
 
@@ -162,16 +168,22 @@ Numbers from `prv.vienna_design` (printed by the init) and from the switched mod
 3. **Current loop** (kp 0.25, ki 35): crossover 135 Hz (positive sequence) and 131 Hz (negative sequence),
    phase margin 70 and 78 degrees, gain margin 16 dB; unstable from kp = 1.67.
 4. **DC-voltage loop** (kp 4, ki 45, C = 7.2 mF, load pole 56 rad/s): crossover 21 Hz, phase margin 98
-   degrees.
+   degrees. Below about 980 V the converter voltage of the full load (564 V phase peak) is beyond the linear
+   range of the modulation: after a dip (the start, or a step from no load to full load: about 910 V) the
+   current PI clips, the bridge rectifies like a diode bridge and udc recovers in 0.25 ... 0.4 s.
 5. **DDSRF-PLL** (0.32, 8): 8 Hz, damping 1.0 without the filter; with the decoupling filter in the loop
    crossover 16 Hz, phase margin 58 degrees, slowest pole 37 rad/s. Locked (error below 5 degrees) at 44 ms.
 6. **Start-up**: largest converter current 752 A (2.3 pu) at 20 ms; udc falls to 758 V (the load drains the
    DC link while the grid voltage rises and the PLL waits for the 12.5 ms reset of its trackers), then rises
    to 1171 V (+9.4 %; the bridge cannot give energy back) and is within 2 % after 288 ms. With the PLL
    integrator from 0 (as in `frt_dqpll`) the peak is 1228 A and udc 1513 V, lock at 112 ms: hence the
-   initial value 1 pu. The peak comes from the current PI, which has no voltage feed-forward: at the start its
-   integrators are at zero, the legs sit mostly at the neutral point and the rising grid voltage drives the
-   filter current until the integrators catch up.
+   initial value 1 pu. The peak has two causes. First, the udc PI: its reference starts at 0 with udc at 1 pu,
+   so the error is −1 pu and the output sits at the lower limit −1.65 pu; the PI is in velocity form with
+   back-calculation and stores x = out − kp·e = +2.35 pu also while clamped. As the reference rises and udc
+   falls, the output rises with the error: positive at 8 ms, +1.16 pu at 15 ms, while udc is still 220 V
+   above its reference (point 7 of `prv.vienna_design` prints the threshold, an error of −0.59 pu). Second,
+   the current PI has no feed-forward of the grid voltage: its integrators build the converter voltage while
+   the grid voltage rises, and the current overshoots its reference (2.26 pu against 1.14 pu at 20 ms).
 7. **Steady state**: THD of the grid current 3.4 % (h5 2.0 %, h7 1.6 %, h11 1.1 %, h13 0.9 %), converter
    current 2.8 %; the dead time adds 0.4 %. Most of the low-order distortion comes from the zero crossings:
    with the min-max zero sequence the pole reference and the current have opposite signs over 2δ = 8.6
@@ -183,14 +195,28 @@ Numbers from `prv.vienna_design` (printed by the init) and from the switched mod
 
 ## Open points
 
-- **Start-up peak** (point 6): not changed in the model. Recommended: a feed-forward of the measured
-  capacitor voltage on the output of the current PI (the sample advanced by 1.5 ts) and a udc reference that
-  starts from the measured udc (the low-pass block of the library has no initial state). Switched model: peak
-  455 A instead of 752 A, no udc overshoot (1070 V), within 2 % after 235 ms, same steady state (THD 3.4 %);
-  the remaining dip to 772 V is the load draining the DC link while the grid voltage rises from zero. The
-  reference from the measured udc alone gives 782 A and 1084 V. Connecting the load after the start does not
-  help without the feed-forward: the start-up current alone charges the unloaded DC link to 1341 V (the bridge
-  cannot give the energy back). Enabling the PWM only after the PLL lock is a further option.
+- **Start-up peak** (point 6): not changed in the model. Recommended, one of two changes (switched model:
+  about 455 A instead of 752 A, no udc overshoot, same steady state):
+  - in `udc_ctrl`, the lower limit of the Saturation at 0 (the bridge cannot give a negative active current)
+    and conditional integration: the Unit Delay keeps its state while the output is clamped, instead of
+    taking out − kp·e. One subsystem of this model; 456 A, within 2 % after 317 ms. Each half alone is not
+    enough: the lower limit 0 with the back-calculation gives 1068 A, conditional integration with the
+    −1.65 pu limit gives 587 A and a dip to 647 V;
+  - a feed-forward of the measured capacitor voltage on the output of the current PI (sample advanced by
+    1.5 ts, scaled by √3·ubez/udc) and a udc reference that starts from the measured udc (the low-pass block
+    of the library has no initial state): 455 A, within 2 % after 235 ms. The reference from the measured
+    udc alone gives 782 A, the feed-forward alone 511 A and 1185 V.
+
+  Both together give the same as the second; the feed-forward with the reference from 0 should not be
+  combined with the changed PI (677 A, dip to 611 V). The dip to about 770 V is the load draining the DC link
+  while the grid voltage rises from zero. Enabling the PWM only after the PLL lock is a further option.
+- **Minimum load**: connecting the load after the start does not help. Without the feed-forward the start-up
+  current alone charges the unloaded DC link to 1341 V; with it the start draws less than 30 A, but the DC
+  link still creeps up to 1125 V in 0.2 s: near zero load the current pulses that remain are rectified and
+  the bridge cannot give the energy back. A Vienna rectifier needs a minimum load.
+- **Voltage margin** (point 4): 8.7 % at 1070 V. After a dip below about 980 V udc recovers in
+  0.25 ... 0.4 s; a faster recovery needs a higher udc reference, if the devices allow it, or smaller load
+  steps.
 - **Zero-crossing distortion** (point 7): a Vienna-aware zero sequence needs a change of `sv_pwm_cm` (C
   code of the library) or a block after it.
 - **LCL** (point 2): the resonance depends on the grid inductance, here the transformer leakage only; a
