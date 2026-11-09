@@ -1,6 +1,6 @@
 function cable = cable_param(c)
 %CABLE_PARAM  Lumped high-frequency model of the power cable between the inverter and the machine of
-%   afe_inv_psm_with_hf_models.slx (legacy struct hf_power_cable_model of init_model_legacy.m).
+%   afe_inv_psm_with_hf_models.slx (legacy struct hf_power_cable_model of the old init, in the git history).
 %
 %   cable = cable_param(c), with c = param.cable_in:
 %     c.n         number of lumped sections per phase (blocks power_cable_model_1/2/3, each with

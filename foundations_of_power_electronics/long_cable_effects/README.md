@@ -21,7 +21,6 @@ the functions of `private/`, the model was re-pointed to `param.*` and the 20 ta
 | `long_cable_effects_private.m` | handles to the functions of `private/` (`prv.<name>`): the Live Editor runs a live script from a copy outside this folder and does not see `private/` |
 | `private/` | the functions of this model (table below) |
 | `afe_inv_psm_with_hf_models.slx` | the model |
-| `init_model_legacy.m` | the old init (flat workspace, the whole template of the AFE and inverter models), kept for reference: the model does not run with it any more |
 | `plotting_*.m`, `sim_results_post_process.m`, `voltage_*spectrum_analysis.m` | post-processing of the old model (see [Open points](#open-points)) |
 | `non_virtual_blocks_counting.m` | counts the non-virtual blocks of the model |
 | `data/` | 25 measured oscilloscope traces (625 kHz) for comparison |
@@ -202,5 +201,6 @@ limits, dead time and the PWM sampling are left out, except in point 7.
 - **Clock alignment** (point 7): unstable after about 4 s; the fix belongs to the library blocks.
 - **Not in the new architecture**: brake chopper, pre-charge, fault ride-through control (the fault test of
   the grid emulator is off).
-- **Leftovers**: the commented timing chain in `global timing`, the commented `parasitic_lump_1/2` from the DC
-  bus to ground, and `init_model_legacy.m` can be deleted when no longer needed.
+- **Leftovers**: the commented timing chain in `global timing` and the commented `parasitic_lump_1/2` from the
+  DC bus to ground can be deleted when no longer needed. The old init (`init_model_legacy.m`) was deleted in
+  November 2026: it is in the git history.
