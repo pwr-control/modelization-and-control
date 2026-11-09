@@ -434,13 +434,18 @@ Recurring building blocks across the projects:
 - `test_phase_shift_filter.slx` isolates the C-Caller phase-shift filter (not used by the model).
 
 ### `long_cable_effects`
-- AFE + inverter + PMSM at 400 V with high-frequency models added: a lumped HF power-cable model
-  (two cascaded sections with distributed capacitance and damping) plus common-mode inductances
-  on both sides.
+- AFE + inverter + PMSM at 400 V with high-frequency models: a lumped HF power-cable model (two
+  sections per phase, capacitors to ground) at the inverter terminals with its far end open, and the
+  zero-sequence inductances of both filters.
 - Targets overvoltage/reflection at the motor terminals and common-mode phenomena (zero-sequence
-  current, DC-link rail-to-ground voltage), in grid-connected and island mode.
+  current through the cable capacitances, DC-link rail-to-ground voltage).
+- Rebuilt in November 2026 on the library blocks `grid_following_dqctrl_mod1` (AFE) and
+  `pmsm_inverter_dqctrl_mod1` (inverter); `init_model.m` builds the struct `param` with the
+  functions of `private/` and the model reads only `param.*`. Details, old names and the design
+  check (the Backward Euler solver damps the cable ringing far more than the cable does) in
+  [`long_cable_effects/README.md`](long_cable_effects/README.md).
 - `data/` holds 25 measured oscilloscope traces sampled at 625 kHz with their plotting scripts,
-  compared against the simulations.
+  for comparison with the simulations.
 
 ---
 
